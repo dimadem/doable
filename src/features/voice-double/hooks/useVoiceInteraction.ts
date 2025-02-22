@@ -1,24 +1,13 @@
 
 import { useState, useCallback } from 'react';
 import type { StatusIndicatorProps } from '../types';
+import type { Json } from '@/integrations/supabase/types';
 
 interface VoiceConfig {
+  voice_name?: string;
+  api_key?: string | null;
   agent_id?: string;
-  agent_settings?: {
-    tts?: {
-      model_id?: string;
-      voice_id?: string;
-      stability?: number;
-      similarity_boost?: number;
-    };
-    agent?: {
-      prompt?: {
-        prompt?: string;
-      };
-      language?: string;
-      first_message?: string;
-    };
-  };
+  agent_settings?: Json;
 }
 
 export const useVoiceInteraction = (voiceConfig?: VoiceConfig | null) => {
@@ -28,7 +17,15 @@ export const useVoiceInteraction = (voiceConfig?: VoiceConfig | null) => {
 
   const startRecording = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          sampleRate: 24000,
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
       setAudioStream(stream);
       setIsRecording(true);
       return stream;
@@ -47,23 +44,31 @@ export const useVoiceInteraction = (voiceConfig?: VoiceConfig | null) => {
   }, [audioStream]);
 
   const startVoiceInteraction = useCallback(async () => {
-    if (!voiceConfig?.agent_id) {
-      throw new Error('Voice agent not configured');
+    if (!voiceConfig?.agent_id || !voiceConfig?.api_key) {
+      throw new Error('Voice agent not configured or API key missing');
     }
 
     try {
       setStatus('connecting');
       await startRecording();
       
-      // Initialize WebSocket connection for real-time voice interaction
+      // Initialize WebSocket connection with authentication
       const ws = new WebSocket(`wss://api.elevenlabs.io/v1/chat?agent_id=${voiceConfig.agent_id}`);
       
+      // Add authentication header
       ws.onopen = () => {
+        console.log('WebSocket connected');
+        ws.send(JSON.stringify({
+          type: 'connection.auth',
+          api_key: voiceConfig.api_key
+        }));
         setStatus('processing');
       };
 
       ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
+        console.log('WebSocket message received:', data);
+        
         if (data.type === 'speech') {
           setStatus('responding');
           // Handle incoming speech data
@@ -74,10 +79,13 @@ export const useVoiceInteraction = (voiceConfig?: VoiceConfig | null) => {
 
       ws.onerror = (error) => {
         console.error('WebSocket error:', error);
+        stopRecording();
+        setStatus('idle');
         throw new Error('WebSocket connection failed');
       };
 
       ws.onclose = () => {
+        console.log('WebSocket closed');
         stopRecording();
         setStatus('idle');
       };
@@ -87,6 +95,7 @@ export const useVoiceInteraction = (voiceConfig?: VoiceConfig | null) => {
         stopRecording();
       };
     } catch (err) {
+      console.error('Voice interaction error:', err);
       stopRecording();
       setStatus('idle');
       throw err;

@@ -41,11 +41,11 @@ const VoiceDouble: React.FC = () => {
 
   const handleInteractionToggle = async () => {
     if (status === 'idle') {
-      if (!voiceConfig) {
+      if (!voiceConfig?.api_key) {
         toast({
           variant: "destructive",
-          title: "Error",
-          description: "Voice configuration not loaded yet. Please wait.",
+          title: "Configuration Error",
+          description: "Voice API key not configured. Please check your settings.",
         });
         return;
       }
