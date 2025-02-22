@@ -29,19 +29,19 @@ const pageVariants = {
 
 const pulseVariants = {
   idle: {
-    scale: [1, 1.05, 1],
-    opacity: [0.5, 0.8, 0.5],
+    scale: [1, 1.02, 1],
+    opacity: [0.5, 0.7, 0.5],
     transition: {
-      duration: 2,
+      duration: 4,
       repeat: Infinity,
       ease: "easeInOut"
     }
   },
   active: {
-    scale: [1, 1.15, 1],
-    opacity: [0.6, 1, 0.6],
+    scale: [1, 1.05, 1],
+    opacity: [0.6, 0.9, 0.6],
     transition: {
-      duration: 1,
+      duration: 3,
       repeat: Infinity,
       ease: "easeInOut"
     }
@@ -124,9 +124,9 @@ const VoiceDouble: React.FC = () => {
             animate={status === 'idle' ? 'idle' : 'active'}
           >
             {/* Multi-layer borders */}
-            <div className="absolute inset-0 rounded-full border-4 border-white/10 animate-pulse" />
-            <div className="absolute inset-2 rounded-full border-2 border-white/20 animate-[pulse_2s_ease-in-out_infinite_500ms]" />
-            <div className="absolute inset-4 rounded-full border border-white/30 animate-[pulse_2s_ease-in-out_infinite_1000ms]" />
+            <div className="absolute inset-0 rounded-full border-4 border-white/10 animate-[pulse_4s_ease-in-out_infinite]" />
+            <div className="absolute inset-2 rounded-full border-2 border-white/20 animate-[pulse_4s_ease-in-out_infinite_1000ms]" />
+            <div className="absolute inset-4 rounded-full border border-white/30 animate-[pulse_4s_ease-in-out_infinite_2000ms]" />
             
             {/* Waveform */}
             <WaveformVisualization isActive={status === 'responding'} />
