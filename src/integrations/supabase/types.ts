@@ -94,18 +94,21 @@ export type Database = {
       }
       voices: {
         Row: {
+          agent_id: string | null
           agent_settings: Json | null
           id: string
           personality_id: string
           personality_name: string | null
         }
         Insert: {
+          agent_id?: string | null
           agent_settings?: Json | null
           id?: string
           personality_id: string
           personality_name?: string | null
         }
         Update: {
+          agent_id?: string | null
           agent_settings?: Json | null
           id?: string
           personality_id?: string
