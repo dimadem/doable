@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/layouts/PageHeader';
@@ -12,24 +12,49 @@ import { usePersonalities } from '../hooks/usePersonalities';
 import { determinePersonality, saveUserSession } from '../services/personalityService';
 import { MAX_STEPS } from '../constants';
 import { SessionSelection } from '../types';
+import { toast } from '@/hooks/use-toast';
 
 const VibeMatching: React.FC = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [selections, setSelections] = useState<SessionSelection[]>([]);
   const { personalities, loading, error } = usePersonalities();
+  const [preloadedImages, setPreloadedImages] = useState<Set<string>>(new Set());
+
+  // Preload next step images
+  useEffect(() => {
+    if (!personalities || personalities.length === 0) return;
+
+    const preloadImage = (url: string) => {
+      if (preloadedImages.has(url)) return;
+
+      const img = new Image();
+      img.src = url;
+      img.onload = () => {
+        setPreloadedImages(prev => new Set([...prev, url]));
+      };
+    };
+
+    // Preload current and next step images
+    personalities.slice(0, 3).forEach(personality => {
+      const currentImg = personality.url_array[step - 1];
+      const nextImg = personality.url_array[step];
+
+      if (currentImg) preloadImage(currentImg);
+      if (nextImg) preloadImage(nextImg);
+    });
+  }, [personalities, step, preloadedImages]);
 
   const getCurrentImages = () => {
     if (!personalities || personalities.length === 0) return [];
     
-    // Get an image from each of the first 3 personalities for the current step
     return personalities
-      .slice(0, 3) // Take first 3 personalities
+      .slice(0, 3)
       .map(personality => ({
         name: personality.name,
         imageId: personality.url_array[step - 1] || ''
       }))
-      .filter(item => item.imageId); // Only show items that have an image
+      .filter(item => item.imageId);
   };
 
   const handleImageClick = async (selectedPersonality: string) => {
@@ -43,6 +68,10 @@ const VibeMatching: React.FC = () => {
 
     if (step < MAX_STEPS) {
       setStep(step + 1);
+      toast({
+        title: "Selection saved",
+        description: `Step ${step} of ${MAX_STEPS} completed`,
+      });
     } else {
       const finalPersonality = determinePersonality(updatedSelections);
       const success = await saveUserSession(finalPersonality, updatedSelections, personalities);
@@ -57,9 +86,13 @@ const VibeMatching: React.FC = () => {
 
   const currentImages = getCurrentImages();
 
-  // Ensure we have exactly 3 images before proceeding
   if (currentImages.length !== 3) {
-    return <ErrorState error="Not enough personality images available" onRetry={() => window.location.reload()} />;
+    return (
+      <ErrorState 
+        error="Not enough valid images available for this step. Please try again later." 
+        onRetry={() => window.location.reload()} 
+      />
+    );
   }
 
   return (
