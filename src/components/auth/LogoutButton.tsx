@@ -21,14 +21,22 @@ export const LogoutButton = () => {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      if (!session) {
+        // Clear local storage and redirect when session ends
+        localStorage.removeItem('userSession');
+        navigate('/');
+      }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [navigate]);
 
   const handleLogout = async () => {
     try {
-      if (!session) {
+      // Get current session before attempting logout
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      
+      if (!currentSession) {
         toast({
           variant: "destructive",
           title: "Error",
@@ -48,13 +56,11 @@ export const LogoutButton = () => {
           description: "Failed to log out. Please try again."
         });
       } else {
-        // Only clear localStorage after successful logout
-        localStorage.removeItem('userSession');
+        // Session cleanup happens in onAuthStateChange
         toast({
           title: "Logged out",
           description: "You have been successfully logged out."
         });
-        navigate('/');
       }
     } catch (err) {
       console.error('Unexpected logout error:', err);
@@ -70,6 +76,7 @@ export const LogoutButton = () => {
     <button 
       onClick={handleLogout}
       className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+      disabled={!session}
     >
       <LogOut size={20} />
       <span className="font-mono">logout</span>
