@@ -16,12 +16,14 @@ const Struggle: React.FC = () => {
   const { data: sessionData } = useQuery({
     queryKey: ['latestSession'],
     queryFn: fetchLatestSession,
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to load session data",
-        variant: "destructive",
-      });
+    meta: {
+      onError: () => {
+        toast({
+          title: "Error",
+          description: "Failed to load session data",
+          variant: "destructive",
+        });
+      }
     }
   });
 
