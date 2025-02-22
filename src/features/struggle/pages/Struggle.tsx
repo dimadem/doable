@@ -22,10 +22,8 @@ const formatTraits = (traits: Record<string, any> | null) => {
 };
 
 const Struggle: React.FC = () => {
-  const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const direction = (location.state as { direction?: number })?.direction || 1;
 
   const { data: sessionData } = useQuery<SessionResponse>({
     queryKey: ['latestSession'],
@@ -69,10 +67,7 @@ const Struggle: React.FC = () => {
         description: `${struggleType.replace('_', ' ')} mode activated`,
       });
       
-      // Navigate to voice-double with personality parameter
-      navigate(`/voice-double?personality=${sessionData.personalities.name}`, {
-        state: { direction: 1 }
-      });
+      navigate(`/voice-double?personality=${sessionData.personalities.name}`);
     } catch (error) {
       toast({
         title: "Error",
@@ -90,7 +85,6 @@ const Struggle: React.FC = () => {
         animate="animate"
         exit="exit"
         variants={pageVariants}
-        custom={direction}
       >
         <AppHeader title="struggle" />
         <div className="flex-1 flex items-center justify-center">
@@ -115,7 +109,6 @@ const Struggle: React.FC = () => {
       animate="animate"
       exit="exit"
       variants={pageVariants}
-      custom={direction}
     >
       <AppHeader title="struggle" />
 

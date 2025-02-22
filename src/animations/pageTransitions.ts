@@ -1,24 +1,22 @@
+
 export const pageVariants = {
-  initial: (direction: number) => ({
-    opacity: 0,
-    x: direction > 0 ? 100 : -100
-  }),
+  initial: {
+    opacity: 0
+  },
   animate: {
     opacity: 1,
-    x: 0,
     transition: {
       duration: 0.4,
       ease: "easeInOut"
     }
   },
-  exit: (direction: number) => ({
+  exit: {
     opacity: 0,
-    x: direction > 0 ? -100 : 100,
     transition: {
       duration: 0.4,
       ease: "easeInOut"
     }
-  })
+  }
 };
 
 export const pulseVariants = {

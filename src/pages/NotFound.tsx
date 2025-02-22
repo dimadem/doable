@@ -1,13 +1,11 @@
 
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { pageVariants } from "@/animations/pageTransitions";
 
 const NotFound = () => {
-  const location = useLocation();
   const navigate = useNavigate();
-  const direction = (location.state as { direction?: number })?.direction || 1;
 
   useEffect(() => {
     console.error(
@@ -23,13 +21,12 @@ const NotFound = () => {
       animate="animate"
       exit="exit"
       variants={pageVariants}
-      custom={direction}
     >
       <div className="text-center space-y-4">
         <h1 className="text-4xl font-mono font-bold">404</h1>
         <p className="text-xl font-mono text-white/60">Oops! Page not found</p>
         <button 
-          onClick={() => navigate('/', { state: { direction: -1 } })}
+          onClick={() => navigate('/')}
           className="text-white/80 hover:text-white underline font-mono"
         >
           Return to Home

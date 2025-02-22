@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import AuthDialog from '../auth/AuthDialog';
 import { pageVariants } from '@/animations/pageTransitions';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,15 +10,12 @@ import { AppHeader } from '../layouts/AppHeader';
 
 const Hero = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const { user, loading } = useAuth();
-  
-  const direction = (location.state as { direction?: number })?.direction || 1;
 
   const handleStart = async () => {
     if (user) {
-      navigate('/vibe-matching', { state: { direction: 1 } });
+      navigate('/vibe-matching');
     } else {
       setShowAuthDialog(true);
     }
@@ -31,7 +28,6 @@ const Hero = () => {
       animate="animate"
       exit="exit"
       variants={pageVariants}
-      custom={direction}
     >
       <AppHeader showBack={false} />
 
@@ -73,4 +69,3 @@ const Hero = () => {
 };
 
 export default Hero;
-
