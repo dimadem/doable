@@ -1,4 +1,3 @@
-
 import React, { useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -36,34 +35,38 @@ const VibeMatching: React.FC = () => {
       return [];
     }
 
+    // Keep track of used URLs to avoid repetition
+    const usedUrls = new Set<string>();
+
     // Create media groups for each step
-    const groups = Array.from({ length: MAX_STEPS }, (_, stepIndex) => {
-      // For each step, select one media item from each personality
+    return Array.from({ length: MAX_STEPS }, (_, stepIndex) => {
       const stepGroup = filteredPersonalities.map(personality => {
-        // Get available media for this personality that hasn't been used in previous steps
-        const availableMedia = (personality.url_array || []).filter(url => {
-          // Check if this URL has been used in any previous step
-          const isUsedInPreviousSteps = mediaGroups.slice(0, stepIndex)
-            .some(group => group.some(item => item.url === url));
-          return !isUsedInPreviousSteps;
-        });
+        // Get available media for this personality that hasn't been used yet
+        const availableMedia = (personality.url_array || []).filter(url => 
+          !usedUrls.has(url)
+        );
+
+        if (!availableMedia.length) {
+          console.error(`No available media for personality ${personality.name}`);
+          return null;
+        }
 
         // Randomly select one media item from available options
         const randomIndex = Math.floor(Math.random() * availableMedia.length);
         const selectedUrl = availableMedia[randomIndex];
+        
+        // Mark this URL as used
+        usedUrls.add(selectedUrl);
 
         return {
           url: selectedUrl,
           personalityName: personality.name
         };
-      });
+      }).filter(Boolean); // Remove any null entries
 
       // Shuffle the media items within this step
       return stepGroup.sort(() => Math.random() - 0.5);
     });
-
-    console.log('Generated media groups:', groups);
-    return groups;
   }, [personalities]);
 
   const handleImageSelect = useCallback(async (imageUrl: string) => {
@@ -146,4 +149,3 @@ const VibeMatching: React.FC = () => {
 };
 
 export default VibeMatching;
-
