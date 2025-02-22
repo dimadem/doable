@@ -45,7 +45,7 @@ const VoiceDouble: React.FC = () => {
         toast({
           variant: "destructive",
           title: "Configuration Error",
-          description: "Voice API key not configured. Please check your settings.",
+          description: "Voice API key not found for this personality. Please check the configuration.",
         });
         return;
       }

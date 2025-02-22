@@ -12,7 +12,15 @@ export const useVoiceAgent = (personalityKey: string) => {
         .eq('fit_personality_name', personalityKey)
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching voice configuration:', error);
+        throw error;
+      }
+      
+      if (!data?.api_key) {
+        console.error('No API key found for personality:', personalityKey);
+      }
+      
       return data;
     },
     enabled: !!personalityKey,
