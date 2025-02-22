@@ -98,23 +98,31 @@ export type Database = {
           agent_settings: Json | null
           id: string
           personality_id: string
-          personality_name: string | null
+          personality_name: string
         }
         Insert: {
           agent_id?: string | null
           agent_settings?: Json | null
           id?: string
-          personality_id: string
-          personality_name?: string | null
+          personality_id?: string
+          personality_name: string
         }
         Update: {
           agent_id?: string | null
           agent_settings?: Json | null
           id?: string
           personality_id?: string
-          personality_name?: string | null
+          personality_name?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "voices_personality_name_fkey"
+            columns: ["personality_name"]
+            isOneToOne: false
+            referencedRelation: "personalities"
+            referencedColumns: ["name"]
+          },
+        ]
       }
     }
     Views: {
