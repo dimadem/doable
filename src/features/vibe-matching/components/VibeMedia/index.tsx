@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ImageOff, Loader2, Film } from 'lucide-react';
@@ -14,13 +13,11 @@ export const VibeMedia: React.FC<VibeImageProps> = ({ imageId, index, onClick })
   const isMobile = useIsMobile();
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
-  // Determine if the media is a video based on file extension
   useEffect(() => {
     const isVideoFile = imageId.toLowerCase().endsWith('.mp4');
     setIsVideo(isVideoFile);
   }, [imageId]);
 
-  // Handle video playback
   const toggleVideoPlayback = async () => {
     if (!videoRef.current) return;
     
@@ -37,38 +34,32 @@ export const VibeMedia: React.FC<VibeImageProps> = ({ imageId, index, onClick })
     }
   };
 
-  // Handle video loading
   const handleVideoLoadedData = () => {
     setIsLoading(false);
     setHasError(false);
     
-    // Start playing on non-iOS mobile devices
     if (isMobile && !isIOS && videoRef.current) {
       videoRef.current.play().catch(console.error);
     }
   };
 
-  // Handle video error
   const handleVideoError = () => {
     console.error(`Failed to load video: ${imageId}`);
     setIsLoading(false);
     setHasError(true);
   };
 
-  // Handle image loading
   const handleImageLoad = () => {
     setIsLoading(false);
     setHasError(false);
   };
 
-  // Handle image error
   const handleImageError = () => {
     setIsLoading(false);
     setHasError(true);
     console.error(`Failed to load media: ${imageId}`);
   };
 
-  // Configure video for optimal playback
   const configureVideoPlayback = (videoElement: HTMLVideoElement) => {
     videoElement.playsInline = true;
     videoElement.muted = true;
@@ -78,7 +69,6 @@ export const VibeMedia: React.FC<VibeImageProps> = ({ imageId, index, onClick })
       videoElement.setAttribute('playsinline', 'true');
       videoElement.setAttribute('webkit-playsinline', 'true');
       
-      // Set lower resolution for mobile
       if (!isIOS) {
         videoElement.width = 480;
         videoElement.height = 360;
@@ -86,7 +76,6 @@ export const VibeMedia: React.FC<VibeImageProps> = ({ imageId, index, onClick })
     }
   };
 
-  // Handle click events
   const handleClick = (e: React.MouseEvent) => {
     if (isVideo) {
       e.preventDefault();
@@ -101,7 +90,6 @@ export const VibeMedia: React.FC<VibeImageProps> = ({ imageId, index, onClick })
       configureVideoPlayback(videoRef.current);
     }
 
-    // Cleanup
     return () => {
       if (videoRef.current) {
         videoRef.current.pause();
@@ -116,8 +104,7 @@ export const VibeMedia: React.FC<VibeImageProps> = ({ imageId, index, onClick })
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
       onClick={handleClick}
-      className={`w-full aspect-[4/3] relative overflow-hidden rounded-lg 
-                 ${!hasError && !isLoading ? 'cursor-pointer' : ''} group`}
+      className="h-full w-full relative overflow-hidden rounded-lg cursor-pointer group"
     >
       {isLoading && (
         <div className="absolute inset-0 bg-gray-900 animate-pulse flex items-center justify-center">
@@ -135,8 +122,8 @@ export const VibeMedia: React.FC<VibeImageProps> = ({ imageId, index, onClick })
           <video
             ref={videoRef}
             src={imageId}
-            className={`w-full h-full object-cover transition-all duration-300 
-                      ${!isLoading ? 'grayscale group-hover:grayscale-0' : 'opacity-0'}`}
+            className="w-full h-full object-cover transition-all duration-300 grayscale group-hover:grayscale-0"
+            style={{ opacity: isLoading ? 0 : 1 }}
             onLoadedData={handleVideoLoadedData}
             onError={handleVideoError}
             muted
@@ -157,8 +144,8 @@ export const VibeMedia: React.FC<VibeImageProps> = ({ imageId, index, onClick })
         <img
           src={imageId}
           alt={`choice ${index + 1}`}
-          className={`w-full h-full object-cover filter transition-all duration-300 
-                    ${!isLoading ? 'grayscale group-hover:grayscale-0 group-hover:scale-105' : 'opacity-0'}`}
+          className="w-full h-full object-cover transition-all duration-300 grayscale group-hover:grayscale-0 group-hover:scale-105"
+          style={{ opacity: isLoading ? 0 : 1 }}
           onLoad={handleImageLoad}
           onError={handleImageError}
           loading={index > 1 ? 'lazy' : 'eager'}

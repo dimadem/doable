@@ -122,7 +122,7 @@ const VibeMatching: React.FC = () => {
 
   return (
     <motion.div 
-      className="min-h-[100svh] bg-black text-white flex flex-col overflow-hidden"
+      className="h-[100svh] bg-black text-white flex flex-col overflow-hidden"
       initial="initial"
       animate="animate"
       exit="exit"
@@ -136,15 +136,17 @@ const VibeMatching: React.FC = () => {
       
       <ProgressBar progress={progress} />
 
-      <main className="flex-1 flex flex-col gap-4 p-4 max-w-md mx-auto w-full">
-        {currentGroup.map((media, index) => (
-          <VibeMedia
-            key={`${media.url}-${index}`}
-            imageId={media.url}
-            index={index}
-            onClick={() => handleImageSelect(media.url)}
-          />
-        ))}
+      <main className="flex-1 flex flex-col gap-2 p-2 max-w-md mx-auto w-full overflow-y-auto">
+        <div className="grid grid-cols-1 gap-2 auto-rows-fr h-full">
+          {currentGroup.map((media, index) => (
+            <VibeMedia
+              key={`${media.url}-${index}`}
+              imageId={media.url}
+              index={index}
+              onClick={() => handleImageSelect(media.url)}
+            />
+          ))}
+        </div>
       </main>
     </motion.div>
   );
