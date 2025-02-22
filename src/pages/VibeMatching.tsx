@@ -133,8 +133,9 @@ const VibeMatching: React.FC = () => {
       exit="exit"
       variants={pageVariants}
     >
-      <header className="p-8">
+      <header className="p-8 flex justify-between items-center">
         <BackButton onClick={() => navigate('/')} />
+        <h1 className="font-mono text-lg">Check the Vibe</h1>
       </header>
 
       <main className="flex-1 flex flex-col justify-center px-8 gap-6">
