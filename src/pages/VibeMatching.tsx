@@ -76,7 +76,7 @@ const BackButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
     className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
   >
     <ArrowLeft size={20} />
-    <span className="font-mono">Back</span>
+    <span className="font-mono">back</span>
   </button>
 );
 
@@ -91,7 +91,7 @@ const VibeImage: React.FC<VibeImageProps> = ({ imageId, index, onClick }) => (
   >
     <img
       src={`https://images.unsplash.com/${imageId}?auto=format&fit=crop&w=800&h=800`}
-      alt={`Choice ${index + 1}`}
+      alt={`choice ${index + 1}`}
       className="w-full h-full object-cover filter grayscale transition-all duration-300 group-hover:grayscale-0 group-hover:scale-105"
     />
     <div className="absolute inset-0 bg-black bg-opacity-40 group-hover:bg-opacity-20 transition-all duration-300" />
@@ -135,7 +135,7 @@ const VibeMatching: React.FC = () => {
     >
       <header className="p-8 flex justify-between items-center">
         <BackButton onClick={() => navigate('/')} />
-        <h1 className="font-mono text-lg">Check the Vibe</h1>
+        <h1 className="font-mono text-lg px-4 py-2 bg-white text-black rounded-md">check the vibe</h1>
       </header>
 
       <main className="flex-1 flex flex-col justify-center px-8 gap-6">
