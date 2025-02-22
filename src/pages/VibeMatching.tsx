@@ -29,16 +29,16 @@ const VibeMatching: React.FC = () => {
         
         let personalityName = 'hyperthymic';
         if (step === 2) personalityName = 'emotive';
-        if (step === 3) personalityName = 'persistend_paranoid';
+        if (step === 3) personalityName = 'persistent_paranoid'; // Fixed typo here
 
         const { data, error: supabaseError } = await supabase
           .from('personalities')
           .select('name, url_array')
           .eq('name', personalityName)
-          .single();
+          .maybeSingle(); // Changed from single() to maybeSingle() to handle no results more gracefully
 
         if (supabaseError) throw supabaseError;
-        if (!data) throw new Error('No personality data found');
+        if (!data) throw new Error(`No personality data found for ${personalityName}`);
 
         setCurrentPersonality(data);
       } catch (err) {
