@@ -22,15 +22,14 @@ const VibeMatching: React.FC = () => {
   const getCurrentImages = () => {
     if (!personalities.length) return [];
     
-    // Get the first 3 personalities only
-    const limitedPersonalities = personalities.slice(0, 3);
-    
-    return limitedPersonalities
+    // Get an image from each of the first 3 personalities for the current step
+    return personalities
+      .slice(0, 3) // Take first 3 personalities
       .map(personality => ({
         name: personality.name,
         imageId: personality.url_array[step - 1] || ''
       }))
-      .filter(item => item.imageId);
+      .filter(item => item.imageId); // Only show items that have an image
   };
 
   const handleImageClick = async (selectedPersonality: string) => {
@@ -57,6 +56,11 @@ const VibeMatching: React.FC = () => {
   if (error || personalities.length === 0) return <ErrorState error={error} onRetry={() => window.location.reload()} />;
 
   const currentImages = getCurrentImages();
+
+  // Ensure we have exactly 3 images before proceeding
+  if (currentImages.length !== 3) {
+    return <ErrorState error="Not enough personality images available" onRetry={() => window.location.reload()} />;
+  }
 
   return (
     <motion.div 
