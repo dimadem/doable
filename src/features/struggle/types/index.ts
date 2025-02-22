@@ -1,4 +1,6 @@
 
+import { CoreTraits, BehaviorPatterns } from '@/features/vibe-matching/types';
+
 export interface SessionData {
   selections: {
     step: number;
@@ -9,8 +11,8 @@ export interface SessionData {
 
 export interface PersonalityData {
   name: string;
-  core_traits: Record<string, any> | null;
-  behavior_patterns: Record<string, any> | null;
+  core_traits: CoreTraits | null;
+  behavior_patterns: BehaviorPatterns | null;
 }
 
 export interface SessionResponse {

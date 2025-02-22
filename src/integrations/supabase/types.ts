@@ -104,7 +104,6 @@ export type Database = {
           agent_settings: Json | null
           id: string
           other_metadata: string | null
-          personality_id: string
           personality_name: string
           voice_name: string | null
         }
@@ -113,7 +112,6 @@ export type Database = {
           agent_settings?: Json | null
           id?: string
           other_metadata?: string | null
-          personality_id?: string
           personality_name: string
           voice_name?: string | null
         }
@@ -122,7 +120,6 @@ export type Database = {
           agent_settings?: Json | null
           id?: string
           other_metadata?: string | null
-          personality_id?: string
           personality_name?: string
           voice_name?: string | null
         }

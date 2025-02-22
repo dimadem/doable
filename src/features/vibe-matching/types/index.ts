@@ -24,10 +24,26 @@ export interface SessionData {
   finalPersonality: string;
 }
 
+export interface CoreTraits {
+  adaptability?: number;
+  empathy?: number;
+  resilience?: number;
+  creativity?: number;
+  analytical?: number;
+}
+
+export interface BehaviorPatterns {
+  communication_style?: 'direct' | 'indirect' | 'analytical' | 'intuitive';
+  problem_solving?: 'systematic' | 'creative' | 'collaborative' | 'independent';
+  stress_response?: 'adaptive' | 'reactive' | 'proactive' | 'avoidant';
+  learning_preference?: 'visual' | 'auditory' | 'kinesthetic' | 'reading/writing';
+  work_style?: 'structured' | 'flexible' | 'deadline-driven' | 'self-paced';
+}
+
 export interface PersonalityData {
   name: string;
-  core_traits: Record<string, any> | null;
-  behavior_patterns: Record<string, any> | null;
+  core_traits: CoreTraits | null;
+  behavior_patterns: BehaviorPatterns | null;
 }
 
 export interface SessionResponse {
