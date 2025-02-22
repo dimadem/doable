@@ -9,25 +9,10 @@ export const VibeMedia: React.FC<VibeImageProps> = ({ imageId, index, onClick })
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [isVideo, setIsVideo] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const isMobile = useIsMobile();
-
-  // Function to modify video URL for mobile optimization
-  const getOptimizedVideoUrl = (url: string): string => {
-    if (!isVideo || !isMobile) return url;
-
-    try {
-      const urlObj = new URL(url);
-      // Add quality parameter for mobile devices
-      // Assuming the video service accepts these parameters
-      urlObj.searchParams.set('quality', 'low');
-      urlObj.searchParams.set('optimize', 'true');
-      return urlObj.toString();
-    } catch (e) {
-      console.error('Failed to optimize video URL:', e);
-      return url;
-    }
-  };
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   // Determine if the media is a video based on file extension
   useEffect(() => {
@@ -35,10 +20,32 @@ export const VibeMedia: React.FC<VibeImageProps> = ({ imageId, index, onClick })
     setIsVideo(isVideoFile);
   }, [imageId]);
 
+  // Handle video playback
+  const toggleVideoPlayback = async () => {
+    if (!videoRef.current) return;
+    
+    try {
+      if (isPlaying) {
+        await videoRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        await videoRef.current.play();
+        setIsPlaying(true);
+      }
+    } catch (error) {
+      console.error('Video playback error:', error);
+    }
+  };
+
   // Handle video loading
   const handleVideoLoadedData = () => {
     setIsLoading(false);
     setHasError(false);
+    
+    // Start playing on non-iOS mobile devices
+    if (isMobile && !isIOS && videoRef.current) {
+      videoRef.current.play().catch(console.error);
+    }
   };
 
   // Handle video error
@@ -61,29 +68,54 @@ export const VibeMedia: React.FC<VibeImageProps> = ({ imageId, index, onClick })
     console.error(`Failed to load media: ${imageId}`);
   };
 
-  // Optimize video playback settings
+  // Configure video for optimal playback
   const configureVideoPlayback = (videoElement: HTMLVideoElement) => {
+    videoElement.playsInline = true;
+    videoElement.muted = true;
+    videoElement.preload = isMobile ? "metadata" : "auto";
+    
     if (isMobile) {
-      videoElement.preload = "metadata";
-      videoElement.playsInline = true;
-      // Lower quality for mobile
-      videoElement.width = 480;
-      videoElement.height = 360;
+      videoElement.setAttribute('playsinline', 'true');
+      videoElement.setAttribute('webkit-playsinline', 'true');
+      
+      // Set lower resolution for mobile
+      if (!isIOS) {
+        videoElement.width = 480;
+        videoElement.height = 360;
+      }
     }
+  };
+
+  // Handle click events
+  const handleClick = (e: React.MouseEvent) => {
+    if (isVideo) {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleVideoPlayback();
+    }
+    onClick?.();
   };
 
   useEffect(() => {
     if (videoRef.current) {
       configureVideoPlayback(videoRef.current);
     }
-  }, [isMobile]);
+
+    // Cleanup
+    return () => {
+      if (videoRef.current) {
+        videoRef.current.pause();
+        setIsPlaying(false);
+      }
+    };
+  }, [isMobile, isIOS]);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
-      onClick={!hasError ? onClick : undefined}
+      onClick={handleClick}
       className={`w-full aspect-[4/3] relative overflow-hidden rounded-lg 
                  ${!hasError && !isLoading ? 'cursor-pointer' : ''} group`}
     >
@@ -102,7 +134,7 @@ export const VibeMedia: React.FC<VibeImageProps> = ({ imageId, index, onClick })
         <>
           <video
             ref={videoRef}
-            src={getOptimizedVideoUrl(imageId)}
+            src={imageId}
             className={`w-full h-full object-cover transition-all duration-300 
                       ${!isLoading ? 'grayscale group-hover:grayscale-0' : 'opacity-0'}`}
             onLoadedData={handleVideoLoadedData}
@@ -110,13 +142,16 @@ export const VibeMedia: React.FC<VibeImageProps> = ({ imageId, index, onClick })
             muted
             playsInline
             loop
-            onMouseEnter={() => videoRef.current?.play()}
-            onMouseLeave={() => videoRef.current?.pause()}
-            preload="metadata"
+            preload={isMobile ? "metadata" : "auto"}
           />
           <div className="absolute bottom-2 right-2">
             <Film className="w-4 h-4 text-white opacity-50" />
           </div>
+          {isIOS && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 pointer-events-none">
+              <span className="text-white text-sm">Tap to play</span>
+            </div>
+          )}
         </>
       ) : (
         <img

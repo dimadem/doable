@@ -20,6 +20,7 @@ export type Database = {
           id: string
           metadata: Json | null
           name: string
+          sound_ai_prompt: Json | null
           url_array: string[] | null
           url_metadata: Json[] | null
           visual_style: Json | null
@@ -34,6 +35,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           name?: string
+          sound_ai_prompt?: Json | null
           url_array?: string[] | null
           url_metadata?: Json[] | null
           visual_style?: Json | null
@@ -48,6 +50,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           name?: string
+          sound_ai_prompt?: Json | null
           url_array?: string[] | null
           url_metadata?: Json[] | null
           visual_style?: Json | null
