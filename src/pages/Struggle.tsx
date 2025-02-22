@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Square } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const pageVariants = {
@@ -52,7 +52,7 @@ const Struggle = () => {
         <h1 className="font-mono text-lg px-4 py-2 bg-white text-black">struggle</h1>
       </header>
 
-      <main className="flex-1 flex flex-col items-center justify-center px-8">
+      <main className="flex-1 flex flex-col items-center justify-center px-8 gap-8">
         <div className="relative w-64 h-64 flex items-center justify-center">
           <motion.div 
             className="absolute inset-0 border-2 border-white/20 rounded-lg"
@@ -68,6 +68,16 @@ const Struggle = () => {
           />
           <span className="font-mono text-xl">coming soon</span>
         </div>
+
+        <motion.button
+          className="flex flex-col items-center gap-2 p-6 border-2 border-white/20 rounded-lg 
+                     hover:bg-white/5 transition-colors"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <Square className="w-8 h-8" />
+          <span className="font-mono text-sm">Hard Task</span>
+        </motion.button>
       </main>
     </motion.div>
   );
