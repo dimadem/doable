@@ -1,13 +1,44 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Square } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../components/layouts/PageHeader';
 import { pageVariants } from '../animations/pageTransitions';
+import { supabase } from '../integrations/supabase/client';
 
 const Struggle: React.FC = () => {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchLatestSession = async () => {
+      const { data: sessionData, error: sessionError } = await supabase
+        .from('user_sessions')
+        .select(`
+          session_data,
+          personalities (
+            name
+          )
+        `)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (sessionError) {
+        console.error('Error fetching session:', sessionError);
+        return;
+      }
+
+      if (sessionData) {
+        console.log('Final Personality Result:', {
+          personality: sessionData.personalities?.name,
+          sessionData: sessionData.session_data
+        });
+      }
+    };
+
+    fetchLatestSession();
+  }, []);
 
   return (
     <motion.div 
