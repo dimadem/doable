@@ -1,75 +1,23 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
 import { PageHeader } from '../components/layouts/PageHeader';
 import { VibeImage } from '../components/vibe/VibeImage';
 import { ProgressBar } from '../components/vibe/ProgressBar';
+import { LoadingState } from '../components/vibe/LoadingState';
+import { ErrorState } from '../components/vibe/ErrorState';
 import { pageVariants } from '../animations/pageTransitions';
-import { supabase } from '../integrations/supabase/client';
+import { usePersonalities } from '../hooks/usePersonalities';
+import { determinePersonality, saveUserSession } from '../services/personalityService';
 import { MAX_STEPS } from '../constants/vibeGroups';
-import { Personality, SessionSelection } from '../types/vibe';
+import { SessionSelection } from '../types/vibe';
 
 const VibeMatching: React.FC = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [personalities, setPersonalities] = useState<Personality[]>([]);
   const [selections, setSelections] = useState<SessionSelection[]>([]);
-
-  useEffect(() => {
-    const fetchPersonalities = async () => {
-      setLoading(true);
-      
-      const { data, error } = await supabase
-        .from('personalities')
-        .select('id, name, url_array');
-
-      if (error) {
-        setError(error.message);
-        setLoading(false);
-        return;
-      }
-
-      if (!data || data.length === 0) {
-        setError('No personality data available');
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const processedData = data.map(personality => {
-          try {
-            let parsedArray: string[] = [];
-            if (typeof personality.url_array === 'string') {
-              parsedArray = JSON.parse(personality.url_array);
-            } else if (Array.isArray(personality.url_array)) {
-              parsedArray = personality.url_array;
-            }
-            return {
-              ...personality,
-              url_array: parsedArray
-            };
-          } catch (parseError) {
-            return {
-              ...personality,
-              url_array: []
-            };
-          }
-        });
-
-        setPersonalities(processedData);
-      } catch (processError) {
-        setError('Error processing personality data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPersonalities();
-  }, []);
+  const { personalities, loading, error } = usePersonalities();
 
   const getCurrentImages = () => {
     if (!personalities.length) return [];
@@ -80,57 +28,6 @@ const VibeMatching: React.FC = () => {
         imageId: personality.url_array[step - 1] || ''
       }))
       .filter(item => item.imageId);
-  };
-
-  const determinePersonality = (selections: SessionSelection[]): string => {
-    const counts = selections.reduce((acc, selection) => {
-      acc[selection.personalityName] = (acc[selection.personalityName] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    let maxCount = 0;
-    let dominantPersonality = '';
-    
-    Object.entries(counts).forEach(([personality, count]) => {
-      if (count > maxCount) {
-        maxCount = count;
-        dominantPersonality = personality;
-      }
-    });
-
-    return dominantPersonality;
-  };
-
-  const saveUserSession = async (personalityName: string) => {
-    try {
-      const personality = personalities.find(p => p.name === personalityName);
-      
-      if (!personality) {
-        toast.error('Could not determine personality type');
-        return;
-      }
-
-      const { error: sessionError } = await supabase
-        .from('user_sessions')
-        .insert([
-          {
-            session_data: {
-              selections,
-              finalPersonality: personalityName
-            },
-            personality_id: personality.id
-          }
-        ]);
-
-      if (sessionError) {
-        toast.error('Failed to save session data');
-        return;
-      }
-
-      toast.success(`Your personality type: ${personalityName}`);
-    } catch (error) {
-      toast.error('An error occurred while saving the session');
-    }
   };
 
   const handleImageClick = async (selectedPersonality: string) => {
@@ -146,43 +43,15 @@ const VibeMatching: React.FC = () => {
       setStep(step + 1);
     } else {
       const finalPersonality = determinePersonality(updatedSelections);
-      await saveUserSession(finalPersonality);
-      navigate('/struggle', { replace: true });
+      const success = await saveUserSession(finalPersonality, updatedSelections, personalities);
+      if (success) {
+        navigate('/struggle', { replace: true });
+      }
     }
   };
 
-  if (loading) return (
-    <motion.div 
-      className="min-h-[100svh] bg-black text-white flex flex-col items-center justify-center"
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      variants={pageVariants}
-    >
-      <div className="animate-pulse">Loading...</div>
-    </motion.div>
-  );
-
-  if (error || personalities.length === 0) return (
-    <motion.div 
-      className="min-h-[100svh] bg-black text-white flex flex-col items-center justify-center"
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      variants={pageVariants}
-    >
-      <div className="text-red-500 max-w-md text-center px-4">
-        <p className="text-lg font-bold mb-2">Error Loading Personalities</p>
-        <p>{error || 'No personality data available'}</p>
-      </div>
-      <button 
-        onClick={() => window.location.reload()} 
-        className="mt-4 px-4 py-2 bg-white text-black rounded hover:bg-gray-200"
-      >
-        Retry
-      </button>
-    </motion.div>
-  );
+  if (loading) return <LoadingState />;
+  if (error || personalities.length === 0) return <ErrorState error={error} onRetry={() => window.location.reload()} />;
 
   const currentImages = getCurrentImages();
 
