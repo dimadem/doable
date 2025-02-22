@@ -13,16 +13,16 @@ import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import ProgressBar from '../components/ProgressBar';
 import VibeImage from '../components/VibeImage';
-import { vibeGroups } from '../constants';
+import { VIBE_GROUPS } from '../constants';
 
 const VibeMatching: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [step, setStep] = useState(0);
   const [selections, setSelections] = useState<SessionSelection[]>([]);
-  const { data: personalities, isLoading, error, refetch } = usePersonalities();
+  const { personalities, loading, error } = usePersonalities();
 
-  const progress = Math.min((step / vibeGroups.length) * 100, 100);
+  const progress = Math.min((step / Object.keys(VIBE_GROUPS).length) * 100, 100);
 
   const handleImageSelect = async (personalityName: string) => {
     const newSelection: SessionSelection = {
@@ -33,7 +33,7 @@ const VibeMatching: React.FC = () => {
     const updatedSelections = [...selections, newSelection];
     setSelections(updatedSelections);
 
-    if (step < vibeGroups.length - 1) {
+    if (step < Object.keys(VIBE_GROUPS).length - 1) {
       setStep(step + 1);
     } else {
       try {
@@ -59,11 +59,11 @@ const VibeMatching: React.FC = () => {
     }
   };
 
-  if (isLoading) return <LoadingState />;
-  if (error) return <ErrorState error={error.message} onRetry={refetch} />;
-  if (!personalities) return <ErrorState error="No personality data available" onRetry={refetch} />;
+  if (loading) return <LoadingState />;
+  if (error) return <ErrorState error={error} onRetry={() => window.location.reload()} />;
+  if (!personalities) return <ErrorState error="No personality data available" onRetry={() => window.location.reload()} />;
 
-  const currentGroup = vibeGroups[step];
+  const currentGroup = VIBE_GROUPS[`group${step}`] || VIBE_GROUPS.initial;
 
   return (
     <motion.div 
@@ -73,12 +73,15 @@ const VibeMatching: React.FC = () => {
       exit="exit"
       variants={pageVariants}
     >
-      <PageHeader title="vibe matching" />
+      <PageHeader 
+        title="vibe matching"
+        onBack={() => navigate('/')}
+      />
       
       <ProgressBar progress={progress} />
 
       <main className="flex-1 grid grid-cols-2 gap-4 p-4">
-        {currentGroup.map((imageId, index) => (
+        {currentGroup.images.map((imageId, index) => (
           <VibeImage
             key={imageId}
             imageId={imageId}

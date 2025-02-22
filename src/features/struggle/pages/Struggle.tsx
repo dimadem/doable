@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Square } from 'lucide-react';
@@ -29,7 +28,6 @@ const Struggle: React.FC = () => {
     }
   });
 
-  // Log personality data with proper type annotations
   if (sessionData?.personalities) {
     const personalityAnalysis: PersonalityAnalysis = {
       type: sessionData.personalities.name,
