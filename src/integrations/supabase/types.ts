@@ -54,34 +54,40 @@ export type Database = {
       user_sessions: {
         Row: {
           device_info: Json | null
+          ended_at: string | null
           id: string
           personality_id: string | null
           personality_key: string | null
           session_data: Json | null
           session_feedback: Json | null
           session_id: string | null
+          started_at: string | null
           struggle_type: string | null
           user_id: string | null
         }
         Insert: {
           device_info?: Json | null
+          ended_at?: string | null
           id?: string
           personality_id?: string | null
           personality_key?: string | null
           session_data?: Json | null
           session_feedback?: Json | null
           session_id?: string | null
+          started_at?: string | null
           struggle_type?: string | null
           user_id?: string | null
         }
         Update: {
           device_info?: Json | null
+          ended_at?: string | null
           id?: string
           personality_id?: string | null
           personality_key?: string | null
           session_data?: Json | null
           session_feedback?: Json | null
           session_id?: string | null
+          started_at?: string | null
           struggle_type?: string | null
           user_id?: string | null
         }
