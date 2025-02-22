@@ -1,8 +1,7 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from "@/integrations/supabase/client";
-import { Session } from '@supabase/supabase-js';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from "@/components/ui/use-toast";
 
 interface AuthGuardProps {
@@ -11,46 +10,20 @@ interface AuthGuardProps {
 
 export const AuthGuard = ({ children }: AuthGuardProps) => {
   const navigate = useNavigate();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const { session, loading } = useAuth();
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
-          toast({
-            variant: "destructive",
-            title: "Authentication Required",
-            description: "Please log in to access this page."
-          });
-          navigate('/');
-          return;
-        }
+    if (!loading && !session) {
+      toast({
+        variant: "destructive",
+        title: "Authentication Required",
+        description: "Please log in to access this page."
+      });
+      navigate('/');
+    }
+  }, [session, loading, navigate]);
 
-        setIsAuthenticated(true);
-      } catch (error) {
-        console.error('Auth check error:', error);
-        navigate('/');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        setIsAuthenticated(false);
-        navigate('/');
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-black">
         <div className="font-mono text-white">Loading...</div>
@@ -58,5 +31,5 @@ export const AuthGuard = ({ children }: AuthGuardProps) => {
     );
   }
 
-  return isAuthenticated ? <>{children}</> : null;
+  return session ? <>{children}</> : null;
 };

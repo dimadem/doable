@@ -2,9 +2,8 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/components/ui/use-toast";
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AuthDialogProps {
   isOpen: boolean;
@@ -13,45 +12,30 @@ interface AuthDialogProps {
 
 const AuthDialog = ({ isOpen, onOpenChange }: AuthDialogProps) => {
   const navigate = useNavigate();
+  const { signIn, signUp } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
+    
     try {
-      const response = isRegistering 
-        ? await supabase.auth.signUp({
-            email,
-            password,
-            options: { emailRedirectTo: `${window.location.origin}/vibe-matching` }
-          })
-        : await supabase.auth.signInWithPassword({ email, password });
-
-      if (response.error) {
-        toast({
-          variant: "destructive",
-          title: "Authentication Error",
-          description: response.error.message
-        });
-      } else if (isRegistering) {
-        toast({
-          title: "Check your email",
-          description: "We've sent you a verification link."
-        });
+      if (isRegistering) {
+        await signUp(email, password);
         onOpenChange(false);
-      } else if (response.data.session) {
-        localStorage.setItem('userSession', JSON.stringify(response.data.session));
+      } else {
+        await signIn(email, password);
         onOpenChange(false);
         navigate('/vibe-matching');
       }
-    } catch (err) {
-      console.error('Authentication error:', err);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "An unexpected error occurred. Please try again."
-      });
+    } catch (error) {
+      // Error handling is done in the auth context
+      console.error('Auth error:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -70,6 +54,7 @@ const AuthDialog = ({ isOpen, onOpenChange }: AuthDialogProps) => {
             onChange={(e) => setEmail(e.target.value)}
             className="font-mono bg-transparent border-2 border-white text-white placeholder:text-gray-400"
             required
+            disabled={isLoading}
           />
           <Input
             type="password"
@@ -78,20 +63,24 @@ const AuthDialog = ({ isOpen, onOpenChange }: AuthDialogProps) => {
             onChange={(e) => setPassword(e.target.value)}
             className="font-mono bg-transparent border-2 border-white text-white placeholder:text-gray-400"
             required
+            disabled={isLoading}
           />
           
           <button
             type="submit"
+            disabled={isLoading}
             className="w-full font-mono px-8 py-4 bg-black text-white border-2 border-white 
-                     font-bold text-lg transition-all duration-300 hover:bg-white hover:text-black"
+                     font-bold text-lg transition-all duration-300 hover:bg-white hover:text-black
+                     disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isRegistering ? 'Sign Up' : 'Sign In'}
+            {isLoading ? 'Processing...' : (isRegistering ? 'Sign Up' : 'Sign In')}
           </button>
           
           <button
             type="button"
             onClick={() => setIsRegistering(!isRegistering)}
             className="w-full font-mono text-sm text-gray-400 hover:text-white transition-colors"
+            disabled={isLoading}
           >
             {isRegistering ? 'Already have an account? Sign in' : 'Need an account? Sign up'}
           </button>
