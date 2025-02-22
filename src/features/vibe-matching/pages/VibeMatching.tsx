@@ -1,5 +1,5 @@
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/layouts/PageHeader';
@@ -11,16 +11,34 @@ import { useVibeState } from '../hooks/useVibeState';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import ProgressBar from '../components/ProgressBar';
-import VibeImage from '../components/VibeImage';
-import { VIBE_GROUPS } from '../constants';
+import VibeMedia from '../components/VibeMedia';
 
-const TOTAL_STEPS = Object.keys(VIBE_GROUPS).length - 1; // Subtract 1 for 'initial'
+const MEDIA_PER_STEP = 2;
 
 const VibeMatching: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { personalities, loading, error: loadError } = usePersonalities();
   const { step, selections, isComplete, error, selectVibe, setError, reset } = useVibeState();
+
+  // Group media URLs from personalities for each step
+  const mediaGroups = useMemo(() => {
+    if (!personalities?.length) return [];
+    
+    const allMedia = personalities.flatMap(p => 
+      (p.url_array || []).map(url => ({ url, personalityName: p.name }))
+    );
+
+    // Shuffle media to randomize choices
+    const shuffled = [...allMedia].sort(() => Math.random() - 0.5);
+    
+    // Group into pairs for each step
+    return Array.from({ length: Math.floor(allMedia.length / MEDIA_PER_STEP) }, (_, i) => 
+      shuffled.slice(i * MEDIA_PER_STEP, (i + 1) * MEDIA_PER_STEP)
+    );
+  }, [personalities]);
+
+  const TOTAL_STEPS = mediaGroups.length;
 
   const handleImageSelect = useCallback(async (imageUrl: string) => {
     try {
@@ -47,14 +65,15 @@ const VibeMatching: React.FC = () => {
         variant: "destructive"
       });
     }
-  }, [personalities, step, selections, selectVibe, setError, toast, navigate]);
+  }, [personalities, step, selections, selectVibe, setError, toast, navigate, TOTAL_STEPS]);
 
   if (loading) return <LoadingState />;
   if (loadError || error) return <ErrorState error={error || loadError} onRetry={reset} />;
   if (!personalities?.length) return <ErrorState error="No personality data available" onRetry={reset} />;
+  if (!mediaGroups.length) return <ErrorState error="No media content available" onRetry={reset} />;
 
   const progress = (step / TOTAL_STEPS) * 100;
-  const currentGroup = VIBE_GROUPS[`group${step}`] || VIBE_GROUPS.initial;
+  const currentGroup = mediaGroups[step] || [];
 
   return (
     <motion.div 
@@ -72,12 +91,12 @@ const VibeMatching: React.FC = () => {
       <ProgressBar progress={progress} />
 
       <main className="flex-1 grid grid-cols-2 gap-4 p-4">
-        {currentGroup.images.map((imageUrl, index) => (
-          <VibeImage
-            key={imageUrl}
-            imageId={imageUrl}
+        {currentGroup.map((media, index) => (
+          <VibeMedia
+            key={media.url}
+            imageId={media.url}
             index={index}
-            onClick={() => handleImageSelect(imageUrl)}
+            onClick={() => handleImageSelect(media.url)}
           />
         ))}
       </main>
