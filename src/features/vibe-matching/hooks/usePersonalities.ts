@@ -28,7 +28,8 @@ export const usePersonalities = () => {
         throw new Error('Not enough valid personalities available (need at least 3)');
       }
 
-      return validPersonalities as Personality[];
+      // Now the data already matches our Personality type
+      return validPersonalities;
     },
     retry: 1,
     staleTime: 5 * 60 * 1000,

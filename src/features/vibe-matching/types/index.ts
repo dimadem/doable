@@ -56,9 +56,9 @@ export interface Personality {
   id: string;
   name: string;
   url_array: string[] | null;
-  url_metadata: MediaMetadata[] | null;
-  core_traits: CoreTraits | null;
-  behavior_patterns: BehaviorPatterns | null;
+  url_metadata: Json[] | null; // Changed from MediaMetadata[] to Json[]
+  core_traits: Json | null;
+  behavior_patterns: Json | null;
   description?: string | null;
   created_at?: string | null;
 }

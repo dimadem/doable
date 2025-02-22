@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { SessionSelection, Personality } from '../types';
+import { SessionSelection, Personality, SessionData } from '../types';
 import { Json } from '@/integrations/supabase/types';
 import { toast } from '@/hooks/use-toast';
 
@@ -29,7 +29,7 @@ export const saveUserSession = async (
   personalities: Personality[]
 ): Promise<void> => {
   try {
-    const sessionData: Json = {
+    const sessionData: SessionData = {
       selections: selections.map(s => ({
         step: s.step,
         personalityName: s.personalityName
@@ -41,7 +41,7 @@ export const saveUserSession = async (
       .from('user_sessions')
       .insert({
         personality_key: dominantPersonality,
-        session_data: sessionData,
+        session_data: sessionData as Json,
         started_at: new Date().toISOString()
       });
 
