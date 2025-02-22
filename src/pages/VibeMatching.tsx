@@ -32,16 +32,37 @@ const VibeMatching: React.FC = () => {
         const { data, error: supabaseError } = await supabase
           .from('personalities')
           .select('name, url_array')
-          .in('name', PERSONALITY_TYPES)
-          .maybeSingle();
+          .in('name', PERSONALITY_TYPES);
 
         if (supabaseError) throw supabaseError;
-        if (!data) throw new Error('No personality data found');
+        
+        if (!data || data.length === 0) {
+          throw new Error(
+            `Failed to load personality data. Looking for: ${PERSONALITY_TYPES.join(', ')}`
+          );
+        }
 
-        setPersonalities([data].flat());
+        // Transform the string url_array into string[]
+        const processedData = data.map(personality => ({
+          ...personality,
+          url_array: personality.url_array ? JSON.parse(personality.url_array) : []
+        }));
+
+        // Check for missing personalities
+        const foundNames = processedData.map(p => p.name);
+        const missingNames = PERSONALITY_TYPES.filter(name => !foundNames.includes(name));
+        
+        if (missingNames.length > 0) {
+          throw new Error(
+            `Incomplete personality data. Missing: ${missingNames.join(', ')}. ` +
+            `Found: ${foundNames.join(', ')}`
+          );
+        }
+
+        setPersonalities(processedData);
       } catch (err) {
         console.error('Error fetching personalities:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load images');
+        setError(err instanceof Error ? err.message : 'An unexpected error occurred while loading personalities');
       } finally {
         setLoading(false);
       }
@@ -53,7 +74,7 @@ const VibeMatching: React.FC = () => {
   const getCurrentImages = () => {
     return personalities.map(personality => ({
       name: personality.name,
-      imageId: personality.url_array?.[step - 1] || ''
+      imageId: Array.isArray(personality.url_array) ? personality.url_array[step - 1] || '' : ''
     })).filter(item => item.imageId);
   };
 
@@ -88,7 +109,10 @@ const VibeMatching: React.FC = () => {
         exit="exit"
         variants={pageVariants}
       >
-        <div className="text-red-500">{error || 'Failed to load images'}</div>
+        <div className="text-red-500 max-w-md text-center px-4">
+          <p className="text-lg font-bold mb-2">Error Loading Personalities</p>
+          <p>{error || 'No personality data available'}</p>
+        </div>
         <button 
           onClick={() => window.location.reload()} 
           className="mt-4 px-4 py-2 bg-white text-black rounded hover:bg-gray-200"
