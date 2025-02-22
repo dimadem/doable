@@ -17,6 +17,9 @@ const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
 const generateSessionId = () => crypto.randomUUID();
 
+// Default personality for initial session
+const DEFAULT_PERSONALITY = 'neutral';
+
 export const SessionProvider = ({ children }: { children: React.ReactNode }) => {
   const [state, setState] = useState<SessionState>({
     sessionId: null,
@@ -36,8 +39,11 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
       const { error } = await supabase
         .from('user_sessions')
         .insert({
-          session_id: sessionId,
-          started_at: new Date().toISOString()
+          id: sessionId, // Using the session ID as the primary key
+          personality_key: DEFAULT_PERSONALITY, // Required field
+          started_at: new Date().toISOString(),
+          session_data: {}, // Initialize empty session data
+          device_info: {} // Initialize empty device info
         });
 
       if (error) throw error;
