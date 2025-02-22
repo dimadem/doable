@@ -1,41 +1,70 @@
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 
-interface AuthContextType {
+interface AuthState {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  error: string | null;
+}
+
+interface AuthContextType extends AuthState {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  clearError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [authState, setAuthState] = useState<AuthState>({
+    session: null,
+    user: null,
+    loading: true,
+    error: null
+  });
+
+  const clearError = useCallback(() => {
+    setAuthState(prev => ({ ...prev, error: null }));
+  }, []);
 
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
+      setAuthState(prev => ({
+        ...prev,
+        session,
+        user: session?.user ?? null,
+        loading: false
+      }));
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
+      setAuthState(prev => ({
+        ...prev,
+        session,
+        user: session?.user ?? null,
+        loading: false
+      }));
     });
 
     return () => subscription.unsubscribe();
+  }, []);
+
+  const handleAuthError = useCallback((error: any) => {
+    const errorMessage = error?.message || 'An unexpected error occurred';
+    setAuthState(prev => ({ ...prev, error: errorMessage }));
+    toast({
+      variant: "destructive",
+      title: "Authentication Error",
+      description: errorMessage
+    });
+    throw error;
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -46,13 +75,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         title: "Welcome back!",
         description: "You have successfully signed in."
       });
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Authentication Error",
-        description: error.message
-      });
-      throw error;
+    } catch (error) {
+      handleAuthError(error);
     }
   };
 
@@ -70,13 +94,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         title: "Welcome!",
         description: "Please check your email to verify your account."
       });
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Registration Error",
-        description: error.message
-      });
-      throw error;
+    } catch (error) {
+      handleAuthError(error);
     }
   };
 
@@ -88,24 +107,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         title: "Signed out",
         description: "You have been successfully signed out."
       });
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to sign out. Please try again."
-      });
-      throw error;
+    } catch (error) {
+      handleAuthError(error);
     }
   };
 
   return (
     <AuthContext.Provider value={{
-      session,
-      user,
-      loading,
+      ...authState,
       signIn,
       signUp,
-      signOut
+      signOut,
+      clearError
     }}>
       {children}
     </AuthContext.Provider>
