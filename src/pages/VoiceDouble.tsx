@@ -1,54 +1,13 @@
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Pause } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { BackButton } from '../components/vibe/BackButton';
-import { LogoutButton } from '../components/auth/LogoutButton';
+import { PageHeader } from '../components/layouts/PageHeader';
+import { pageVariants, pulseVariants } from '../animations/pageTransitions';
+import type { StatusIndicatorProps, WaveformVisualizationProps } from '../types/vibe';
 
-const pageVariants = {
-  initial: { 
-    opacity: 0, 
-    y: 20 
-  },
-  animate: {
-    opacity: 1,
-    y: 0,
-    transition: { 
-      duration: 0.5, 
-      ease: "easeOut" 
-    }
-  },
-  exit: {
-    opacity: 0,
-    y: -20,
-    transition: { 
-      duration: 0.3 
-    }
-  }
-};
-
-const pulseVariants = {
-  idle: {
-    scale: [1, 1.02, 1],
-    opacity: [0.5, 0.7, 0.5],
-    transition: {
-      duration: 4,
-      repeat: Infinity,
-      ease: "easeInOut"
-    }
-  },
-  active: {
-    scale: [1, 1.05, 1],
-    opacity: [0.6, 0.9, 0.6],
-    transition: {
-      duration: 3,
-      repeat: Infinity,
-      ease: "easeInOut"
-    }
-  }
-};
-
-const StatusIndicator = ({ status }: { status: 'idle' | 'connecting' | 'processing' | 'responding' }) => {
+const StatusIndicator: React.FC<StatusIndicatorProps> = ({ status }) => {
   const statusColors = {
     idle: 'bg-purple-500',
     connecting: 'bg-blue-500',
@@ -64,7 +23,7 @@ const StatusIndicator = ({ status }: { status: 'idle' | 'connecting' | 'processi
   );
 };
 
-const WaveformVisualization = ({ isActive }: { isActive: boolean }) => (
+const WaveformVisualization: React.FC<WaveformVisualizationProps> = ({ isActive }) => (
   <div className="absolute inset-0 flex items-center justify-center">
     <div className="flex items-center gap-1 h-full">
       {Array.from({ length: 12 }).map((_, i) => (
@@ -86,9 +45,9 @@ const WaveformVisualization = ({ isActive }: { isActive: boolean }) => (
   </div>
 );
 
-const VoiceDouble = () => {
+const VoiceDouble: React.FC = () => {
   const navigate = useNavigate();
-  const [status, setStatus] = useState<'idle' | 'connecting' | 'processing' | 'responding'>('idle');
+  const [status, setStatus] = useState<StatusIndicatorProps['status']>('idle');
 
   return (
     <motion.div 
@@ -98,11 +57,10 @@ const VoiceDouble = () => {
       exit="exit"
       variants={pageVariants}
     >
-      <header className="p-8 flex justify-between items-center">
-        <BackButton onClick={() => navigate('/struggle')} />
-        <h1 className="font-mono text-lg px-4 py-2 bg-white text-black">voice double</h1>
-        <LogoutButton />
-      </header>
+      <PageHeader 
+        title="voice double"
+        onBack={() => navigate('/struggle')}
+      />
 
       <main className="flex-1 flex flex-col items-center justify-center px-8">
         <div className="relative">

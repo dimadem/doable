@@ -3,32 +3,10 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Square } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { BackButton } from '../components/vibe/BackButton';
-import { LogoutButton } from '../components/auth/LogoutButton';
+import { PageHeader } from '../components/layouts/PageHeader';
+import { pageVariants } from '../animations/pageTransitions';
 
-const pageVariants = {
-  initial: { 
-    opacity: 0, 
-    x: 100 
-  },
-  animate: {
-    opacity: 1,
-    x: 0,
-    transition: { 
-      duration: 0.5, 
-      ease: "easeOut" 
-    }
-  },
-  exit: {
-    opacity: 0,
-    x: -100,
-    transition: { 
-      duration: 0.3 
-    }
-  }
-};
-
-const Struggle = () => {
+const Struggle: React.FC = () => {
   const navigate = useNavigate();
 
   return (
@@ -39,11 +17,10 @@ const Struggle = () => {
       exit="exit"
       variants={pageVariants}
     >
-      <header className="p-8 flex justify-between items-center">
-        <BackButton onClick={() => navigate('/vibe-matching')} />
-        <h1 className="font-mono text-lg px-4 py-2 bg-white text-black">struggle</h1>
-        <LogoutButton />
-      </header>
+      <PageHeader 
+        title="struggle"
+        onBack={() => navigate('/vibe-matching')}
+      />
 
       <main className="flex-1 flex flex-col items-center justify-center px-8 gap-8">
         <motion.button

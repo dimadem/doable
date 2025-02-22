@@ -2,8 +2,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { BackButton } from '../components/vibe/BackButton';
-import { LogoutButton } from '../components/auth/LogoutButton';
+import { PageHeader } from '../components/layouts/PageHeader';
 import { VibeImage } from '../components/vibe/VibeImage';
 import { ProgressBar } from '../components/vibe/ProgressBar';
 import { VIBE_GROUPS, MAX_STEPS } from '../constants/vibeGroups';
@@ -31,11 +30,10 @@ const VibeMatching: React.FC = () => {
       exit="exit"
       variants={pageVariants}
     >
-      <header className="p-4 flex justify-between items-center shrink-0">
-        <BackButton onClick={() => navigate('/')} />
-        <h1 className="font-mono text-lg px-4 py-2 bg-white text-black">check the vibe</h1>
-        <LogoutButton />
-      </header>
+      <PageHeader 
+        title="check the vibe"
+        onBack={() => navigate('/')}
+      />
 
       <main className="flex-1 flex flex-col justify-evenly px-4 py-2 gap-3 overflow-y-auto">
         {VIBE_GROUPS[currentGroupId].images.map((imageId, index) => (
