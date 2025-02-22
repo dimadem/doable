@@ -1,22 +1,22 @@
 
 import { CoreTraits, BehaviorPatterns } from '@/features/vibe-matching/types';
-
-export interface SessionData {
-  selections: {
-    step: number;
-    personalityName: string;
-  }[];
-  finalPersonality: string;
-}
-
-export interface PersonalityData {
-  name: string;
-  core_traits: CoreTraits | null;
-  behavior_patterns: BehaviorPatterns | null;
-}
+import { Json } from '@/integrations/supabase/types';
 
 export interface SessionResponse {
   id: string;
-  session_data: SessionData;
-  personalities: PersonalityData | null;
+  session_data: {
+    selections: any[];
+  };
+  personalities?: {
+    name: string;
+    core_traits: CoreTraits;
+    behavior_patterns: BehaviorPatterns;
+  };
+}
+
+export interface PersonalityAnalysis {
+  type: string;
+  traits: Partial<Record<keyof CoreTraits, number>>;
+  patterns: Partial<BehaviorPatterns>;
+  selections: any[];
 }

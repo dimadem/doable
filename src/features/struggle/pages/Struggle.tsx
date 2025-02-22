@@ -15,7 +15,7 @@ const Struggle: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const { data: sessionData } = useQuery({
+  const { data: sessionData } = useQuery<SessionResponse>({
     queryKey: ['latestSession'],
     queryFn: fetchLatestSession,
     meta: {
@@ -114,16 +114,12 @@ const formatTraits = (traits: CoreTraits | null): Partial<Record<keyof CoreTrait
 
 const formatPatterns = (patterns: BehaviorPatterns | null): Partial<BehaviorPatterns> => {
   if (!patterns) return {};
-  
-  const formattedPatterns: Partial<BehaviorPatterns> = {};
-  
-  Object.entries(patterns).forEach(([key, value]) => {
+  return Object.entries(patterns).reduce((acc, [key, value]) => {
     if (value !== null && key in patterns) {
-      formattedPatterns[key as keyof BehaviorPatterns] = value;
+      acc[key as keyof BehaviorPatterns] = value;
     }
-  });
-  
-  return formattedPatterns;
+    return acc;
+  }, {} as Partial<BehaviorPatterns>);
 };
 
 export default Struggle;
