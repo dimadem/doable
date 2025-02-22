@@ -7,6 +7,27 @@ import { PageHeader } from '../components/layouts/PageHeader';
 import { pageVariants } from '../animations/pageTransitions';
 import { supabase } from '../integrations/supabase/client';
 
+type SessionSelection = {
+  step: number;
+  personalityName: string;
+};
+
+type SessionData = {
+  selections: SessionSelection[];
+  finalPersonality: string;
+};
+
+type PersonalityData = {
+  name: string;
+  core_traits: Record<string, any> | null;
+  behavior_patterns: Record<string, any> | null;
+};
+
+type SessionResponse = {
+  session_data: SessionData;
+  personalities: PersonalityData | null;
+};
+
 const Struggle: React.FC = () => {
   const navigate = useNavigate();
 
@@ -33,11 +54,12 @@ const Struggle: React.FC = () => {
       }
 
       if (sessionData) {
+        const typedSessionData = sessionData as unknown as SessionResponse;
         console.log('Personality Analysis:', {
-          type: sessionData.personalities?.name,
-          traits: sessionData.personalities?.core_traits,
-          patterns: sessionData.personalities?.behavior_patterns,
-          selections: sessionData.session_data.selections
+          type: typedSessionData.personalities?.name,
+          traits: typedSessionData.personalities?.core_traits,
+          patterns: typedSessionData.personalities?.behavior_patterns,
+          selections: typedSessionData.session_data.selections
         });
       }
     };
