@@ -45,7 +45,6 @@ export const saveUserSession = async (
       return false;
     }
 
-    // Convert session data to a JSON-compatible format
     const sessionData = {
       selections: selections.map(selection => ({
         step: selection.step,
