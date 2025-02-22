@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
@@ -94,10 +95,10 @@ const VibeImage: React.FC<VibeImageProps> = ({ imageId, index, onClick }) => (
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay: index * 0.1 }}
     onClick={onClick}
-    className="w-full aspect-square relative overflow-hidden rounded-lg cursor-pointer group"
+    className="w-full aspect-[4/3] relative overflow-hidden rounded-lg cursor-pointer group"
   >
     <img
-      src={`https://images.unsplash.com/${imageId}?auto=format&fit=crop&w=800&h=800`}
+      src={`https://images.unsplash.com/${imageId}?auto=format&fit=crop&w=800&h=600`}
       alt={`choice ${index + 1}`}
       className="w-full h-full object-cover filter grayscale transition-all duration-300 group-hover:grayscale-0 group-hover:scale-105"
     />
@@ -138,12 +139,12 @@ const VibeMatching: React.FC = () => {
       exit="exit"
       variants={pageVariants}
     >
-      <header className="p-8 flex justify-between items-center">
+      <header className="p-4 flex justify-between items-center shrink-0">
         <BackButton onClick={() => navigate('/')} />
         <h1 className="font-mono text-lg px-4 py-2 bg-white text-black">check the vibe</h1>
       </header>
 
-      <main className="flex-1 flex flex-col justify-center px-8 gap-6">
+      <main className="flex-1 flex flex-col justify-evenly px-4 py-2 gap-3 overflow-y-auto">
         {VIBE_GROUPS[currentGroupId].images.map((imageId, index) => (
           <VibeImage
             key={imageId}
@@ -154,7 +155,7 @@ const VibeMatching: React.FC = () => {
         ))}
       </main>
 
-      <footer className="p-8">
+      <footer className="p-4 shrink-0">
         <ProgressBar progress={(step / MAX_STEPS) * 100} />
       </footer>
     </motion.div>
