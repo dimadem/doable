@@ -1,27 +1,27 @@
 
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useSession } from '@/contexts/SessionContext';
 import { toast } from "@/components/ui/use-toast";
 
-interface AuthGuardProps {
+interface SessionGuardProps {
   children: React.ReactNode;
 }
 
-export const AuthGuard = ({ children }: AuthGuardProps) => {
+export const SessionGuard = ({ children }: SessionGuardProps) => {
   const navigate = useNavigate();
-  const { session, loading } = useAuth();
+  const { sessionId, loading } = useSession();
 
   useEffect(() => {
-    if (!loading && !session) {
+    if (!loading && !sessionId) {
       toast({
         variant: "destructive",
-        title: "Authentication Required",
-        description: "Please log in to access this page."
+        title: "Session Required",
+        description: "Please start your journey from the home page."
       });
       navigate('/');
     }
-  }, [session, loading, navigate]);
+  }, [sessionId, loading, navigate]);
 
   if (loading) {
     return (
@@ -31,5 +31,5 @@ export const AuthGuard = ({ children }: AuthGuardProps) => {
     );
   }
 
-  return session ? <>{children}</> : null;
+  return sessionId ? <>{children}</> : null;
 };

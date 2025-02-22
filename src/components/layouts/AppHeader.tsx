@@ -1,10 +1,9 @@
 
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, LogOut } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { ArrowLeft } from 'lucide-react';
 import { Button } from '../ui/button';
-import AuthDialog from '../auth/AuthDialog';
+import { useSession } from '@/contexts/SessionContext';
 
 interface AppHeaderProps {
   title?: string;
@@ -17,8 +16,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, signOut } = useAuth();
-  const [showAuthDialog, setShowAuthDialog] = React.useState(false);
+  const { sessionId } = useSession();
 
   const handleBack = () => {
     const direction = -1;
@@ -35,15 +33,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         break;
       default:
         navigate(-1);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut();
-      navigate('/');
-    } catch (error) {
-      console.error('Logout error:', error);
     }
   };
 
@@ -68,41 +57,16 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       )}
 
       <div className="flex items-center">
-        {location.pathname === '/' ? (
-          user ? (
-            <Button
-              variant="outline"
-              onClick={() => navigate('/vibe-matching', { state: { direction: 1 } })}
-              className="font-mono border-white text-white hover:bg-white hover:text-black"
-            >
-              Go to App
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              onClick={() => setShowAuthDialog(true)}
-              className="font-mono border-white text-white hover:bg-white hover:text-black"
-            >
-              Login
-            </Button>
-          )
-        ) : (
-          user && (
-            <button 
-              onClick={handleLogout}
-              className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
-            >
-              <LogOut size={20} />
-              <span className="font-mono">logout</span>
-            </button>
-          )
+        {location.pathname === '/' && sessionId && (
+          <Button
+            variant="outline"
+            onClick={() => navigate('/vibe-matching', { state: { direction: 1 } })}
+            className="font-mono border-white text-white hover:bg-white hover:text-black"
+          >
+            Continue Journey
+          </Button>
         )}
       </div>
-
-      <AuthDialog 
-        isOpen={showAuthDialog} 
-        onOpenChange={setShowAuthDialog} 
-      />
     </header>
   );
 };

@@ -1,23 +1,22 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import AuthDialog from '../auth/AuthDialog';
 import { pageVariants } from '@/animations/pageTransitions';
-import { useAuth } from '@/contexts/AuthContext';
+import { useSession } from '@/contexts/SessionContext';
 import { AppHeader } from '../layouts/AppHeader';
 
 const Hero = () => {
   const navigate = useNavigate();
-  const [showAuthDialog, setShowAuthDialog] = useState(false);
-  const { user, loading } = useAuth();
+  const { sessionId, loading, startSession } = useSession();
 
   const handleStart = async () => {
-    if (user) {
+    if (sessionId) {
       navigate('/vibe-matching');
     } else {
-      setShowAuthDialog(true);
+      await startSession();
+      navigate('/vibe-matching');
     }
   };
 
@@ -59,11 +58,6 @@ const Hero = () => {
           <ArrowRight className="transition-transform group-hover:translate-x-1" />
         </motion.button>
       </motion.div>
-
-      <AuthDialog 
-        isOpen={showAuthDialog} 
-        onOpenChange={setShowAuthDialog} 
-      />
     </motion.div>
   );
 };

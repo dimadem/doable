@@ -9,8 +9,8 @@ import { VibeMatching } from "./features/vibe-matching";
 import { Struggle } from "./features/struggle";
 import { VoiceDouble } from "./features/voice-double";
 import NotFound from "./pages/NotFound";
-import { AuthGuard } from "./components/auth/AuthGuard";
-import { AuthProvider } from "./contexts/AuthContext";
+import { SessionProvider } from "./contexts/SessionContext";
+import { SessionGuard } from "./components/session/SessionGuard";
 
 const queryClient = new QueryClient();
 
@@ -24,25 +24,25 @@ const AnimatedRoutes = () => {
         <Route 
           path="/vibe-matching" 
           element={
-            <AuthGuard>
+            <SessionGuard>
               <VibeMatching />
-            </AuthGuard>
+            </SessionGuard>
           } 
         />
         <Route 
           path="/struggle" 
           element={
-            <AuthGuard>
+            <SessionGuard>
               <Struggle />
-            </AuthGuard>
+            </SessionGuard>
           } 
         />
         <Route 
           path="/voice-double" 
           element={
-            <AuthGuard>
+            <SessionGuard>
               <VoiceDouble />
-            </AuthGuard>
+            </SessionGuard>
           } 
         />
         <Route path="*" element={<NotFound />} />
@@ -55,10 +55,10 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <BrowserRouter>
-        <AuthProvider>
+        <SessionProvider>
           <Toaster />
           <AnimatedRoutes />
-        </AuthProvider>
+        </SessionProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
