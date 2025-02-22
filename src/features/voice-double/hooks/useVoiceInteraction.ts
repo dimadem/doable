@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { StatusIndicatorProps } from '../types';
 import type { Json } from '@/integrations/supabase/types';
@@ -76,13 +77,8 @@ export const useVoiceInteraction = (voiceConfig?: VoiceConfig | null) => {
     }
   }, []);
 
-  const buildWebSocketUrl = useCallback((agentId: string, apiKey: string) => {
-    const params = new URLSearchParams({
-      xi_api_key: apiKey,
-      agent_id: agentId,
-      protocol_version: '2',
-    });
-    return `wss://api.elevenlabs.io/v1/text-to-speech/${agentId}/stream-input?${params.toString()}`;
+  const buildWebSocketUrl = useCallback((agentId: string) => {
+    return `wss://api.elevenlabs.io/v1/text-to-speech/stream`;
   }, []);
 
   const connectWebSocket = useCallback(async () => {
@@ -92,7 +88,8 @@ export const useVoiceInteraction = (voiceConfig?: VoiceConfig | null) => {
 
     cleanup();
 
-    const ws = new WebSocket(buildWebSocketUrl(voiceConfig.agent_id, voiceConfig.api_key));
+    // Create WebSocket with custom headers
+    const ws = new WebSocket(buildWebSocketUrl(voiceConfig.agent_id));
     webSocketRef.current = ws;
 
     connectionTimeoutRef.current = setTimeout(() => {
@@ -108,6 +105,7 @@ export const useVoiceInteraction = (voiceConfig?: VoiceConfig | null) => {
         clearTimeout(connectionTimeoutRef.current);
       }
 
+      // Send initial configuration with authentication
       ws.send(JSON.stringify({
         type: "start",
         model_id: "eleven_multilingual_v2",
@@ -116,7 +114,9 @@ export const useVoiceInteraction = (voiceConfig?: VoiceConfig | null) => {
           similarity_boost: 0.75,
           style: 0.0,
           use_speaker_boost: true
-        }
+        },
+        xi_api_key: voiceConfig.api_key,
+        voice_id: voiceConfig.voice_name
       }));
 
       setStatus('processing');
