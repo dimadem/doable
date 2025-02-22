@@ -2,6 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { SessionSelection, Personality } from '../types';
 import { toast } from '@/hooks/use-toast';
+import { Json } from '@/integrations/supabase/types';
 
 export const determinePersonality = (selections: SessionSelection[]): string => {
   const counts = selections.reduce((acc, selection) => {
@@ -47,14 +48,12 @@ export const saveUserSession = async (
       finalPersonality: personalityName
     };
 
-    const dataToInsert = {
-      session_data: JSON.stringify(sessionData),
-      personality_key: personality.name
-    };
-
     const { error: sessionError } = await supabase
       .from('user_sessions')
-      .insert(dataToInsert);
+      .insert({
+        personality_key: personality.name,
+        session_data: sessionData as Json
+      });
 
     if (sessionError) {
       toast({

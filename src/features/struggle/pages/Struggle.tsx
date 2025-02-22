@@ -10,6 +10,13 @@ import { useToast } from '@/hooks/use-toast';
 import { fetchLatestSession, updateSessionStartTime } from '../services/sessionService';
 import { CoreTraits, BehaviorPatterns } from '@/features/vibe-matching/types';
 
+interface PersonalityAnalysis {
+  type: string;
+  traits: Partial<Record<keyof CoreTraits, number>>;
+  patterns: Partial<BehaviorPatterns>;
+  selections: Array<{ step: number; personalityName: string }>;
+}
+
 const Struggle: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -30,7 +37,7 @@ const Struggle: React.FC = () => {
 
   // Log personality data with proper type annotations
   if (sessionData?.personalities) {
-    const personalityAnalysis = {
+    const personalityAnalysis: PersonalityAnalysis = {
       type: sessionData.personalities.name,
       traits: formatTraits(sessionData.personalities.core_traits),
       patterns: formatPatterns(sessionData.personalities.behavior_patterns),
@@ -97,7 +104,6 @@ const Struggle: React.FC = () => {
   );
 };
 
-// Helper functions to format personality data
 const formatTraits = (traits: CoreTraits | null): Partial<Record<keyof CoreTraits, number>> => {
   if (!traits) return {};
   
@@ -113,7 +119,7 @@ const formatPatterns = (patterns: BehaviorPatterns | null): Partial<BehaviorPatt
   if (!patterns) return {};
   
   return Object.entries(patterns).reduce((acc, [key, value]) => {
-    if (value && key in patterns) {
+    if (value !== null && patterns.hasOwnProperty(key)) {
       acc[key as keyof BehaviorPatterns] = value;
     }
     return acc;
