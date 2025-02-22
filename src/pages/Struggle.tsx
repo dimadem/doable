@@ -53,7 +53,11 @@ const Struggle = () => {
       </header>
 
       <main className="flex-1 flex flex-col items-center justify-center px-8 gap-8">
-        <div className="relative w-64 h-64 flex items-center justify-center">
+        <motion.button
+          className="relative flex flex-col items-center justify-center w-64 h-64"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
           <motion.div 
             className="absolute inset-0 border-2 border-white/20 rounded-lg"
             animate={{
@@ -66,17 +70,8 @@ const Struggle = () => {
               ease: "easeInOut"
             }}
           />
-          <span className="font-mono text-xl">coming soon</span>
-        </div>
-
-        <motion.button
-          className="flex flex-col items-center gap-2 p-6 border-2 border-white/20 rounded-lg 
-                     hover:bg-white/5 transition-colors"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <Square className="w-8 h-8" />
-          <span className="font-mono text-sm">Hard Task</span>
+          <Square className="w-16 h-16 mb-4" />
+          <span className="font-mono text-xl">Hard Task</span>
         </motion.button>
       </main>
     </motion.div>
