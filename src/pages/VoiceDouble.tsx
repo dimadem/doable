@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Pause } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-// Animation variants
 const pageVariants = {
   initial: { 
     opacity: 0, 
@@ -48,8 +47,7 @@ const pulseVariants = {
   }
 };
 
-// Components
-const BackButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
+const BackButton = ({ onClick }: { onClick: () => void }) => (
   <button 
     onClick={onClick}
     className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
@@ -59,7 +57,7 @@ const BackButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
   </button>
 );
 
-const StatusIndicator: React.FC<{ status: 'idle' | 'connecting' | 'processing' | 'responding' }> = ({ status }) => {
+const StatusIndicator = ({ status }: { status: 'idle' | 'connecting' | 'processing' | 'responding' }) => {
   const statusColors = {
     idle: 'bg-purple-500',
     connecting: 'bg-blue-500',
@@ -75,7 +73,7 @@ const StatusIndicator: React.FC<{ status: 'idle' | 'connecting' | 'processing' |
   );
 };
 
-const WaveformVisualization: React.FC<{ isActive: boolean }> = ({ isActive }) => (
+const WaveformVisualization = ({ isActive }: { isActive: boolean }) => (
   <div className="absolute inset-0 flex items-center justify-center">
     <div className="flex items-center gap-1 h-full">
       {Array.from({ length: 12 }).map((_, i) => (
@@ -97,7 +95,7 @@ const WaveformVisualization: React.FC<{ isActive: boolean }> = ({ isActive }) =>
   </div>
 );
 
-const VoiceDouble: React.FC = () => {
+const VoiceDouble = () => {
   const navigate = useNavigate();
   const [status, setStatus] = useState<'idle' | 'connecting' | 'processing' | 'responding'>('idle');
 
@@ -116,21 +114,17 @@ const VoiceDouble: React.FC = () => {
 
       <main className="flex-1 flex flex-col items-center justify-center px-8">
         <div className="relative">
-          {/* Central Orb */}
           <motion.div
             className="relative w-64 h-64 rounded-full flex items-center justify-center"
             variants={pulseVariants}
             animate={status === 'idle' ? 'idle' : 'active'}
           >
-            {/* Multi-layer borders */}
             <div className="absolute inset-0 rounded-full border-4 border-white/10 animate-[pulse_4s_ease-in-out_infinite]" />
             <div className="absolute inset-2 rounded-full border-2 border-white/20 animate-[pulse_4s_ease-in-out_infinite_1000ms]" />
             <div className="absolute inset-4 rounded-full border border-white/30 animate-[pulse_4s_ease-in-out_infinite_2000ms]" />
             
-            {/* Waveform */}
             <WaveformVisualization isActive={status === 'responding'} />
 
-            {/* Central Button */}
             <button
               onClick={() => {
                 if (status === 'idle') {
@@ -142,7 +136,7 @@ const VoiceDouble: React.FC = () => {
                 }
               }}
               className="w-32 h-32 rounded-full bg-white/5 backdrop-blur-sm flex items-center justify-center 
-                         hover:bg-white/10 transition-colors border border-white/20 z-10"
+                       hover:bg-white/10 transition-colors border border-white/20 z-10"
             >
               {status === 'idle' ? (
                 <span className="font-mono text-sm">start</span>
@@ -152,7 +146,6 @@ const VoiceDouble: React.FC = () => {
             </button>
           </motion.div>
 
-          {/* Status Indicator */}
           <StatusIndicator status={status} />
         </div>
       </main>
