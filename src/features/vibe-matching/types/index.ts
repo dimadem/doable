@@ -9,6 +9,11 @@ export interface ProgressBarProps {
   progress: number;
 }
 
+export interface ErrorStateProps {
+  error: string | null;
+  onRetry: () => void;
+}
+
 export interface SessionSelection {
   step: number;
   personalityName: string;
@@ -21,6 +26,8 @@ export interface SessionData {
 
 export interface PersonalityData {
   name: string;
+  core_traits: Record<string, any> | null;
+  behavior_patterns: Record<string, any> | null;
 }
 
 export interface SessionResponse {

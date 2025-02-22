@@ -9,6 +9,8 @@ export interface SessionData {
 
 export interface PersonalityData {
   name: string;
+  core_traits: Record<string, any> | null;
+  behavior_patterns: Record<string, any> | null;
 }
 
 export interface SessionResponse {
