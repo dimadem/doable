@@ -46,8 +46,9 @@ export const saveUserSession = async (
     const { error: sessionError } = await supabase
       .from('user_sessions')
       .insert({
-        personality_key: personalityName, // Using name as the key
-        session_data: sessionData as Json
+        personality_key: personalityName,
+        session_data: sessionData as Json,
+        started_at: new Date().toISOString()
       });
 
     if (sessionError) {

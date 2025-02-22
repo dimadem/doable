@@ -1,14 +1,30 @@
+
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Square } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { PageHeader } from '@/components/layouts/PageHeader';
+import { fetchLatestSession } from '../services/sessionService';
+import { SessionResponse, PersonalityAnalysis } from '../types';
 import { pageVariants } from '@/animations/pageTransitions';
 import { useToast } from '@/hooks/use-toast';
-import { fetchLatestSession, updateSessionStartTime } from '../services/sessionService';
-import { CoreTraits, BehaviorPatterns } from '@/features/vibe-matching/types';
-import { PersonalityAnalysis, SessionResponse } from '../types';
+import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/layouts/PageHeader';
+
+const formatTraits = (traits: Record<string, any> | null) => {
+  if (!traits) return {};
+  return Object.entries(traits).reduce((acc, [key, value]) => {
+    if (typeof value === 'number') {
+      acc[key] = value;
+    }
+    return acc;
+  }, {} as Record<string, number>);
+};
+
+const formatPatterns = (patterns: Record<string, any> | null) => {
+  if (!patterns) return {};
+  return patterns;
+};
 
 const Struggle: React.FC = () => {
   const navigate = useNavigate();
@@ -18,106 +34,104 @@ const Struggle: React.FC = () => {
     queryKey: ['latestSession'],
     queryFn: fetchLatestSession,
     meta: {
-      onError: () => {
-        toast({
-          title: "Error",
-          description: "Failed to load session data",
-          variant: "destructive",
-        });
+      onSettled: (data, error) => {
+        if (error) {
+          toast({
+            title: "Error",
+            description: "Failed to load session data",
+            variant: "destructive",
+          });
+        }
       }
     }
   });
 
-  if (sessionData?.personalities) {
-    const personalityAnalysis: PersonalityAnalysis = {
-      type: sessionData.personalities.name,
-      traits: formatTraits(sessionData.personalities.core_traits),
-      patterns: formatPatterns(sessionData.personalities.behavior_patterns),
-      selections: sessionData.session_data.selections
-    };
-    console.log('Personality Analysis:', personalityAnalysis);
+  if (!sessionData) {
+    return (
+      <motion.div
+        className="min-h-[100svh] bg-black text-white flex flex-col"
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        variants={pageVariants}
+      >
+        <PageHeader 
+          title="struggle" 
+          onBack={() => navigate('/vibe-matching')}
+        />
+        <div className="flex-1 flex items-center justify-center">
+          <p>Loading session data...</p>
+        </div>
+      </motion.div>
+    );
   }
 
-  const handleHardTaskClick = async () => {
-    try {
-      if (!sessionData) {
-        throw new Error('No active session found');
-      }
-      
-      await updateSessionStartTime(sessionData.id);
-      navigate('/voice-double');
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to start session",
-        variant: "destructive",
-      });
-      console.error('Failed to update session start time:', error);
-    }
-  };
+  const personalityData = sessionData.personalities;
+  const personality: PersonalityAnalysis | null = personalityData ? {
+    type: personalityData.name,
+    traits: formatTraits(personalityData.core_traits),
+    patterns: formatPatterns(personalityData.behavior_patterns),
+    selections: sessionData.session_data.selections
+  } : null;
 
   return (
-    <motion.div 
-      className="min-h-[100svh] bg-black text-white flex flex-col overflow-hidden"
+    <motion.div
+      className="min-h-[100svh] bg-black text-white flex flex-col"
       initial="initial"
       animate="animate"
       exit="exit"
       variants={pageVariants}
     >
       <PageHeader 
-        title="struggle"
+        title="struggle" 
         onBack={() => navigate('/vibe-matching')}
       />
 
-      <main className="flex-1 flex flex-col items-center justify-center px-8 gap-8">
-        <motion.button
-          onClick={handleHardTaskClick}
-          className="relative flex flex-col items-center justify-center w-64 h-64"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <motion.div 
-            className="absolute inset-0 border-2 border-white/20 rounded-lg"
-            animate={{
-              scale: [1, 1.05, 1],
-              borderWidth: ["2px", "1px", "2px"],
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          />
-          <Square className="w-16 h-16 mb-4" />
-          <span className="font-mono text-xl">Hard Task</span>
-        </motion.button>
+      <main className="flex-1 p-4">
+        <div className="space-y-6">
+          {personality && (
+            <>
+              <section>
+                <h2 className="text-xl font-mono mb-4">Personality Type: {personality.type}</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  {Object.entries(personality.traits).map(([trait, value]) => (
+                    <div key={trait} className="border border-white/20 p-4 rounded-lg">
+                      <h3 className="font-mono text-sm mb-2">{trait}</h3>
+                      <div className="flex items-center space-x-2">
+                        <Square className="w-4 h-4" />
+                        <span>{value}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section>
+                <h2 className="text-xl font-mono mb-4">Behavior Patterns</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  {Object.entries(personality.patterns).map(([pattern, value]) => (
+                    <div key={pattern} className="border border-white/20 p-4 rounded-lg">
+                      <h3 className="font-mono text-sm mb-2">{pattern}</h3>
+                      <p>{String(value)}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </>
+          )}
+
+          <div className="flex justify-center mt-8">
+            <Button 
+              variant="outline"
+              onClick={() => navigate('/voice-double')}
+            >
+              Continue to Voice Double
+            </Button>
+          </div>
+        </div>
       </main>
     </motion.div>
   );
-};
-
-const formatTraits = (traits: CoreTraits | null): Partial<Record<keyof CoreTraits, number>> => {
-  if (!traits) return {};
-  
-  const formattedTraits: Partial<Record<keyof CoreTraits, number>> = {};
-  
-  Object.entries(traits).forEach(([key, value]) => {
-    if (typeof value === 'number' && key in traits) {
-      formattedTraits[key as keyof CoreTraits] = value;
-    }
-  });
-  
-  return formattedTraits;
-};
-
-const formatPatterns = (patterns: BehaviorPatterns | null): Partial<BehaviorPatterns> => {
-  if (!patterns) return {};
-  return Object.entries(patterns).reduce((acc, [key, value]) => {
-    if (value !== null && key in patterns) {
-      acc[key as keyof BehaviorPatterns] = value;
-    }
-    return acc;
-  }, {} as Partial<BehaviorPatterns>);
 };
 
 export default Struggle;
