@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
@@ -135,7 +134,7 @@ const VibeMatching: React.FC = () => {
     >
       <header className="p-8 flex justify-between items-center">
         <BackButton onClick={() => navigate('/')} />
-        <h1 className="font-mono text-lg px-4 py-2 bg-white text-black rounded-md">check the vibe</h1>
+        <h1 className="font-mono text-lg px-4 py-2 bg-white text-black">check the vibe</h1>
       </header>
 
       <main className="flex-1 flex flex-col justify-center px-8 gap-6">
