@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { PageHeader } from '@/components/layouts/PageHeader';
 import { pageVariants } from '@/animations/pageTransitions';
 import { useToast } from '@/hooks/use-toast';
-import { fetchLatestSession } from '../services/sessionService';
+import { fetchLatestSession, updateSessionStartTime } from '../services/sessionService';
 
 const Struggle: React.FC = () => {
   const navigate = useNavigate();
@@ -37,6 +37,24 @@ const Struggle: React.FC = () => {
     });
   }
 
+  const handleHardTaskClick = async () => {
+    try {
+      if (!sessionData) {
+        throw new Error('No active session found');
+      }
+      
+      await updateSessionStartTime(sessionData.id);
+      navigate('/voice-double');
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to start session",
+        variant: "destructive",
+      });
+      console.error('Failed to update session start time:', error);
+    }
+  };
+
   return (
     <motion.div 
       className="min-h-[100svh] bg-black text-white flex flex-col overflow-hidden"
@@ -52,7 +70,7 @@ const Struggle: React.FC = () => {
 
       <main className="flex-1 flex flex-col items-center justify-center px-8 gap-8">
         <motion.button
-          onClick={() => navigate('/voice-double')}
+          onClick={handleHardTaskClick}
           className="relative flex flex-col items-center justify-center w-64 h-64"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -78,3 +96,4 @@ const Struggle: React.FC = () => {
 };
 
 export default Struggle;
+

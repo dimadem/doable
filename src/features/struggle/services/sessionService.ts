@@ -24,3 +24,18 @@ export const fetchLatestSession = async (): Promise<SessionResponse> => {
 
   return sessionData as unknown as SessionResponse;
 };
+
+export const updateSessionStartTime = async (sessionId: string): Promise<void> => {
+  const now = new Date();
+  const timeString = now.toLocaleTimeString('en-US', { hour12: false });
+  
+  const { error } = await supabase
+    .from('user_sessions')
+    .update({ started_at: timeString })
+    .eq('id', sessionId);
+
+  if (error) {
+    throw new Error('Failed to update session start time');
+  }
+};
+

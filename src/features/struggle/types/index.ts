@@ -14,6 +14,8 @@ export interface PersonalityData {
 }
 
 export interface SessionResponse {
+  id: string;
   session_data: SessionData;
   personalities: PersonalityData | null;
 }
+
