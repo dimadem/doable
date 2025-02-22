@@ -1,21 +1,27 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { toast } from "@/components/ui/use-toast";
 
 interface PasswordRequirement {
   label: string;
   validator: (password: string) => boolean;
 }
 
+const RATE_LIMIT_DELAY = 1000; // 1 second delay between attempts
+const MAX_ATTEMPTS = 5; // Maximum number of login attempts
+
 const passwordRequirements: PasswordRequirement[] = [
-  { label: 'At least 6 characters', validator: (p) => p.length >= 6 },
+  { label: 'At least 8 characters', validator: (p) => p.length >= 8 },
   { label: 'At least 1 number', validator: (p) => /\d/.test(p) },
-  { label: 'At least 1 special character', validator: (p) => /[!@#$%^&*]/.test(p) },
+  { label: 'At least 1 special character', validator: (p) => /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]+/.test(p) },
+  { label: 'At least 1 uppercase letter', validator: (p) => /[A-Z]/.test(p) },
+  { label: 'At least 1 lowercase letter', validator: (p) => /[a-z]/.test(p) },
 ];
 
 interface AuthDialogProps {
@@ -32,56 +38,96 @@ const AuthDialog = ({ isOpen, onOpenChange }: AuthDialogProps) => {
   const [showPassword, setShowPassword] = useState(false);
   const [validationError, setValidationError] = useState('');
   const [showRequirements, setShowRequirements] = useState(false);
+  const [attempts, setAttempts] = useState(0);
+  const [lastAttemptTime, setLastAttemptTime] = useState(0);
+
+  const resetForm = useCallback(() => {
+    setFormData({ email: '', password: '' });
+    setValidationError('');
+    setShowRequirements(false);
+    setAttempts(0);
+    clearError();
+  }, [clearError]);
 
   useEffect(() => {
     if (!isOpen) {
       resetForm();
     }
-  }, [isOpen]);
+  }, [isOpen, resetForm]);
 
   useEffect(() => {
     clearError();
   }, [isRegistering, clearError]);
 
-  const resetForm = () => {
-    setFormData({ email: '', password: '' });
-    setValidationError('');
-    setShowRequirements(false);
-    clearError();
-  };
-
-  const validatePassword = (password: string) => {
+  const validatePassword = useCallback((password: string) => {
     return passwordRequirements.every(req => req.validator(password));
-  };
+  }, []);
 
-  const validateForm = () => {
-    if (!formData.email || !formData.password) {
+  const sanitizeInput = useCallback((input: string) => {
+    return input.trim().replace(/[<>]/g, '');
+  }, []);
+
+  const validateForm = useCallback(() => {
+    const sanitizedEmail = sanitizeInput(formData.email);
+    const sanitizedPassword = sanitizeInput(formData.password);
+
+    if (!sanitizedEmail || !sanitizedPassword) {
       setValidationError('Please fill in all fields');
       return false;
     }
-    if (!formData.email.includes('@') || !formData.email.includes('.')) {
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(sanitizedEmail)) {
       setValidationError('Please enter a valid email address');
       return false;
     }
-    if (isRegistering && !validatePassword(formData.password)) {
+
+    if (isRegistering && !validatePassword(sanitizedPassword)) {
       setValidationError('Please meet all password requirements');
       return false;
     }
+
     setValidationError('');
     return true;
-  };
+  }, [formData.email, formData.password, isRegistering, validatePassword, sanitizeInput]);
+
+  const handleRateLimit = useCallback(() => {
+    const now = Date.now();
+    if (now - lastAttemptTime < RATE_LIMIT_DELAY) {
+      toast({
+        variant: "destructive",
+        title: "Please wait",
+        description: "Too many attempts. Please try again in a moment."
+      });
+      return true;
+    }
+    if (attempts >= MAX_ATTEMPTS) {
+      toast({
+        variant: "destructive",
+        title: "Account locked",
+        description: "Too many failed attempts. Please try again later."
+      });
+      return true;
+    }
+    setLastAttemptTime(now);
+    setAttempts(prev => prev + 1);
+    return false;
+  }, [attempts, lastAttemptTime]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (!validateForm() || handleRateLimit()) return;
     
     setIsLoading(true);
     try {
+      const sanitizedEmail = sanitizeInput(formData.email);
+      const sanitizedPassword = sanitizeInput(formData.password);
+
       if (isRegistering) {
-        await signUp(formData.email, formData.password);
+        await signUp(sanitizedEmail, sanitizedPassword);
         onOpenChange(false);
       } else {
-        await signIn(formData.email, formData.password);
+        await signIn(sanitizedEmail, sanitizedPassword);
         onOpenChange(false);
         navigate('/vibe-matching');
       }
@@ -92,15 +138,17 @@ const AuthDialog = ({ isOpen, onOpenChange }: AuthDialogProps) => {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const sanitizedValue = sanitizeInput(value);
+    setFormData(prev => ({ ...prev, [name]: sanitizedValue }));
+    
     if (name === 'password' && isRegistering) {
       setShowRequirements(true);
     }
     setValidationError('');
     if (authError) clearError();
-  };
+  }, [authError, clearError, isRegistering, sanitizeInput]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !isLoading && onOpenChange(open)}>
@@ -121,6 +169,7 @@ const AuthDialog = ({ isOpen, onOpenChange }: AuthDialogProps) => {
               required
               disabled={isLoading}
               aria-label="Email"
+              maxLength={100}
             />
           </div>
 
@@ -137,6 +186,7 @@ const AuthDialog = ({ isOpen, onOpenChange }: AuthDialogProps) => {
                 required
                 disabled={isLoading}
                 aria-label="Password"
+                maxLength={100}
               />
               <button
                 type="button"
