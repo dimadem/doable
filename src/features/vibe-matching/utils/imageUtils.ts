@@ -1,23 +1,61 @@
 
-interface ImageMetadata {
+interface MediaMetadata {
   url: string;
   width?: number;
   height?: number;
   format?: string;
   loading: boolean;
   error: boolean;
+  isVideo: boolean;
 }
 
-export const validateImageUrl = (url: string): boolean => {
+export const isVideo = (url: string): boolean => {
   try {
-    new URL(url);
-    return url.match(/\.(jpg|jpeg|png|webp|gif)$/i) !== null;
+    return url.match(/\.(mp4)$/i) !== null;
   } catch {
     return false;
   }
 };
 
-export const preloadImage = async (url: string): Promise<ImageMetadata> => {
+export const validateMediaUrl = (url: string): boolean => {
+  try {
+    new URL(url);
+    return url.match(/\.(jpg|jpeg|png|webp|gif|mp4)$/i) !== null;
+  } catch {
+    return false;
+  }
+};
+
+export const preloadMedia = async (url: string): Promise<MediaMetadata> => {
+  if (isVideo(url)) {
+    return new Promise((resolve) => {
+      const video = document.createElement('video');
+      
+      video.onloadedmetadata = () => {
+        resolve({
+          url,
+          width: video.videoWidth,
+          height: video.videoHeight,
+          format: 'mp4',
+          loading: false,
+          error: false,
+          isVideo: true
+        });
+      };
+
+      video.onerror = () => {
+        resolve({
+          url,
+          loading: false,
+          error: true,
+          isVideo: true
+        });
+      };
+
+      video.src = url;
+    });
+  }
+
   return new Promise((resolve) => {
     const img = new Image();
     
@@ -28,7 +66,8 @@ export const preloadImage = async (url: string): Promise<ImageMetadata> => {
         height: img.naturalHeight,
         format: url.split('.').pop()?.toLowerCase(),
         loading: false,
-        error: false
+        error: false,
+        isVideo: false
       });
     };
 
@@ -36,7 +75,8 @@ export const preloadImage = async (url: string): Promise<ImageMetadata> => {
       resolve({
         url,
         loading: false,
-        error: true
+        error: true,
+        isVideo: false
       });
     };
 
@@ -44,7 +84,7 @@ export const preloadImage = async (url: string): Promise<ImageMetadata> => {
   });
 };
 
-export const optimizeImageUrl = (url: string, width = 800): string => {
+export const optimizeMediaUrl = (url: string, width = 800): string => {
   // Add query parameters for CDN optimization if using one
   // For now, just return the original URL
   return url;
