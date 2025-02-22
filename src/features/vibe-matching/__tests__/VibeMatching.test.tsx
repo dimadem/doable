@@ -2,7 +2,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { VibeMatching } from '../pages/VibeMatching';
+import VibeMatching from '../pages/VibeMatching';
 import { usePersonalities } from '../hooks/usePersonalities';
 
 // Mock the hooks and services

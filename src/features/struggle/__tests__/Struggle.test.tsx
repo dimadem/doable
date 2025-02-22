@@ -2,7 +2,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { Struggle } from '../pages/Struggle';
+import Struggle from '../pages/Struggle';
 
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),

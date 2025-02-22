@@ -2,7 +2,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { VoiceDouble } from '../pages/VoiceDouble';
+import VoiceDouble from '../pages/VoiceDouble';
 
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
