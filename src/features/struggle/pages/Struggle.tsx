@@ -2,7 +2,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Timer, Target, Focus } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { fetchLatestSession, updateSessionStruggleType, type StruggleType } from '../services/sessionService';
 import { SessionResponse, PersonalityAnalysis } from '../types';
@@ -23,6 +23,7 @@ const formatTraits = (traits: Record<string, any> | null) => {
 
 const Struggle: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const direction = (location.state as { direction?: number })?.direction || 1;
 
@@ -52,11 +53,25 @@ const Struggle: React.FC = () => {
       return;
     }
 
+    if (!sessionData.personalities?.name) {
+      toast({
+        title: "Error",
+        description: "No personality type found for this session",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       await updateSessionStruggleType(sessionData.id, struggleType);
       toast({
         title: "Success",
         description: `${struggleType.replace('_', ' ')} mode activated`,
+      });
+      
+      // Navigate to voice-double with personality parameter
+      navigate(`/voice-double?personality=${sessionData.personalities.name}`, {
+        state: { direction: 1 }
       });
     } catch (error) {
       toast({
