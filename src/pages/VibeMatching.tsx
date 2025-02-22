@@ -24,42 +24,53 @@ const VibeMatching: React.FC = () => {
   const [personalities, setPersonalities] = useState<Personality[]>([]);
 
   useEffect(() => {
-    const fetchPersonalities = async () => {
+    const fetchPersonality = async (name: string) => {
+      const { data, error: supabaseError } = await supabase
+        .from('personalities')
+        .select('name, url_array')
+        .eq('name', name)
+        .maybeSingle();
+
+      if (supabaseError) throw supabaseError;
+      if (!data) {
+        throw new Error(`Personality type "${name}" not found in database`);
+      }
+
+      return {
+        ...data,
+        url_array: data.url_array ? JSON.parse(data.url_array) : []
+      };
+    };
+
+    const fetchAllPersonalities = async () => {
       try {
         setLoading(true);
         setError(null);
-        
-        const { data, error: supabaseError } = await supabase
-          .from('personalities')
-          .select('name, url_array')
-          .in('name', PERSONALITY_TYPES);
 
-        if (supabaseError) throw supabaseError;
-        
-        if (!data || data.length === 0) {
+        const results = await Promise.allSettled(
+          PERSONALITY_TYPES.map(type => fetchPersonality(type))
+        );
+
+        const successfulResults: Personality[] = [];
+        const failedTypes: string[] = [];
+
+        results.forEach((result, index) => {
+          if (result.status === 'fulfilled') {
+            successfulResults.push(result.value);
+          } else {
+            failedTypes.push(PERSONALITY_TYPES[index]);
+            console.error(`Failed to fetch ${PERSONALITY_TYPES[index]}:`, result.reason);
+          }
+        });
+
+        if (failedTypes.length > 0) {
           throw new Error(
-            `Failed to load personality data. Looking for: ${PERSONALITY_TYPES.join(', ')}`
+            `Failed to load some personality types: ${failedTypes.join(', ')}. ` +
+            `Successfully loaded: ${successfulResults.map(p => p.name).join(', ')}`
           );
         }
 
-        // Transform the string url_array into string[]
-        const processedData = data.map(personality => ({
-          ...personality,
-          url_array: personality.url_array ? JSON.parse(personality.url_array) : []
-        }));
-
-        // Check for missing personalities
-        const foundNames = processedData.map(p => p.name);
-        const missingNames = PERSONALITY_TYPES.filter(name => !foundNames.includes(name));
-        
-        if (missingNames.length > 0) {
-          throw new Error(
-            `Incomplete personality data. Missing: ${missingNames.join(', ')}. ` +
-            `Found: ${foundNames.join(', ')}`
-          );
-        }
-
-        setPersonalities(processedData);
+        setPersonalities(successfulResults);
       } catch (err) {
         console.error('Error fetching personalities:', err);
         setError(err instanceof Error ? err.message : 'An unexpected error occurred while loading personalities');
@@ -68,7 +79,7 @@ const VibeMatching: React.FC = () => {
       }
     };
 
-    fetchPersonalities();
+    fetchAllPersonalities();
   }, []);
 
   const getCurrentImages = () => {
