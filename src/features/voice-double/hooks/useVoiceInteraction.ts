@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import type { StatusIndicatorProps } from '../types';
 import type { Json } from '@/integrations/supabase/types';
@@ -50,7 +49,7 @@ export const useVoiceInteraction = (voiceConfig?: VoiceConfig | null) => {
     }
 
     if (!voiceConfig?.api_key) {
-      throw new Error('ElevenLabs API key not configured');
+      throw new Error('ElevenLabs API key not configured. Please add it in the Supabase secrets.');
     }
 
     try {
