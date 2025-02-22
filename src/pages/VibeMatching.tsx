@@ -66,63 +66,57 @@ const VibeMatching = () => {
 
   return (
     <motion.div 
-      className="min-h-screen bg-black text-white p-8"
+      className="h-screen bg-black text-white flex flex-col overflow-hidden"
       initial="initial"
       animate="animate"
       exit="exit"
       variants={pageVariants}
     >
-      {/* Back Button */}
-      <button 
-        onClick={() => navigate('/')}
-        className="fixed top-8 left-8 flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
-      >
-        <ArrowLeft size={20} />
-        <span className="font-mono">Back</span>
-      </button>
+      {/* Header Section */}
+      <header className="p-8 flex justify-between items-center">
+        <button 
+          onClick={() => navigate('/')}
+          className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+        >
+          <ArrowLeft size={20} />
+          <span className="font-mono">Back</span>
+        </button>
 
-      {/* Progress Indicator */}
-      <div className="fixed top-8 right-8 flex gap-2">
-        {[1, 2, 3].map((s, i) => (
-          <div 
-            key={i} 
-            className={`w-2 h-2 rounded-full ${
-              i + 1 <= step ? 'bg-white' : 'bg-gray-800'
-            }`} 
-          />
-        ))}
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-2xl mx-auto mt-32">
-        <h1 className="font-mono text-5xl font-bold mb-8 text-center">
+        <h1 className="font-mono text-2xl font-bold text-center absolute left-1/2 -translate-x-1/2">
           Choose Your Vibe
         </h1>
-        <p className="font-mono text-gray-400 text-center mb-12">
-          Select the image that resonates most with you. {step}/3
-        </p>
-        
-        {/* Image Grid */}
-        <div className="space-y-6">
-          {imageGroups[currentGroup].map((imageId, index) => (
-            <motion.div
-              key={imageId}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              onClick={() => handleImageClick(index)}
-              className="w-full aspect-square relative overflow-hidden rounded-lg cursor-pointer group"
-            >
-              <img
-                src={`https://images.unsplash.com/${imageId}?auto=format&fit=crop&w=800&h=800`}
-                alt={`Choice ${index + 1}`}
-                className="w-full h-full object-cover filter grayscale transition-all duration-300 group-hover:grayscale-0 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-black bg-opacity-40 group-hover:bg-opacity-20 transition-all duration-300" />
-            </motion.div>
-          ))}
+      </header>
+
+      {/* Main Content - Images */}
+      <main className="flex-1 flex flex-col justify-center px-8 gap-4">
+        {imageGroups[currentGroup].map((imageId, index) => (
+          <motion.div
+            key={imageId}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+            onClick={() => handleImageClick(index)}
+            className="w-full aspect-[3/2] relative overflow-hidden rounded-lg cursor-pointer group"
+          >
+            <img
+              src={`https://images.unsplash.com/${imageId}?auto=format&fit=crop&w=800&h=800`}
+              alt={`Choice ${index + 1}`}
+              className="w-full h-full object-cover filter grayscale transition-all duration-300 group-hover:grayscale-0 group-hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-black bg-opacity-40 group-hover:bg-opacity-20 transition-all duration-300" />
+          </motion.div>
+        ))}
+      </main>
+
+      {/* Progress Bar - Bottom */}
+      <footer className="p-8">
+        <div className="w-full h-1 bg-gray-800 rounded-full overflow-hidden">
+          <div 
+            className="h-full bg-white transition-all duration-300"
+            style={{ width: `${(step / 3) * 100}%` }}
+          />
         </div>
-      </div>
+      </footer>
     </motion.div>
   );
 };
