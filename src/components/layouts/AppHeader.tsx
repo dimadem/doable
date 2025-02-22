@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { ArrowLeft, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '../ui/button';
@@ -10,13 +9,11 @@ import AuthDialog from '../auth/AuthDialog';
 interface AppHeaderProps {
   title?: string;
   showBack?: boolean;
-  showStatusDots?: boolean;
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({ 
   title, 
-  showBack = true,
-  showStatusDots = false
+  showBack = true
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -69,7 +66,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         )}
       </div>
 
-      <div>
+      <div className="flex items-center">
         {location.pathname === '/' ? (
           user ? (
             <Button
