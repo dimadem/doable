@@ -56,7 +56,7 @@ export type Database = {
           device_info: Json | null
           ended_at: string | null
           id: string
-          personality_key: string | null
+          personality_key: string
           session_data: Json | null
           session_feedback: Json | null
           session_id: string | null
@@ -68,7 +68,7 @@ export type Database = {
           device_info?: Json | null
           ended_at?: string | null
           id?: string
-          personality_key?: string | null
+          personality_key: string
           session_data?: Json | null
           session_feedback?: Json | null
           session_id?: string | null
@@ -80,7 +80,7 @@ export type Database = {
           device_info?: Json | null
           ended_at?: string | null
           id?: string
-          personality_key?: string | null
+          personality_key?: string
           session_data?: Json | null
           session_feedback?: Json | null
           session_id?: string | null
@@ -95,6 +95,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "personalities"
             referencedColumns: ["name"]
+          },
+          {
+            foreignKeyName: "user_sessions_personality_voice_fkey"
+            columns: ["personality_key"]
+            isOneToOne: false
+            referencedRelation: "voices"
+            referencedColumns: ["fit_personality_name"]
           },
         ]
       }
@@ -127,7 +134,7 @@ export type Database = {
           {
             foreignKeyName: "voices_fit_personality_name_fkey"
             columns: ["fit_personality_name"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "personalities"
             referencedColumns: ["name"]
           },

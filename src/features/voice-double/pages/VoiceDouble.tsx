@@ -2,16 +2,32 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Pause } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '@/components/layouts/PageHeader';
 import { pageVariants, pulseVariants } from '@/animations/pageTransitions';
 import { StatusIndicator } from '../components/StatusIndicator';
 import { WaveformVisualization } from '../components/WaveformVisualization';
+import { useVoiceAgent } from '../hooks/useVoiceAgent';
 import type { StatusIndicatorProps } from '../types';
+import { useToast } from '@/hooks/use-toast';
 
 const VoiceDouble: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const personalityKey = searchParams.get('personality') || 'dysthymic';
   const [status, setStatus] = useState<StatusIndicatorProps['status']>('idle');
+  const { toast } = useToast();
+
+  const { data: voiceConfig, isLoading, error } = useVoiceAgent(personalityKey);
+
+  if (error) {
+    console.error('Error loading voice configuration:', error);
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: "Failed to load voice configuration. Please try again.",
+    });
+  }
 
   return (
     <motion.div 
@@ -42,6 +58,14 @@ const VoiceDouble: React.FC = () => {
             <button
               onClick={() => {
                 if (status === 'idle') {
+                  if (!voiceConfig) {
+                    toast({
+                      variant: "destructive",
+                      title: "Error",
+                      description: "Voice configuration not loaded yet. Please wait.",
+                    });
+                    return;
+                  }
                   setStatus('connecting');
                   setTimeout(() => setStatus('processing'), 2000);
                   setTimeout(() => setStatus('responding'), 4000);
@@ -49,11 +73,15 @@ const VoiceDouble: React.FC = () => {
                   setStatus('idle');
                 }
               }}
+              disabled={isLoading || !voiceConfig}
               className="w-32 h-32 rounded-full bg-white/5 backdrop-blur-sm flex items-center justify-center 
-                       hover:bg-white/10 transition-colors border border-white/20 z-10"
+                       hover:bg-white/10 transition-colors border border-white/20 z-10
+                       disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {status === 'idle' ? (
-                <span className="font-mono text-sm">start</span>
+                <span className="font-mono text-sm">
+                  {isLoading ? 'loading...' : 'start'}
+                </span>
               ) : (
                 <Pause className="w-8 h-8" />
               )}
@@ -62,6 +90,14 @@ const VoiceDouble: React.FC = () => {
 
           <StatusIndicator status={status} />
         </div>
+
+        {voiceConfig && (
+          <div className="mt-8 text-center">
+            <p className="font-mono text-sm text-white/60">
+              Voice Agent: {voiceConfig.voice_name || 'Default'}
+            </p>
+          </div>
+        )}
       </main>
     </motion.div>
   );
