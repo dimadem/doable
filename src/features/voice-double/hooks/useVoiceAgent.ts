@@ -2,11 +2,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import type { Json } from '@/integrations/supabase/types';
 
 interface VoiceConfig {
   voice_name: string;
   agent_id: string;
-  agent_settings: Record<string, unknown>;
+  agent_settings: Json;
   api_key?: string;
 }
 
