@@ -9,17 +9,7 @@ import { ProgressBar } from '../components/vibe/ProgressBar';
 import { pageVariants } from '../animations/pageTransitions';
 import { supabase } from '../integrations/supabase/client';
 import { MAX_STEPS } from '../constants/vibeGroups';
-
-type Personality = {
-  id: string;
-  name: string;
-  url_array: string[];
-};
-
-type Selection = {
-  step: number;
-  personalityName: string;
-};
+import { Personality, SessionSelection } from '../types/vibe';
 
 const VibeMatching: React.FC = () => {
   const navigate = useNavigate();
@@ -27,7 +17,7 @@ const VibeMatching: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [personalities, setPersonalities] = useState<Personality[]>([]);
-  const [selections, setSelections] = useState<Selection[]>([]);
+  const [selections, setSelections] = useState<SessionSelection[]>([]);
 
   useEffect(() => {
     const fetchPersonalities = async () => {
@@ -92,14 +82,12 @@ const VibeMatching: React.FC = () => {
       .filter(item => item.imageId);
   };
 
-  const determinePersonality = (selections: Selection[]): string => {
-    // Count occurrences of each personality
+  const determinePersonality = (selections: SessionSelection[]): string => {
     const counts = selections.reduce((acc, selection) => {
       acc[selection.personalityName] = (acc[selection.personalityName] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    // Find the personality with the most selections
     let maxCount = 0;
     let dominantPersonality = '';
     
@@ -115,7 +103,6 @@ const VibeMatching: React.FC = () => {
 
   const saveUserSession = async (personalityName: string) => {
     try {
-      // Find the corresponding personality ID
       const personality = personalities.find(p => p.name === personalityName);
       
       if (!personality) {
@@ -147,7 +134,6 @@ const VibeMatching: React.FC = () => {
   };
 
   const handleImageClick = async (selectedPersonality: string) => {
-    // Record the selection
     const newSelection = {
       step,
       personalityName: selectedPersonality
@@ -159,7 +145,6 @@ const VibeMatching: React.FC = () => {
     if (step < MAX_STEPS) {
       setStep(step + 1);
     } else {
-      // Determine final personality based on all selections
       const finalPersonality = determinePersonality(updatedSelections);
       await saveUserSession(finalPersonality);
       navigate('/struggle', { replace: true });

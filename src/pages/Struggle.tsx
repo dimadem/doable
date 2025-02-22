@@ -6,27 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../components/layouts/PageHeader';
 import { pageVariants } from '../animations/pageTransitions';
 import { supabase } from '../integrations/supabase/client';
-
-type SessionSelection = {
-  step: number;
-  personalityName: string;
-};
-
-type SessionData = {
-  selections: SessionSelection[];
-  finalPersonality: string;
-};
-
-type PersonalityData = {
-  name: string;
-  core_traits: Record<string, any> | null;
-  behavior_patterns: Record<string, any> | null;
-};
-
-type SessionResponse = {
-  session_data: SessionData;
-  personalities: PersonalityData | null;
-};
+import { SessionResponse } from '../types/vibe';
 
 const Struggle: React.FC = () => {
   const navigate = useNavigate();
