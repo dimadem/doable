@@ -57,11 +57,11 @@ const VIBE_GROUPS: Record<string, ImageGroup> = {
 const pageVariants = {
   initial: { 
     opacity: 0, 
-    y: 20 
+    x: 100 
   },
   animate: {
     opacity: 1,
-    y: 0,
+    x: 0,
     transition: { 
       duration: 0.5, 
       ease: "easeOut" 
@@ -69,7 +69,7 @@ const pageVariants = {
   },
   exit: {
     opacity: 0,
-    y: -20,
+    x: -100,
     transition: { 
       duration: 0.3 
     }
@@ -126,7 +126,7 @@ const VibeMatching: React.FC = () => {
       setStep(nextStep);
       setCurrentGroupId(`group${step}`);
     } else {
-      navigate('/voice-double', { replace: true });
+      navigate('/struggle', { replace: true });
     }
   };
 

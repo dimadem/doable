@@ -8,7 +8,7 @@ import { AnimatePresence } from "framer-motion";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import VibeMatching from "./pages/VibeMatching";
-import VoiceDouble from "./pages/VoiceDouble";
+import Struggle from "./pages/Struggle";
 
 const queryClient = new QueryClient();
 
@@ -22,7 +22,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/vibe-matching" element={<VibeMatching />} />
-            <Route path="/voice-double" element={<VoiceDouble />} />
+            <Route path="/struggle" element={<Struggle />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AnimatePresence>
