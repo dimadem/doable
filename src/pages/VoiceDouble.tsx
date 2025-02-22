@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Pause, AlertOctagon } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ArrowLeft, Pause } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 // Animation variants
@@ -100,7 +99,6 @@ const WaveformVisualization: React.FC<{ isActive: boolean }> = ({ isActive }) =>
 const VoiceDouble: React.FC = () => {
   const navigate = useNavigate();
   const [status, setStatus] = useState<'idle' | 'connecting' | 'processing' | 'responding'>('idle');
-  const [isEmergencyStop, setIsEmergencyStop] = useState(false);
 
   return (
     <motion.div 
@@ -130,20 +128,6 @@ const VoiceDouble: React.FC = () => {
             
             {/* Waveform */}
             <WaveformVisualization isActive={status === 'responding'} />
-            
-            {/* Emergency Stop Button */}
-            <AnimatePresence>
-              {isEmergencyStop && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  exit={{ scale: 0 }}
-                  className="absolute inset-0 flex items-center justify-center bg-red-500/90 rounded-full"
-                >
-                  <AlertOctagon className="w-12 h-12" />
-                </motion.div>
-              )}
-            </AnimatePresence>
 
             {/* Central Button */}
             <button
@@ -153,9 +137,7 @@ const VoiceDouble: React.FC = () => {
                   setTimeout(() => setStatus('processing'), 2000);
                   setTimeout(() => setStatus('responding'), 4000);
                 } else {
-                  setIsEmergencyStop(true);
                   setStatus('idle');
-                  setTimeout(() => setIsEmergencyStop(false), 1000);
                 }
               }}
               className="w-32 h-32 rounded-full bg-white/5 backdrop-blur-sm flex items-center justify-center 
