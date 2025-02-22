@@ -4,8 +4,19 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
+
+interface PasswordRequirement {
+  label: string;
+  validator: (password: string) => boolean;
+}
+
+const passwordRequirements: PasswordRequirement[] = [
+  { label: 'At least 6 characters', validator: (p) => p.length >= 6 },
+  { label: 'At least 1 number', validator: (p) => /\d/.test(p) },
+  { label: 'At least 1 special character', validator: (p) => /[!@#$%^&*]/.test(p) },
+];
 
 interface AuthDialogProps {
   isOpen: boolean;
@@ -20,32 +31,40 @@ const AuthDialog = ({ isOpen, onOpenChange }: AuthDialogProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [validationError, setValidationError] = useState('');
+  const [showRequirements, setShowRequirements] = useState(false);
 
-  // Clear form and errors when dialog opens/closes
   useEffect(() => {
     if (!isOpen) {
-      setFormData({ email: '', password: '' });
-      setValidationError('');
-      clearError();
+      resetForm();
     }
-  }, [isOpen, clearError]);
+  }, [isOpen]);
 
-  // Clear auth error when switching modes
   useEffect(() => {
     clearError();
   }, [isRegistering, clearError]);
+
+  const resetForm = () => {
+    setFormData({ email: '', password: '' });
+    setValidationError('');
+    setShowRequirements(false);
+    clearError();
+  };
+
+  const validatePassword = (password: string) => {
+    return passwordRequirements.every(req => req.validator(password));
+  };
 
   const validateForm = () => {
     if (!formData.email || !formData.password) {
       setValidationError('Please fill in all fields');
       return false;
     }
-    if (!formData.email.includes('@')) {
+    if (!formData.email.includes('@') || !formData.email.includes('.')) {
       setValidationError('Please enter a valid email address');
       return false;
     }
-    if (formData.password.length < 6) {
-      setValidationError('Password must be at least 6 characters long');
+    if (isRegistering && !validatePassword(formData.password)) {
+      setValidationError('Please meet all password requirements');
       return false;
     }
     setValidationError('');
@@ -76,6 +95,9 @@ const AuthDialog = ({ isOpen, onOpenChange }: AuthDialogProps) => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    if (name === 'password' && isRegistering) {
+      setShowRequirements(true);
+    }
     setValidationError('');
     if (authError) clearError();
   };
@@ -102,26 +124,59 @@ const AuthDialog = ({ isOpen, onOpenChange }: AuthDialogProps) => {
             />
           </div>
 
-          <div className="space-y-2 relative">
-            <Input
-              type={showPassword ? 'text' : 'password'}
-              name="password"
-              placeholder="Password"
-              value={formData.password}
-              onChange={handleInputChange}
-              className="font-mono bg-transparent border-2 border-white text-white placeholder:text-gray-400 pr-10"
-              required
-              disabled={isLoading}
-              aria-label="Password"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
-            >
-              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-            </button>
+          <div className="space-y-2">
+            <div className="relative">
+              <Input
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                placeholder="Password"
+                value={formData.password}
+                onChange={handleInputChange}
+                onFocus={() => isRegistering && setShowRequirements(true)}
+                className="font-mono bg-transparent border-2 border-white text-white placeholder:text-gray-400 pr-10"
+                required
+                disabled={isLoading}
+                aria-label="Password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
+
+            <AnimatePresence>
+              {isRegistering && showRequirements && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-1 mt-2"
+                >
+                  {passwordRequirements.map((req, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="flex items-center gap-2"
+                    >
+                      <div 
+                        className={`w-2 h-2 rounded-full transition-colors ${
+                          req.validator(formData.password) ? 'bg-green-500' : 'bg-gray-400'
+                        }`} 
+                      />
+                      <span className="text-sm text-gray-400 font-mono">
+                        {req.label}
+                      </span>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {(validationError || authError) && (
@@ -149,7 +204,10 @@ const AuthDialog = ({ isOpen, onOpenChange }: AuthDialogProps) => {
           
           <button
             type="button"
-            onClick={() => setIsRegistering(!isRegistering)}
+            onClick={() => {
+              setIsRegistering(!isRegistering);
+              resetForm();
+            }}
             className="w-full font-mono text-sm text-gray-400 hover:text-white transition-colors"
             disabled={isLoading}
           >
