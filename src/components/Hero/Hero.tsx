@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronDown, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AuthDialog from '../auth/AuthDialog';
 import { pageVariants } from '@/animations/pageTransitions';
@@ -26,20 +26,20 @@ const Hero = () => {
 
   return (
     <motion.div 
-      className="min-h-[100svh] flex flex-col items-center justify-center px-4 bg-black text-white"
+      className="min-h-[100svh] flex flex-col items-center bg-black text-white"
       initial="initial"
       animate="animate"
       exit="exit"
       variants={pageVariants}
       custom={direction}
     >
-      <AppHeader showBack={false} showStatusDots={true} />
+      <AppHeader showBack={false} />
 
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="text-center mb-12"
+        className="text-center mt-32 mb-12"
       >
         <span className="font-mono text-sm tracking-wider text-gray-400 mb-4 block">
           just do it
@@ -64,15 +64,6 @@ const Hero = () => {
         </motion.button>
       </motion.div>
 
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.4 }}
-        className="absolute bottom-8"
-      >
-        <ChevronDown className="text-gray-600 animate-bounce" />
-      </motion.div>
-
       <AuthDialog 
         isOpen={showAuthDialog} 
         onOpenChange={setShowAuthDialog} 
@@ -82,3 +73,4 @@ const Hero = () => {
 };
 
 export default Hero;
+
