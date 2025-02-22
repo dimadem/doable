@@ -1,71 +1,30 @@
 
-import { useReducer, useCallback } from 'react';
-import { SessionSelection, Personality } from '../types';
+import { useState, useCallback } from 'react';
+import { SessionSelection } from '../types';
 import { MAX_STEPS } from '../constants';
 
-interface VibeState {
-  step: number;
-  selections: SessionSelection[];
-  isComplete: boolean;
-  error: string | null;
-}
-
-type VibeAction = 
-  | { type: 'SELECT_VIBE'; payload: { step: number; personalityName: string } }
-  | { type: 'SET_ERROR'; payload: string }
-  | { type: 'RESET' };
-
-const initialState: VibeState = {
-  step: 0,
-  selections: [],
-  isComplete: false,
-  error: null
-};
-
-function vibeReducer(state: VibeState, action: VibeAction): VibeState {
-  switch (action.type) {
-    case 'SELECT_VIBE':
-      const newSelections = [
-        ...state.selections,
-        { step: action.payload.step, personalityName: action.payload.personalityName }
-      ];
-      const nextStep = state.step + 1;
-      return {
-        ...state,
-        step: nextStep,
-        selections: newSelections,
-        isComplete: nextStep >= MAX_STEPS,
-        error: null
-      };
-    case 'SET_ERROR':
-      return { ...state, error: action.payload };
-    case 'RESET':
-      return initialState;
-    default:
-      return state;
-  }
-}
-
 export const useVibeState = () => {
-  const [state, dispatch] = useReducer(vibeReducer, initialState);
+  const [step, setStep] = useState(0);
+  const [selections, setSelections] = useState<SessionSelection[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const selectVibe = useCallback((personalityName: string) => {
-    dispatch({
-      type: 'SELECT_VIBE',
-      payload: { step: state.step, personalityName }
-    });
-  }, [state.step]);
-
-  const setError = useCallback((error: string) => {
-    dispatch({ type: 'SET_ERROR', payload: error });
-  }, []);
+    setSelections(prev => [...prev, { step, personalityName }]);
+    setStep(prev => prev + 1);
+    setError(null);
+  }, [step]);
 
   const reset = useCallback(() => {
-    dispatch({ type: 'RESET' });
+    setStep(0);
+    setSelections([]);
+    setError(null);
   }, []);
 
   return {
-    ...state,
+    step,
+    selections,
+    error,
+    isComplete: step >= MAX_STEPS,
     selectVibe,
     setError,
     reset

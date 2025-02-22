@@ -22,31 +22,21 @@ const VibeMatching: React.FC = () => {
 
   const handleImageSelect = useCallback(async (imageUrl: string) => {
     try {
-      console.log('Selected image URL:', imageUrl);
-      
       const personality = personalities?.find(p => p.url_array?.includes(imageUrl));
-      
-      if (!personality) {
-        throw new Error('Could not match image to personality');
-      }
+      if (!personality) throw new Error('Could not match image to personality');
 
       selectVibe(personality.name);
 
-      if (isComplete) {
-        if (!personalities) throw new Error('No personalities data available');
-        
+      if (step + 1 >= VIBE_GROUPS.length) {
         const dominantPersonality = determinePersonality(selections);
         await saveUserSession(dominantPersonality, selections, personalities);
-        
         toast({
           title: "Success",
           description: `Your personality type: ${dominantPersonality}`
         });
-        
         navigate('/struggle');
       }
     } catch (error) {
-      console.error('Error processing selection:', error);
       const message = error instanceof Error ? error.message : 'Failed to process selection';
       setError(message);
       toast({
@@ -55,28 +45,13 @@ const VibeMatching: React.FC = () => {
         variant: "destructive"
       });
     }
-  }, [personalities, isComplete, selections, selectVibe, setError, toast, navigate]);
-
-  const handleRetry = useCallback(() => {
-    reset();
-    window.location.reload();
-  }, [reset]);
+  }, [personalities, step, selections, selectVibe, setError, toast, navigate]);
 
   if (loading) return <LoadingState />;
-  if (loadError || error) return (
-    <ErrorState 
-      error={error || loadError} 
-      onRetry={handleRetry}
-    />
-  );
-  if (!personalities) return (
-    <ErrorState 
-      error="No personality data available" 
-      onRetry={handleRetry}
-    />
-  );
+  if (loadError || error) return <ErrorState error={error || loadError} onRetry={reset} />;
+  if (!personalities?.length) return <ErrorState error="No personality data available" onRetry={reset} />;
 
-  const progress = Math.min((step / Object.keys(VIBE_GROUPS).length) * 100, 100);
+  const progress = (step / Object.keys(VIBE_GROUPS).length) * 100;
   const currentGroup = VIBE_GROUPS[`group${step}`] || VIBE_GROUPS.initial;
 
   return (
