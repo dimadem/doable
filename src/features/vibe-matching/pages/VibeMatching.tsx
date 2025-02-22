@@ -12,8 +12,7 @@ import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import ProgressBar from '../components/ProgressBar';
 import VibeMedia from '../components/VibeMedia';
-
-const MEDIA_PER_STEP = 2;
+import { MAX_STEPS, MEDIA_PER_STEP } from '../constants';
 
 const VibeMatching: React.FC = () => {
   const navigate = useNavigate();
@@ -21,7 +20,7 @@ const VibeMatching: React.FC = () => {
   const { personalities, loading, error: loadError } = usePersonalities();
   const { step, selections, isComplete, error, selectVibe, setError, reset } = useVibeState();
 
-  // Group media URLs from personalities for each step
+  // Group media URLs from personalities for exactly 3 steps with 3 items each
   const mediaGroups = useMemo(() => {
     if (!personalities?.length) return [];
     
@@ -32,13 +31,14 @@ const VibeMatching: React.FC = () => {
     // Shuffle media to randomize choices
     const shuffled = [...allMedia].sort(() => Math.random() - 0.5);
     
-    // Group into pairs for each step
-    return Array.from({ length: Math.floor(allMedia.length / MEDIA_PER_STEP) }, (_, i) => 
-      shuffled.slice(i * MEDIA_PER_STEP, (i + 1) * MEDIA_PER_STEP)
+    // Take exactly 9 items (3 steps × 3 items per step)
+    const selectedMedia = shuffled.slice(0, MAX_STEPS * MEDIA_PER_STEP);
+    
+    // Group into sets of 3 for each step
+    return Array.from({ length: MAX_STEPS }, (_, i) => 
+      selectedMedia.slice(i * MEDIA_PER_STEP, (i + 1) * MEDIA_PER_STEP)
     );
   }, [personalities]);
-
-  const TOTAL_STEPS = mediaGroups.length;
 
   const handleImageSelect = useCallback(async (imageUrl: string) => {
     try {
@@ -47,7 +47,7 @@ const VibeMatching: React.FC = () => {
 
       selectVibe(personality.name);
 
-      if (step + 1 >= TOTAL_STEPS) {
+      if (step + 1 >= MAX_STEPS) {
         const dominantPersonality = determinePersonality(selections);
         await saveUserSession(dominantPersonality, selections, personalities);
         toast({
@@ -65,14 +65,14 @@ const VibeMatching: React.FC = () => {
         variant: "destructive"
       });
     }
-  }, [personalities, step, selections, selectVibe, setError, toast, navigate, TOTAL_STEPS]);
+  }, [personalities, step, selections, selectVibe, setError, toast, navigate]);
 
   if (loading) return <LoadingState />;
   if (loadError || error) return <ErrorState error={error || loadError} onRetry={reset} />;
   if (!personalities?.length) return <ErrorState error="No personality data available" onRetry={reset} />;
   if (!mediaGroups.length) return <ErrorState error="No media content available" onRetry={reset} />;
 
-  const progress = (step / TOTAL_STEPS) * 100;
+  const progress = (step / MAX_STEPS) * 100;
   const currentGroup = mediaGroups[step] || [];
 
   return (
@@ -90,7 +90,7 @@ const VibeMatching: React.FC = () => {
       
       <ProgressBar progress={progress} />
 
-      <main className="flex-1 grid grid-cols-2 gap-4 p-4">
+      <main className="flex-1 flex flex-col gap-4 p-4 max-w-md mx-auto w-full">
         {currentGroup.map((media, index) => (
           <VibeMedia
             key={media.url}
