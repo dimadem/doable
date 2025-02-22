@@ -9,13 +9,7 @@ import { pageVariants } from '@/animations/pageTransitions';
 import { useToast } from '@/hooks/use-toast';
 import { fetchLatestSession, updateSessionStartTime } from '../services/sessionService';
 import { CoreTraits, BehaviorPatterns } from '@/features/vibe-matching/types';
-
-interface PersonalityAnalysis {
-  type: string;
-  traits: Partial<Record<keyof CoreTraits, number>>;
-  patterns: Partial<BehaviorPatterns>;
-  selections: Array<{ step: number; personalityName: string }>;
-}
+import { PersonalityAnalysis, SessionResponse } from '../types';
 
 const Struggle: React.FC = () => {
   const navigate = useNavigate();
@@ -107,23 +101,29 @@ const Struggle: React.FC = () => {
 const formatTraits = (traits: CoreTraits | null): Partial<Record<keyof CoreTraits, number>> => {
   if (!traits) return {};
   
-  return Object.entries(traits).reduce((acc, [key, value]) => {
-    if (typeof value === 'number') {
-      acc[key as keyof CoreTraits] = value;
+  const formattedTraits: Partial<Record<keyof CoreTraits, number>> = {};
+  
+  Object.entries(traits).forEach(([key, value]) => {
+    if (typeof value === 'number' && key in traits) {
+      formattedTraits[key as keyof CoreTraits] = value;
     }
-    return acc;
-  }, {} as Partial<Record<keyof CoreTraits, number>>);
+  });
+  
+  return formattedTraits;
 };
 
 const formatPatterns = (patterns: BehaviorPatterns | null): Partial<BehaviorPatterns> => {
   if (!patterns) return {};
   
-  return Object.entries(patterns).reduce((acc, [key, value]) => {
-    if (value !== null && patterns.hasOwnProperty(key)) {
-      acc[key as keyof BehaviorPatterns] = value;
+  const formattedPatterns: Partial<BehaviorPatterns> = {};
+  
+  Object.entries(patterns).forEach(([key, value]) => {
+    if (value !== null && key in patterns) {
+      formattedPatterns[key as keyof BehaviorPatterns] = value;
     }
-    return acc;
-  }, {} as Partial<BehaviorPatterns>);
+  });
+  
+  return formattedPatterns;
 };
 
 export default Struggle;
