@@ -4,25 +4,14 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Loader2 } from 'lucide-react';
 import { toast } from "@/components/ui/use-toast";
-
-interface PasswordRequirement {
-  label: string;
-  validator: (password: string) => boolean;
-}
+import { PasswordInput } from './PasswordInput';
+import { validateForm, sanitizeInput, FormData } from './authValidation';
 
 const RATE_LIMIT_DELAY = 1000; // 1 second delay between attempts
 const MAX_ATTEMPTS = 5; // Maximum number of login attempts
-
-const passwordRequirements: PasswordRequirement[] = [
-  { label: 'At least 8 characters', validator: (p) => p.length >= 8 },
-  { label: 'At least 1 number', validator: (p) => /\d/.test(p) },
-  { label: 'At least 1 special character', validator: (p) => /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]+/.test(p) },
-  { label: 'At least 1 uppercase letter', validator: (p) => /[A-Z]/.test(p) },
-  { label: 'At least 1 lowercase letter', validator: (p) => /[a-z]/.test(p) },
-];
 
 interface AuthDialogProps {
   isOpen: boolean;
@@ -32,10 +21,9 @@ interface AuthDialogProps {
 const AuthDialog = ({ isOpen, onOpenChange }: AuthDialogProps) => {
   const navigate = useNavigate();
   const { signIn, signUp, loading, error: authError, clearError } = useAuth();
-  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [formData, setFormData] = useState<FormData>({ email: '', password: '' });
   const [isRegistering, setIsRegistering] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [validationError, setValidationError] = useState('');
   const [showRequirements, setShowRequirements] = useState(false);
   const [attempts, setAttempts] = useState(0);
@@ -59,38 +47,6 @@ const AuthDialog = ({ isOpen, onOpenChange }: AuthDialogProps) => {
   useEffect(() => {
     clearError();
   }, [isRegistering, clearError]);
-
-  const validatePassword = useCallback((password: string) => {
-    return passwordRequirements.every(req => req.validator(password));
-  }, []);
-
-  const sanitizeInput = useCallback((input: string) => {
-    return input.trim().replace(/[<>]/g, '');
-  }, []);
-
-  const validateForm = useCallback(() => {
-    const sanitizedEmail = sanitizeInput(formData.email);
-    const sanitizedPassword = sanitizeInput(formData.password);
-
-    if (!sanitizedEmail || !sanitizedPassword) {
-      setValidationError('Please fill in all fields');
-      return false;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(sanitizedEmail)) {
-      setValidationError('Please enter a valid email address');
-      return false;
-    }
-
-    if (isRegistering && !validatePassword(sanitizedPassword)) {
-      setValidationError('Please meet all password requirements');
-      return false;
-    }
-
-    setValidationError('');
-    return true;
-  }, [formData.email, formData.password, isRegistering, validatePassword, sanitizeInput]);
 
   const handleRateLimit = useCallback(() => {
     const now = Date.now();
@@ -117,7 +73,11 @@ const AuthDialog = ({ isOpen, onOpenChange }: AuthDialogProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm() || handleRateLimit()) return;
+    const validation = validateForm(formData, isRegistering);
+    if (!validation.isValid || handleRateLimit()) {
+      setValidationError(validation.error || '');
+      return;
+    }
     
     setIsLoading(true);
     try {
@@ -149,7 +109,7 @@ const AuthDialog = ({ isOpen, onOpenChange }: AuthDialogProps) => {
     }
     setValidationError('');
     if (authError) clearError();
-  }, [authError, clearError, isRegistering, sanitizeInput]);
+  }, [authError, clearError, isRegistering]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !isLoading && onOpenChange(open)}>
@@ -174,61 +134,14 @@ const AuthDialog = ({ isOpen, onOpenChange }: AuthDialogProps) => {
             />
           </div>
 
-          <div className="space-y-2">
-            <div className="relative">
-              <Input
-                type={showPassword ? 'text' : 'password'}
-                name="password"
-                placeholder="Password"
-                value={formData.password}
-                onChange={handleInputChange}
-                onFocus={() => isRegistering && setShowRequirements(true)}
-                className="font-mono bg-transparent border-2 border-white text-white placeholder:text-gray-400 pr-10"
-                required
-                disabled={isLoading}
-                aria-label="Password"
-                maxLength={100}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
-
-            <AnimatePresence>
-              {isRegistering && showRequirements && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="space-y-1 mt-2"
-                >
-                  {passwordRequirements.map((req, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="flex items-center gap-2"
-                    >
-                      <div 
-                        className={`w-2 h-2 rounded-full transition-colors ${
-                          req.validator(formData.password) ? 'bg-green-500' : 'bg-gray-400'
-                        }`} 
-                      />
-                      <span className="text-sm text-gray-400 font-mono">
-                        {req.label}
-                      </span>
-                    </motion.div>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+          <PasswordInput
+            value={formData.password}
+            onChange={handleInputChange}
+            isRegistering={isRegistering}
+            showRequirements={showRequirements}
+            disabled={isLoading}
+            onFocus={() => isRegistering && setShowRequirements(true)}
+          />
 
           {!isRegistering && (
             <div className="flex items-center">
