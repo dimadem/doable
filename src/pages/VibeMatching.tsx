@@ -73,7 +73,7 @@ const VibeMatching = () => {
       variants={pageVariants}
     >
       {/* Header Section */}
-      <header className="p-8 flex justify-between items-center">
+      <header className="p-8 flex justify-between items-center relative">
         <button 
           onClick={() => navigate('/')}
           className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
@@ -82,9 +82,11 @@ const VibeMatching = () => {
           <span className="font-mono">Back</span>
         </button>
 
-        <h1 className="font-mono text-2xl font-bold text-center absolute left-1/2 -translate-x-1/2 mt-8">
-          Choose Your Vibe
-        </h1>
+        <div className="absolute right-8 top-8">
+          <h1 className="font-mono text-2xl font-bold bg-white text-black px-6 py-3 rounded-lg">
+            Choose Your Vibe
+          </h1>
+        </div>
       </header>
 
       {/* Main Content - Images */}
