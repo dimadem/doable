@@ -1,3 +1,4 @@
+
 import React, { useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -71,7 +72,6 @@ const VibeMatching: React.FC = () => {
 
   const handleImageSelect = useCallback(async (imageUrl: string) => {
     try {
-      // Find which personality this media belongs to
       const selectedPersonality = personalities?.find(p => 
         p.url_array?.includes(imageUrl)
       );
@@ -98,7 +98,8 @@ const VibeMatching: React.FC = () => {
           personalities
         );
         
-        navigate('/struggle');
+        // Set direction for forward navigation
+        navigate('/struggle', { state: { direction: 1 } });
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to process selection';
@@ -126,10 +127,11 @@ const VibeMatching: React.FC = () => {
       animate="animate"
       exit="exit"
       variants={pageVariants}
+      custom={1}
     >
       <PageHeader 
         title="vibe matching"
-        onBack={() => navigate('/')}
+        onBack={() => navigate('/', { state: { direction: -1 } })}
       />
       
       <ProgressBar progress={progress} />

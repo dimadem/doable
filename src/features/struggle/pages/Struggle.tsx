@@ -2,7 +2,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Square } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { fetchLatestSession } from '../services/sessionService';
 import { SessionResponse, PersonalityAnalysis } from '../types';
@@ -28,7 +28,9 @@ const formatPatterns = (patterns: Record<string, any> | null) => {
 
 const Struggle: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+  const direction = (location.state as { direction?: number })?.direction || 1;
 
   const { data: sessionData } = useQuery<SessionResponse>({
     queryKey: ['latestSession'],
@@ -54,10 +56,11 @@ const Struggle: React.FC = () => {
         animate="animate"
         exit="exit"
         variants={pageVariants}
+        custom={direction}
       >
         <PageHeader 
           title="struggle" 
-          onBack={() => navigate('/vibe-matching')}
+          onBack={() => navigate('/vibe-matching', { state: { direction: -1 } })}
         />
         <div className="flex-1 flex items-center justify-center">
           <p>Loading session data...</p>
@@ -81,10 +84,11 @@ const Struggle: React.FC = () => {
       animate="animate"
       exit="exit"
       variants={pageVariants}
+      custom={direction}
     >
       <PageHeader 
         title="struggle" 
-        onBack={() => navigate('/vibe-matching')}
+        onBack={() => navigate('/vibe-matching', { state: { direction: -1 } })}
       />
 
       <main className="flex-1 p-4">
@@ -125,7 +129,9 @@ const Struggle: React.FC = () => {
               variant="outline"
               onClick={() => {
                 if (personality?.type) {
-                  navigate(`/voice-double?personality=${personality.type}`);
+                  navigate(`/voice-double?personality=${personality.type}`, { 
+                    state: { direction: 1 } 
+                  });
                 } else {
                   toast({
                     title: "Error",
@@ -145,4 +151,3 @@ const Struggle: React.FC = () => {
 };
 
 export default Struggle;
-
