@@ -1,20 +1,18 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/components/ui/use-toast';
 
 export const useVoiceAgent = (personalityKey: string) => {
   return useQuery({
     queryKey: ['voice-agent', personalityKey],
     queryFn: async () => {
-      // Get voice configuration and API key in parallel for better performance
-      const [voiceConfig, secretResult] = await Promise.all([
-        supabase
-          .from('voices')
-          .select('voice_name, agent_id, agent_settings')
-          .eq('fit_personality_name', personalityKey)
-          .maybeSingle(),
-        supabase.rpc('get_secret', { secret_name: 'ELEVEN_LABS_API_KEY' })
-      ]);
+      // Get voice configuration
+      const voiceConfig = await supabase
+        .from('voices')
+        .select('voice_name, agent_id, agent_settings')
+        .eq('fit_personality_name', personalityKey)
+        .maybeSingle();
 
       if (voiceConfig.error) {
         console.error('Error fetching voice configuration:', voiceConfig.error);
@@ -25,14 +23,22 @@ export const useVoiceAgent = (personalityKey: string) => {
         throw new Error(`No voice configuration found for personality: ${personalityKey}`);
       }
 
-      if (secretResult.error) {
-        console.error('Error fetching API key:', secretResult.error);
+      // Get API key using edge function
+      const { data: apiKeyData, error: apiKeyError } = await supabase.functions.invoke('get-eleven-labs-key');
+      
+      if (apiKeyError) {
+        console.error('Error fetching API key:', apiKeyError);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to fetch API key. Please try again later.",
+        });
         throw new Error('Failed to fetch API key');
       }
 
       return {
         ...voiceConfig.data,
-        api_key: secretResult.data as string
+        api_key: apiKeyData.apiKey
       };
     },
     enabled: !!personalityKey,
