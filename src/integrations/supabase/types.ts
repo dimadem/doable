@@ -21,6 +21,7 @@ export type Database = {
           metadata: Json | null
           name: string
           url_array: string[] | null
+          url_metadata: Json[] | null
           visual_style: Json | null
         }
         Insert: {
@@ -34,6 +35,7 @@ export type Database = {
           metadata?: Json | null
           name?: string
           url_array?: string[] | null
+          url_metadata?: Json[] | null
           visual_style?: Json | null
         }
         Update: {
@@ -47,6 +49,7 @@ export type Database = {
           metadata?: Json | null
           name?: string
           url_array?: string[] | null
+          url_metadata?: Json[] | null
           visual_style?: Json | null
         }
         Relationships: []
