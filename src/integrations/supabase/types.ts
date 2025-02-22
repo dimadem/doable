@@ -121,6 +121,7 @@ export type Database = {
         Row: {
           agent_id: string | null
           agent_settings: Json | null
+          api_key: string | null
           fit_personality_name: string
           id: string
           other_metadata: string | null
@@ -129,6 +130,7 @@ export type Database = {
         Insert: {
           agent_id?: string | null
           agent_settings?: Json | null
+          api_key?: string | null
           fit_personality_name: string
           id?: string
           other_metadata?: string | null
@@ -137,6 +139,7 @@ export type Database = {
         Update: {
           agent_id?: string | null
           agent_settings?: Json | null
+          api_key?: string | null
           fit_personality_name?: string
           id?: string
           other_metadata?: string | null
