@@ -94,21 +94,21 @@ export type Database = {
       }
       voices: {
         Row: {
-          agent_configuration: Json | null
+          agent_settings: Json | null
           id: string
-          personality_id: string | null
+          personality_id: string
           personality_name: string | null
         }
         Insert: {
-          agent_configuration?: Json | null
+          agent_settings?: Json | null
           id?: string
-          personality_id?: string | null
+          personality_id: string
           personality_name?: string | null
         }
         Update: {
-          agent_configuration?: Json | null
+          agent_settings?: Json | null
           id?: string
-          personality_id?: string | null
+          personality_id?: string
           personality_name?: string | null
         }
         Relationships: []
