@@ -9,13 +9,15 @@ interface AuthState {
   user: User | null;
   loading: boolean;
   error: string | null;
+  persistSession: boolean;
 }
 
 interface AuthContextType extends AuthState {
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string, remember?: boolean) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   clearError: () => void;
+  setPersistSession: (persist: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,14 +27,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     session: null,
     user: null,
     loading: true,
-    error: null
+    error: null,
+    persistSession: false
   });
 
   const clearError = useCallback(() => {
     setAuthState(prev => ({ ...prev, error: null }));
   }, []);
 
+  const setPersistSession = useCallback((persist: boolean) => {
+    setAuthState(prev => ({ ...prev, persistSession: persist }));
+    localStorage.setItem('persistSession', persist ? 'true' : 'false');
+  }, []);
+
   useEffect(() => {
+    // Load persistence preference
+    const persistSession = localStorage.getItem('persistSession') === 'true';
+    setAuthState(prev => ({ ...prev, persistSession }));
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setAuthState(prev => ({
@@ -67,10 +79,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     throw error;
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string, remember: boolean = false) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.signInWithPassword({ 
+        email, 
+        password,
+        options: {
+          persistSession: remember || authState.persistSession
+        }
+      });
       if (error) throw error;
+      setPersistSession(remember);
       toast({
         title: "Welcome back!",
         description: "You have successfully signed in."
@@ -86,7 +105,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/vibe-matching`
+          emailRedirectTo: `${window.location.origin}/vibe-matching`,
+          data: {
+            created_at: new Date().toISOString(),
+          }
         }
       });
       if (error) throw error;
@@ -103,6 +125,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      setPersistSession(false);
       toast({
         title: "Signed out",
         description: "You have been successfully signed out."
@@ -118,7 +141,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       signIn,
       signUp,
       signOut,
-      clearError
+      clearError,
+      setPersistSession
     }}>
       {children}
     </AuthContext.Provider>

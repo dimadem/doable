@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -40,6 +39,7 @@ const AuthDialog = ({ isOpen, onOpenChange }: AuthDialogProps) => {
   const [showRequirements, setShowRequirements] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [lastAttemptTime, setLastAttemptTime] = useState(0);
+  const [rememberMe, setRememberMe] = useState(false);
 
   const resetForm = useCallback(() => {
     setFormData({ email: '', password: '' });
@@ -127,7 +127,7 @@ const AuthDialog = ({ isOpen, onOpenChange }: AuthDialogProps) => {
         await signUp(sanitizedEmail, sanitizedPassword);
         onOpenChange(false);
       } else {
-        await signIn(sanitizedEmail, sanitizedPassword);
+        await signIn(sanitizedEmail, sanitizedPassword, rememberMe);
         onOpenChange(false);
         navigate('/vibe-matching');
       }
@@ -228,6 +228,21 @@ const AuthDialog = ({ isOpen, onOpenChange }: AuthDialogProps) => {
               )}
             </AnimatePresence>
           </div>
+
+          {!isRegistering && (
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="rememberMe"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 rounded border-2 border-white bg-transparent text-white focus:ring-white"
+              />
+              <label htmlFor="rememberMe" className="ml-2 text-sm text-gray-400 font-mono">
+                Remember me
+              </label>
+            </div>
+          )}
 
           {(validationError || authError) && (
             <motion.p
