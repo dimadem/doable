@@ -5,7 +5,7 @@ import type { Json } from '@/integrations/supabase/types';
 
 interface VoiceConfig {
   voice_name?: string;
-  api_key?: string | null;
+  api_key?: string;
   agent_id?: string;
   agent_settings?: Json;
 }
