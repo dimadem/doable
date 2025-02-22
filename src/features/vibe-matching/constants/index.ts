@@ -1,3 +1,4 @@
+
 export const MAX_STEPS = 3;
 export const MEDIA_PER_STEP = 3;
 
