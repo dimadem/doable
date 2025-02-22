@@ -10,11 +10,10 @@ import { supabase } from '../integrations/supabase/client';
 import { MAX_STEPS } from '../constants/vibeGroups';
 
 type Personality = {
+  id: string;
   name: string;
   url_array: string[];
 };
-
-const PERSONALITY_TYPES = ['hyperthymic', 'emotive', 'persistent_paranoid'];
 
 const VibeMatching: React.FC = () => {
   const navigate = useNavigate();
@@ -25,34 +24,32 @@ const VibeMatching: React.FC = () => {
 
   useEffect(() => {
     const fetchPersonalities = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const { data, error: supabaseError } = await supabase
-          .from('personalities')
-          .select('name, url_array')
-          .in('name', PERSONALITY_TYPES);
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('personalities')
+        .select('id, name, url_array');
 
-        if (supabaseError) throw supabaseError;
-        
-        if (!data || data.length === 0) {
-          throw new Error('No personality data available');
-        }
-
-        // Transform the string url_array into string[]
-        const processedData = data.map(personality => ({
-          ...personality,
-          url_array: personality.url_array ? JSON.parse(personality.url_array) : []
-        }));
-
-        setPersonalities(processedData);
-      } catch (err) {
-        console.error('Error fetching personalities:', err);
-        setError(err instanceof Error ? err.message : 'An unexpected error occurred');
-      } finally {
+      if (error) {
+        console.error('Error fetching personalities:', error);
+        setError(error.message);
         setLoading(false);
+        return;
       }
+
+      if (!data || data.length === 0) {
+        setError('No personality data available');
+        setLoading(false);
+        return;
+      }
+
+      // Transform the data
+      const processedData = data.map(personality => ({
+        ...personality,
+        url_array: personality.url_array ? JSON.parse(personality.url_array) : []
+      }));
+
+      setPersonalities(processedData);
+      setLoading(false);
     };
 
     fetchPersonalities();
@@ -69,7 +66,6 @@ const VibeMatching: React.FC = () => {
   };
 
   const handleImageClick = (selectedPersonality: string) => {
-    // Store the selected personality or handle the selection
     console.log('Selected personality:', selectedPersonality);
     
     if (step < MAX_STEPS) {
