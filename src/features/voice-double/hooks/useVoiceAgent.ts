@@ -8,9 +8,9 @@ export const useVoiceAgent = (personalityKey: string) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('voices')
-        .select('*')
+        .select('voice_name, api_key, agent_id, agent_settings')
         .eq('fit_personality_name', personalityKey)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data;

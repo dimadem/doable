@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Pause } from 'lucide-react';
@@ -37,6 +38,32 @@ const VoiceDouble: React.FC = () => {
     });
   }
 
+  const startVoiceInteraction = async () => {
+    if (!voiceConfig?.api_key) {
+      toast({
+        variant: "destructive",
+        title: "Configuration Error",
+        description: "Voice API key not configured. Please check your settings.",
+      });
+      return;
+    }
+
+    try {
+      setStatus('connecting');
+      // Initialize voice interaction logic here using voiceConfig
+      setTimeout(() => setStatus('processing'), 2000);
+      setTimeout(() => setStatus('responding'), 4000);
+    } catch (err) {
+      console.error('Voice interaction error:', err);
+      setStatus('idle');
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to start voice interaction. Please try again.",
+      });
+    }
+  };
+
   return (
     <motion.div 
       className="min-h-[100svh] bg-black text-white flex flex-col overflow-hidden"
@@ -72,9 +99,7 @@ const VoiceDouble: React.FC = () => {
                     });
                     return;
                   }
-                  setStatus('connecting');
-                  setTimeout(() => setStatus('processing'), 2000);
-                  setTimeout(() => setStatus('responding'), 4000);
+                  startVoiceInteraction();
                 } else {
                   setStatus('idle');
                 }
