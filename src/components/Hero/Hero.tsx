@@ -2,8 +2,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Hero = () => {
+  const navigate = useNavigate();
+
   const containerVariants = {
     hidden: {
       opacity: 0
@@ -12,6 +15,12 @@ const Hero = () => {
       opacity: 1,
       transition: {
         staggerChildren: 0.2
+      }
+    },
+    exit: {
+      opacity: 0,
+      transition: {
+        duration: 0.3
       }
     }
   };
@@ -31,11 +40,16 @@ const Hero = () => {
     }
   };
 
+  const handleStart = () => {
+    navigate('/vibe-matching');
+  };
+
   return (
     <motion.div 
       className="min-h-screen flex flex-col items-center justify-center px-4 bg-black text-white" 
       initial="hidden" 
-      animate="visible" 
+      animate="visible"
+      exit="exit"
       variants={containerVariants}
     >
       {/* Progress Indicator */}
@@ -69,6 +83,7 @@ const Hero = () => {
       {/* CTA Button */}
       <motion.button 
         variants={itemVariants} 
+        onClick={handleStart}
         className={`
           font-mono px-8 py-4 
           bg-black text-white 
