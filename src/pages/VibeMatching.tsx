@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { PageHeader } from '../components/layouts/PageHeader';
 import { VibeImage } from '../components/vibe/VibeImage';
 import { ProgressBar } from '../components/vibe/ProgressBar';
@@ -15,12 +16,18 @@ type Personality = {
   url_array: string[];
 };
 
+type Selection = {
+  step: number;
+  personalityName: string;
+};
+
 const VibeMatching: React.FC = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [personalities, setPersonalities] = useState<Personality[]>([]);
+  const [selections, setSelections] = useState<Selection[]>([]);
 
   useEffect(() => {
     const fetchPersonalities = async () => {
@@ -85,10 +92,66 @@ const VibeMatching: React.FC = () => {
       .filter(item => item.imageId);
   };
 
-  const handleImageClick = (selectedPersonality: string) => {
+  const determinePersonality = (selections: Selection[]): string => {
+    // Count occurrences of each personality
+    const counts = selections.reduce((acc, selection) => {
+      acc[selection.personalityName] = (acc[selection.personalityName] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Find the personality with the most selections
+    let maxCount = 0;
+    let dominantPersonality = '';
+    
+    Object.entries(counts).forEach(([personality, count]) => {
+      if (count > maxCount) {
+        maxCount = count;
+        dominantPersonality = personality;
+      }
+    });
+
+    return dominantPersonality;
+  };
+
+  const saveUserSession = async (personalityName: string) => {
+    try {
+      const { data: sessionData, error: sessionError } = await supabase
+        .from('user_sessions')
+        .insert([
+          {
+            session_data: { selections },
+            personality_id: personalities.find(p => p.name === personalityName)?.id,
+          }
+        ])
+        .select();
+
+      if (sessionError) {
+        toast.error('Failed to save session data');
+        return;
+      }
+
+      toast.success('Personality match complete!');
+    } catch (error) {
+      toast.error('An error occurred while saving the session');
+    }
+  };
+
+  const handleImageClick = async (selectedPersonality: string) => {
+    // Record the selection
+    const newSelection = {
+      step,
+      personalityName: selectedPersonality
+    };
+    
+    const updatedSelections = [...selections, newSelection];
+    setSelections(updatedSelections);
+
     if (step < MAX_STEPS) {
       setStep(step + 1);
     } else {
+      // Determine final personality and save session
+      const finalPersonality = determinePersonality(updatedSelections);
+      await saveUserSession(finalPersonality);
       navigate('/struggle', { replace: true });
     }
   };
