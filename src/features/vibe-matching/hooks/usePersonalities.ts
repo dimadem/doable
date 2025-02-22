@@ -1,11 +1,9 @@
 
-import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Personality } from '../types';
 import { MAX_STEPS } from '../constants';
-import { toast } from '@/hooks/use-toast';
-import { validateImageUrl, preloadImage } from '../utils/imageUtils';
+import { validateMediaUrl, preloadMedia } from '../utils/imageUtils';
 
 export const usePersonalities = () => {
   const { data: personalities = [], isLoading, error } = useQuery({
@@ -29,18 +27,18 @@ export const usePersonalities = () => {
       const validPersonalities = await Promise.all(
         data.map(async (personality) => {
           const validUrls = (personality.url_array || [])
-            .filter(validateImageUrl)
+            .filter(validateMediaUrl)
             .slice(0, MAX_STEPS);
 
-          // Preload images and gather metadata
-          const imageMetadata = await Promise.all(
-            validUrls.map(url => preloadImage(url))
+          // Preload media and gather metadata
+          const mediaMetadata = await Promise.all(
+            validUrls.map(url => preloadMedia(url))
           );
 
           return {
             ...personality,
             url_array: validUrls,
-            url_metadata: imageMetadata
+            url_metadata: mediaMetadata
           };
         })
       );
