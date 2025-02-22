@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/layouts/PageHeader';
 import { pageVariants } from '@/animations/pageTransitions';
 import { useToast } from '@/hooks/use-toast';
 import { fetchLatestSession, updateSessionStartTime } from '../services/sessionService';
+import { CoreTraits, BehaviorPatterns } from '@/features/vibe-matching/types';
 
 const Struggle: React.FC = () => {
   const navigate = useNavigate();
@@ -27,14 +28,15 @@ const Struggle: React.FC = () => {
     }
   });
 
-  // Log personality data when available
+  // Log personality data with proper type annotations
   if (sessionData?.personalities) {
-    console.log('Personality Analysis:', {
+    const personalityAnalysis = {
       type: sessionData.personalities.name,
-      traits: sessionData.personalities.core_traits,
-      patterns: sessionData.personalities.behavior_patterns,
+      traits: formatTraits(sessionData.personalities.core_traits),
+      patterns: formatPatterns(sessionData.personalities.behavior_patterns),
       selections: sessionData.session_data.selections
-    });
+    };
+    console.log('Personality Analysis:', personalityAnalysis);
   }
 
   const handleHardTaskClick = async () => {
@@ -95,5 +97,27 @@ const Struggle: React.FC = () => {
   );
 };
 
-export default Struggle;
+// Helper functions to format personality data
+const formatTraits = (traits: CoreTraits | null): Partial<Record<keyof CoreTraits, number>> => {
+  if (!traits) return {};
+  
+  return Object.entries(traits).reduce((acc, [key, value]) => {
+    if (typeof value === 'number') {
+      acc[key as keyof CoreTraits] = value;
+    }
+    return acc;
+  }, {} as Partial<Record<keyof CoreTraits, number>>);
+};
 
+const formatPatterns = (patterns: BehaviorPatterns | null): Partial<BehaviorPatterns> => {
+  if (!patterns) return {};
+  
+  return Object.entries(patterns).reduce((acc, [key, value]) => {
+    if (value && key in patterns) {
+      acc[key as keyof BehaviorPatterns] = value;
+    }
+    return acc;
+  }, {} as Partial<BehaviorPatterns>);
+};
+
+export default Struggle;
