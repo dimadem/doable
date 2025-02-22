@@ -1,28 +1,36 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ImageOff, Loader2, Film } from 'lucide-react';
 import { VibeImageProps } from '../../types';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export const VibeMedia: React.FC<VibeImageProps> = ({ imageId, index, onClick }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [isVideo, setIsVideo] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const isMobile = useIsMobile();
 
-  const handleLoad = () => {
-    setIsLoading(false);
-    setHasError(false);
-  };
+  // Function to modify video URL for mobile optimization
+  const getOptimizedVideoUrl = (url: string): string => {
+    if (!isVideo || !isMobile) return url;
 
-  const handleError = () => {
-    setIsLoading(false);
-    setHasError(true);
-    console.error(`Failed to load media: ${imageId}`);
+    try {
+      const urlObj = new URL(url);
+      // Add quality parameter for mobile devices
+      // Assuming the video service accepts these parameters
+      urlObj.searchParams.set('quality', 'low');
+      urlObj.searchParams.set('optimize', 'true');
+      return urlObj.toString();
+    } catch (e) {
+      console.error('Failed to optimize video URL:', e);
+      return url;
+    }
   };
 
   // Determine if the media is a video based on file extension
-  React.useEffect(() => {
+  useEffect(() => {
     const isVideoFile = imageId.toLowerCase().endsWith('.mp4');
     setIsVideo(isVideoFile);
   }, [imageId]);
@@ -32,6 +40,43 @@ export const VibeMedia: React.FC<VibeImageProps> = ({ imageId, index, onClick })
     setIsLoading(false);
     setHasError(false);
   };
+
+  // Handle video error
+  const handleVideoError = () => {
+    console.error(`Failed to load video: ${imageId}`);
+    setIsLoading(false);
+    setHasError(true);
+  };
+
+  // Handle image loading
+  const handleImageLoad = () => {
+    setIsLoading(false);
+    setHasError(false);
+  };
+
+  // Handle image error
+  const handleImageError = () => {
+    setIsLoading(false);
+    setHasError(true);
+    console.error(`Failed to load media: ${imageId}`);
+  };
+
+  // Optimize video playback settings
+  const configureVideoPlayback = (videoElement: HTMLVideoElement) => {
+    if (isMobile) {
+      videoElement.preload = "metadata";
+      videoElement.playsInline = true;
+      // Lower quality for mobile
+      videoElement.width = 480;
+      videoElement.height = 360;
+    }
+  };
+
+  useEffect(() => {
+    if (videoRef.current) {
+      configureVideoPlayback(videoRef.current);
+    }
+  }, [isMobile]);
 
   return (
     <motion.div
@@ -57,16 +102,17 @@ export const VibeMedia: React.FC<VibeImageProps> = ({ imageId, index, onClick })
         <>
           <video
             ref={videoRef}
-            src={imageId}
+            src={getOptimizedVideoUrl(imageId)}
             className={`w-full h-full object-cover transition-all duration-300 
                       ${!isLoading ? 'grayscale group-hover:grayscale-0' : 'opacity-0'}`}
             onLoadedData={handleVideoLoadedData}
-            onError={handleError}
+            onError={handleVideoError}
             muted
             playsInline
             loop
             onMouseEnter={() => videoRef.current?.play()}
             onMouseLeave={() => videoRef.current?.pause()}
+            preload="metadata"
           />
           <div className="absolute bottom-2 right-2">
             <Film className="w-4 h-4 text-white opacity-50" />
@@ -78,8 +124,8 @@ export const VibeMedia: React.FC<VibeImageProps> = ({ imageId, index, onClick })
           alt={`choice ${index + 1}`}
           className={`w-full h-full object-cover filter transition-all duration-300 
                     ${!isLoading ? 'grayscale group-hover:grayscale-0 group-hover:scale-105' : 'opacity-0'}`}
-          onLoad={handleLoad}
-          onError={handleError}
+          onLoad={handleImageLoad}
+          onError={handleImageError}
           loading={index > 1 ? 'lazy' : 'eager'}
         />
       )}
