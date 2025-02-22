@@ -83,12 +83,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
-        password,
-        options: {
-          data: {
-            persistSession: remember || authState.persistSession
-          }
-        }
+        password
       });
       if (error) throw error;
       setPersistSession(remember);

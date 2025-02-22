@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -30,7 +31,7 @@ interface AuthDialogProps {
 
 const AuthDialog = ({ isOpen, onOpenChange }: AuthDialogProps) => {
   const navigate = useNavigate();
-  const { signIn, signUp, loading: authLoading, error: authError, clearError } = useAuth();
+  const { signIn, signUp, loading, error: authError, clearError } = useAuth();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [isRegistering, setIsRegistering] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
