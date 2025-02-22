@@ -1,5 +1,30 @@
 
-import { EventEmitter } from 'events';
+type EventCallback = (...args: any[]) => void;
+
+class SimpleEventEmitter {
+  private events: { [key: string]: EventCallback[] } = {};
+
+  on(event: string, callback: EventCallback) {
+    if (!this.events[event]) {
+      this.events[event] = [];
+    }
+    this.events[event].push(callback);
+  }
+
+  emit(event: string, ...args: any[]) {
+    const callbacks = this.events[event];
+    if (callbacks) {
+      callbacks.forEach(callback => callback(...args));
+    }
+  }
+
+  off(event: string, callback: EventCallback) {
+    const callbacks = this.events[event];
+    if (callbacks) {
+      this.events[event] = callbacks.filter(cb => cb !== callback);
+    }
+  }
+}
 
 interface VoiceConnectionConfig {
   agentId: string;
@@ -8,21 +33,7 @@ interface VoiceConnectionConfig {
   debug?: boolean;
 }
 
-interface AudioConfig {
-  input: {
-    enabled: boolean;
-    echoCancellation: boolean;
-    autoGainControl: boolean;
-    noiseSuppression: boolean;
-  };
-  output: {
-    enabled: boolean;
-    format: string;
-    playbackMuted: boolean;
-  };
-}
-
-export class VoiceConnectionManager extends EventEmitter {
+export class VoiceConnectionManager extends SimpleEventEmitter {
   private ws: WebSocket | null = null;
   private audioStream: MediaStream | null = null;
   private reconnectAttempts = 0;
