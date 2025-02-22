@@ -50,36 +50,14 @@ const Hero = () => {
         </p>
       </motion.div>
 
-      {/* Personality Archetypes */}
-      <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12 w-full max-w-4xl">
-        {[{
-          title: "The Analyst",
-          desc: "Logical & Strategic"
-        }, {
-          title: "The Innovator",
-          desc: "Creative & Forward-thinking"
-        }, {
-          title: "The Diplomat",
-          desc: "Empathetic & Harmonious"
-        }].map((archetype, i) => (
-          <div 
-            key={i}
-            className="group relative overflow-hidden bg-neutral-900 aspect-square rounded-lg hover:bg-neutral-800 transition-colors duration-300"
-          >
-            <div className="absolute inset-0 flex items-center justify-center p-4">
-              <div className="text-center">
-                <h3 className="font-mono text-lg font-bold mb-2 text-white">{archetype.title}</h3>
-                <p className="font-mono text-sm text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  {archetype.desc}
-                </p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </motion.div>
-
       {/* CTA Button */}
-      <motion.button variants={itemVariants} className="font-mono px-8 py-4 transform transition duration-300 hover:scale-105 border-2 border-transparent animate-pulse-border font-normal text-primary-foreground bg-neutral-800 hover:bg-neutral-700">START</motion.button>
+      <motion.button 
+        variants={itemVariants} 
+        className="font-mono px-8 py-4 bg-black text-white border-2 border-white font-bold 
+                   hover:bg-white hover:text-black transition-all duration-300 text-lg"
+      >
+        START
+      </motion.button>
 
       {/* Scroll Indicator */}
       <motion.div variants={itemVariants} className="absolute bottom-8 animate-bounce">
