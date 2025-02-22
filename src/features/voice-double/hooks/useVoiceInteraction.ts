@@ -50,20 +50,18 @@ export const useVoiceInteraction = (voiceConfig?: VoiceConfig | null) => {
     }
 
     if (!voiceConfig?.api_key) {
-      throw new Error('ElevenLabs API key not configured. Please add it in the Supabase secrets.');
+      throw new Error('ElevenLabs API key not configured');
     }
 
     try {
       setStatus('connecting');
       await startRecording();
       
-      // Initialize WebSocket connection
       const ws = new WebSocket(`wss://api.elevenlabs.io/v1/chat?agent_id=${voiceConfig.agent_id}`);
       setWebSocket(ws);
       
       ws.onopen = () => {
         console.log('WebSocket connected, sending auth...');
-        // Send authentication immediately when connection opens
         ws.send(JSON.stringify({
           type: 'connection.auth',
           api_key: voiceConfig.api_key
