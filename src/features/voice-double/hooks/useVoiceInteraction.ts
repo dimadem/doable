@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { StatusIndicatorProps } from '../types';
 import type { Json } from '@/integrations/supabase/types';
@@ -15,13 +14,6 @@ interface VoiceConfig {
 const RECONNECT_ATTEMPTS = 3;
 const RECONNECT_DELAY = 2000;
 const CONNECTION_TIMEOUT = 10000;
-const WEBSOCKET_PARAMS = {
-  input_format: 'pcm_16000',
-  output_format: 'mp3_44100_128',
-  sample_rate: '16000',
-  model_id: 'eleven_multilingual_v2',
-  max_duration: '600'
-};
 
 export const useVoiceInteraction = (voiceConfig?: VoiceConfig | null) => {
   const [status, setStatus] = useState<StatusIndicatorProps['status']>('idle');
@@ -32,7 +24,6 @@ export const useVoiceInteraction = (voiceConfig?: VoiceConfig | null) => {
   const reconnectAttemptsRef = useRef(0);
   const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Initialize audio queue
   useEffect(() => {
     audioQueueRef.current = new AudioQueue();
     return () => {
@@ -85,12 +76,13 @@ export const useVoiceInteraction = (voiceConfig?: VoiceConfig | null) => {
     }
   }, []);
 
-  const buildWebSocketUrl = useCallback((agentId: string) => {
+  const buildWebSocketUrl = useCallback((agentId: string, apiKey: string) => {
     const params = new URLSearchParams({
-      ...WEBSOCKET_PARAMS,
-      agent_id: agentId
+      xi_api_key: apiKey,
+      agent_id: agentId,
+      protocol_version: '2',
     });
-    return `wss://api.elevenlabs.io/v1/chat?${params.toString()}`;
+    return `wss://api.elevenlabs.io/v1/text-to-speech/${agentId}/stream-input?${params.toString()}`;
   }, []);
 
   const connectWebSocket = useCallback(async () => {
@@ -100,10 +92,9 @@ export const useVoiceInteraction = (voiceConfig?: VoiceConfig | null) => {
 
     cleanup();
 
-    const ws = new WebSocket(buildWebSocketUrl(voiceConfig.agent_id));
+    const ws = new WebSocket(buildWebSocketUrl(voiceConfig.agent_id, voiceConfig.api_key));
     webSocketRef.current = ws;
 
-    // Set connection timeout
     connectionTimeoutRef.current = setTimeout(() => {
       console.error('WebSocket connection timeout');
       if (ws.readyState === WebSocket.CONNECTING) {
@@ -112,18 +103,20 @@ export const useVoiceInteraction = (voiceConfig?: VoiceConfig | null) => {
     }, CONNECTION_TIMEOUT);
 
     ws.onopen = () => {
-      console.log('WebSocket connected, authenticating...');
+      console.log('WebSocket connected, sending configuration...');
       if (connectionTimeoutRef.current) {
         clearTimeout(connectionTimeoutRef.current);
       }
 
-      // Send authentication immediately
       ws.send(JSON.stringify({
-        text: "",
-        rate: 1.0,
-        voice_id: voiceConfig.voice_name || "21m00Tcm4TlvDq8ikWAM",
-        api_key: voiceConfig.api_key,
-        optimize_streaming_latency: 4
+        type: "start",
+        model_id: "eleven_multilingual_v2",
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75,
+          style: 0.0,
+          use_speaker_boost: true
+        }
       }));
 
       setStatus('processing');
@@ -198,7 +191,6 @@ export const useVoiceInteraction = (voiceConfig?: VoiceConfig | null) => {
     audioQueueRef.current?.clear();
   }, [cleanup]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       cleanup();
