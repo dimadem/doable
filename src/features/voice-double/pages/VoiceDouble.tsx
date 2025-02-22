@@ -28,7 +28,14 @@ const VoiceDouble: React.FC = () => {
   const { toast } = useToast();
 
   const { data: voiceConfig, isLoading, error } = useVoiceAgent(personalityKey);
-  const { status, isRecording, startVoiceInteraction, stopVoiceInteraction } = useVoiceInteraction(voiceConfig);
+  const { 
+    status, 
+    isRecording, 
+    connectionStatus,
+    errorDetails,
+    startVoiceInteraction, 
+    stopVoiceInteraction 
+  } = useVoiceInteraction(voiceConfig);
 
   React.useEffect(() => {
     if (error) {
@@ -120,21 +127,33 @@ const VoiceDouble: React.FC = () => {
               </motion.div>
 
               <StatusIndicator status={status} />
+
+              {errorDetails && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="absolute bottom-0 left-1/2 -translate-x-1/2 mb-4 text-red-400 text-sm font-mono"
+                >
+                  {errorDetails.message}
+                </motion.div>
+              )}
             </div>
           )}
         </AnimatePresence>
 
-        {voiceConfig && (
-          <motion.div 
-            className="mt-8 text-center"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <p className="font-mono text-sm text-white/60">
-              Voice Agent: {voiceConfig.voice_name || 'Default'}
-            </p>
-          </motion.div>
-        )}
+        <motion.div 
+          className="mt-8 flex flex-col items-center gap-2"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <p className="font-mono text-sm text-white/60">
+            {voiceConfig?.voice_name || 'Default Voice'}
+          </p>
+          <p className="font-mono text-xs text-white/40">
+            Status: {connectionStatus}
+          </p>
+        </motion.div>
       </main>
     </motion.div>
   );
