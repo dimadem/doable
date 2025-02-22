@@ -110,6 +110,7 @@ export type Database = {
           other_metadata: string | null
           personality_id: string
           personality_name: string
+          voice_name: string | null
         }
         Insert: {
           agent_id?: string | null
@@ -118,6 +119,7 @@ export type Database = {
           other_metadata?: string | null
           personality_id?: string
           personality_name: string
+          voice_name?: string | null
         }
         Update: {
           agent_id?: string | null
@@ -126,6 +128,7 @@ export type Database = {
           other_metadata?: string | null
           personality_id?: string
           personality_name?: string
+          voice_name?: string | null
         }
         Relationships: [
           {
