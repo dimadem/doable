@@ -17,14 +17,14 @@ const Struggle: React.FC = () => {
         .from('user_sessions')
         .select(`
           session_data,
-          personality_id,
-          personalities (
+          personality_key,
+          personalities!user_sessions_personality_key_fkey (
             name,
             core_traits,
             behavior_patterns
           )
         `)
-        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
         .limit(1)
         .single();
 
