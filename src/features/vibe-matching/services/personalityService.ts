@@ -28,6 +28,12 @@ export const saveUserSession = async (
   personalities: Personality[]
 ) => {
   try {
+    console.log('Raw Input:', {
+      personalityName,
+      selections,
+      personalities
+    });
+
     const personality = personalities.find(p => p.name === personalityName);
     
     if (!personality) {
@@ -48,14 +54,21 @@ export const saveUserSession = async (
       finalPersonality: personalityName
     };
 
+    console.log('Session Data Before Stringify:', sessionData);
+
+    const dataToInsert = {
+      session_data: JSON.stringify(sessionData),
+      personality_key: personality.name
+    };
+
+    console.log('Data Being Sent to Supabase:', dataToInsert);
+
     const { error: sessionError } = await supabase
       .from('user_sessions')
-      .insert({
-        session_data: JSON.stringify(sessionData), // Explicitly stringify the data
-        personality_key: personality.name
-      });
+      .insert(dataToInsert);
 
     if (sessionError) {
+      console.error('Supabase Error:', sessionError);
       toast({
         title: "Error",
         description: 'Failed to save session data',
@@ -70,6 +83,7 @@ export const saveUserSession = async (
     });
     return true;
   } catch (error) {
+    console.error('Save Session Error:', error);
     toast({
       title: "Error",
       description: 'An error occurred while saving the session',
