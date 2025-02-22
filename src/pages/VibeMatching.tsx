@@ -16,7 +16,24 @@ interface VibeImageProps {
   onClick: () => void;
 }
 
+// Animation variants
+const pageVariants = {
+  initial: { opacity: 0, y: 20 },
+  animate: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: "easeOut" }
+  },
+  exit: {
+    opacity: 0,
+    y: -20,
+    transition: { duration: 0.3 }
+  }
+};
+
 // Constants
+const MAX_STEPS = 3;
+
 const VIBE_GROUPS: Record<string, ImageGroup> = {
   initial: {
     id: 'initial',
@@ -53,6 +70,16 @@ const VIBE_GROUPS: Record<string, ImageGroup> = {
 };
 
 // Reusable components
+const BackButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
+  <button 
+    onClick={onClick}
+    className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+  >
+    <ArrowLeft size={20} />
+    <span className="font-mono">Back</span>
+  </button>
+);
+
 const VibeImage: React.FC<VibeImageProps> = ({ imageId, index, onClick }) => (
   <motion.div
     key={imageId}
@@ -80,28 +107,14 @@ const ProgressBar: React.FC<{ progress: number }> = ({ progress }) => (
   </div>
 );
 
+// Main component
 const VibeMatching: React.FC = () => {
   const navigate = useNavigate();
   const [currentGroupId, setCurrentGroupId] = useState<string>('initial');
   const [step, setStep] = useState(1);
-  const maxSteps = 3;
-
-  const pageVariants = {
-    initial: { opacity: 0, y: 20 },
-    animate: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.5, ease: "easeOut" }
-    },
-    exit: {
-      opacity: 0,
-      y: -20,
-      transition: { duration: 0.3 }
-    }
-  };
 
   const handleImageClick = () => {
-    if (step < maxSteps) {
+    if (step < MAX_STEPS) {
       const nextStep = step + 1;
       setStep(nextStep);
       setCurrentGroupId(`group${step}`);
@@ -121,13 +134,7 @@ const VibeMatching: React.FC = () => {
       variants={pageVariants}
     >
       <header className="p-8">
-        <button 
-          onClick={() => navigate('/')}
-          className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
-        >
-          <ArrowLeft size={20} />
-          <span className="font-mono">Back</span>
-        </button>
+        <BackButton onClick={() => navigate('/')} />
       </header>
 
       <main className="flex-1 flex flex-col justify-center px-8 gap-6">
@@ -136,13 +143,13 @@ const VibeMatching: React.FC = () => {
             key={imageId}
             imageId={imageId}
             index={index}
-            onClick={() => handleImageClick()}
+            onClick={handleImageClick}
           />
         ))}
       </main>
 
       <footer className="p-8">
-        <ProgressBar progress={(step / maxSteps) * 100} />
+        <ProgressBar progress={(step / MAX_STEPS) * 100} />
       </footer>
     </motion.div>
   );
