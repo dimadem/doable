@@ -9,6 +9,7 @@ import { VibeMatching } from "./features/vibe-matching";
 import { Struggle } from "./features/struggle";
 import { VoiceDouble } from "./features/voice-double";
 import NotFound from "./pages/NotFound";
+import { AuthGuard } from "./components/auth/AuthGuard";
 
 const queryClient = new QueryClient();
 
@@ -19,9 +20,30 @@ const AnimatedRoutes = () => {
     <AnimatePresence mode="wait" initial={false}>
       <Routes location={location} key={location.pathname}>
         <Route path="/" element={<Index />} />
-        <Route path="/vibe-matching" element={<VibeMatching />} />
-        <Route path="/struggle" element={<Struggle />} />
-        <Route path="/voice-double" element={<VoiceDouble />} />
+        <Route 
+          path="/vibe-matching" 
+          element={
+            <AuthGuard>
+              <VibeMatching />
+            </AuthGuard>
+          } 
+        />
+        <Route 
+          path="/struggle" 
+          element={
+            <AuthGuard>
+              <Struggle />
+            </AuthGuard>
+          } 
+        />
+        <Route 
+          path="/voice-double" 
+          element={
+            <AuthGuard>
+              <VoiceDouble />
+            </AuthGuard>
+          } 
+        />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AnimatePresence>
