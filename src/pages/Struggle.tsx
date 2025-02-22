@@ -1,8 +1,10 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Square } from 'lucide-react';
+import { Square } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { BackButton } from '../components/vibe/BackButton';
+import { LogoutButton } from '../components/auth/LogoutButton';
 
 const pageVariants = {
   initial: { 
@@ -26,16 +28,6 @@ const pageVariants = {
   }
 };
 
-const BackButton = ({ onClick }: { onClick: () => void }) => (
-  <button 
-    onClick={onClick}
-    className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
-  >
-    <ArrowLeft size={20} />
-    <span className="font-mono">back</span>
-  </button>
-);
-
 const Struggle = () => {
   const navigate = useNavigate();
 
@@ -50,6 +42,7 @@ const Struggle = () => {
       <header className="p-8 flex justify-between items-center">
         <BackButton onClick={() => navigate('/vibe-matching')} />
         <h1 className="font-mono text-lg px-4 py-2 bg-white text-black">struggle</h1>
+        <LogoutButton />
       </header>
 
       <main className="flex-1 flex flex-col items-center justify-center px-8 gap-8">

@@ -1,8 +1,9 @@
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Pause } from 'lucide-react';
+import { Pause } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { BackButton } from '../components/vibe/BackButton';
+import { LogoutButton } from '../components/auth/LogoutButton';
 
 const pageVariants = {
   initial: { 
@@ -46,16 +47,6 @@ const pulseVariants = {
     }
   }
 };
-
-const BackButton = ({ onClick }: { onClick: () => void }) => (
-  <button 
-    onClick={onClick}
-    className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
-  >
-    <ArrowLeft size={20} />
-    <span className="font-mono">back</span>
-  </button>
-);
 
 const StatusIndicator = ({ status }: { status: 'idle' | 'connecting' | 'processing' | 'responding' }) => {
   const statusColors = {
@@ -110,6 +101,7 @@ const VoiceDouble = () => {
       <header className="p-8 flex justify-between items-center">
         <BackButton onClick={() => navigate('/struggle')} />
         <h1 className="font-mono text-lg px-4 py-2 bg-white text-black">voice double</h1>
+        <LogoutButton />
       </header>
 
       <main className="flex-1 flex flex-col items-center justify-center px-8">
