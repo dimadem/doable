@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+// Animation variants
 const pageVariants = {
   initial: { 
     opacity: 0, 
@@ -26,6 +27,7 @@ const pageVariants = {
   }
 };
 
+// Components
 const BackButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
   <button 
     onClick={onClick}
