@@ -51,7 +51,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   };
 
   return (
-    <header className="p-4 md:p-8 flex justify-between items-center shrink-0">
+    <header className="w-full p-4 md:p-8 flex justify-between items-center shrink-0">
       <div className="flex items-center gap-4">
         {showBack && (
           <button 
@@ -61,19 +61,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             <ArrowLeft size={20} />
             <span className="font-mono">back</span>
           </button>
-        )}
-      </div>
-
-      <div className="flex items-center gap-4">
-        {showStatusDots && (
-          <div className="flex gap-2">
-            {[1, 2, 3].map((_, i) => (
-              <div 
-                key={i} 
-                className={`w-2 h-2 rounded-full ${i === 0 ? 'bg-white' : 'bg-gray-800'}`} 
-              />
-            ))}
-          </div>
         )}
         {title && (
           <h1 className="font-mono text-lg px-4 py-2 bg-white text-black">
