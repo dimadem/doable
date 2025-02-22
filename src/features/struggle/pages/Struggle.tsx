@@ -2,7 +2,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Timer, Target, Focus } from 'lucide-react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { fetchLatestSession, updateSessionStruggleType, type StruggleType } from '../services/sessionService';
 import { SessionResponse, PersonalityAnalysis } from '../types';
@@ -61,7 +61,12 @@ const Struggle: React.FC = () => {
     }
 
     try {
-      await updateSessionStruggleType(sessionData.id, struggleType);
+      await updateSessionStruggleType(
+        sessionData.id, 
+        struggleType,
+        sessionData.personalities.name
+      );
+      
       toast({
         title: "Success",
         description: `${struggleType.replace('_', ' ')} mode activated`,
