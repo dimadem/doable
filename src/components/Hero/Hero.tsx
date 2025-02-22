@@ -1,20 +1,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/components/ui/use-toast";
-import { Input } from "@/components/ui/input";
+import AuthDialog from '../auth/AuthDialog';
 
 const Hero = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isRegistering, setIsRegistering] = useState(false);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
 
   useEffect(() => {
-    // Check for existing session on mount
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
@@ -24,14 +20,11 @@ const Hero = () => {
     
     checkSession();
 
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        // Save session to localStorage
         localStorage.setItem('userSession', JSON.stringify(session));
         navigate('/vibe-matching');
       } else if (event === 'SIGNED_OUT') {
-        // Remove session from localStorage
         localStorage.removeItem('userSession');
       }
     });
@@ -39,39 +32,12 @@ const Hero = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const response = isRegistering 
-        ? await supabase.auth.signUp({
-            email,
-            password,
-            options: { emailRedirectTo: `${window.location.origin}/vibe-matching` }
-          })
-        : await supabase.auth.signInWithPassword({ email, password });
-
-      if (response.error) {
-        toast({
-          variant: "destructive",
-          title: "Authentication Error",
-          description: response.error.message
-        });
-      } else if (isRegistering) {
-        toast({
-          title: "Check your email",
-          description: "We've sent you a verification link."
-        });
-      } else if (response.data.session) {
-        // Save session to localStorage on successful login
-        localStorage.setItem('userSession', JSON.stringify(response.data.session));
-      }
-    } catch (err) {
-      console.error('Authentication error:', err);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "An unexpected error occurred. Please try again."
-      });
+  const handleStart = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      navigate('/vibe-matching');
+    } else {
+      setShowAuthDialog(true);
     }
   };
 
@@ -98,7 +64,6 @@ const Hero = () => {
       exit="exit"
       variants={containerVariants}
     >
-      {/* Progress Indicator */}
       <div className="fixed top-8 right-8 flex gap-2">
         {[1, 2, 3].map((_, i) => (
           <div 
@@ -115,55 +80,29 @@ const Hero = () => {
         <h1 className="font-mono font-bold mb-6 md:text-9xl text-7xl text-white">
           doable
         </h1>
-        <p className="font-mono text-lg text-gray-400 max-w-md mx-auto">
+        <p className="font-mono text-lg text-gray-400 max-w-md mx-auto mb-8">
           Uncover your authentic personality archetype through our innovative discovery process.
         </p>
+        <motion.button
+          variants={itemVariants}
+          onClick={handleStart}
+          className="group inline-flex items-center gap-2 font-mono px-8 py-4 bg-black text-white 
+                   border-2 border-white font-bold text-lg transition-all duration-300 
+                   hover:bg-white hover:text-black"
+        >
+          Start Journey
+          <ArrowRight className="transition-transform group-hover:translate-x-1" />
+        </motion.button>
       </motion.div>
-
-      <motion.form 
-        variants={itemVariants}
-        onSubmit={handleSubmit}
-        className="w-full max-w-md space-y-4"
-      >
-        <div className="space-y-2">
-          <Input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="font-mono bg-transparent border-2 border-white text-white placeholder:text-gray-400"
-            required
-          />
-          <Input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="font-mono bg-transparent border-2 border-white text-white placeholder:text-gray-400"
-            required
-          />
-        </div>
-
-        <button
-          type="submit"
-          className="w-full font-mono px-8 py-4 bg-black text-white border-2 border-white 
-                   font-bold text-lg transition-all duration-300 hover:bg-white hover:text-black"
-        >
-          {isRegistering ? 'Sign Up' : 'Sign In'}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setIsRegistering(!isRegistering)}
-          className="w-full font-mono text-sm text-gray-400 hover:text-white transition-colors"
-        >
-          {isRegistering ? 'Already have an account? Sign in' : 'Need an account? Sign up'}
-        </button>
-      </motion.form>
 
       <motion.div variants={itemVariants} className="absolute bottom-8 animate-bounce">
         <ChevronDown className="text-gray-600" />
       </motion.div>
+
+      <AuthDialog 
+        isOpen={showAuthDialog} 
+        onOpenChange={setShowAuthDialog} 
+      />
     </motion.div>
   );
 };
