@@ -22,7 +22,10 @@ const VibeMatching: React.FC = () => {
   const getCurrentImages = () => {
     if (!personalities.length) return [];
     
-    return personalities
+    // Get the first 3 personalities only
+    const limitedPersonalities = personalities.slice(0, 3);
+    
+    return limitedPersonalities
       .map(personality => ({
         name: personality.name,
         imageId: personality.url_array[step - 1] || ''
