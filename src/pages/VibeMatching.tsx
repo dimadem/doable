@@ -132,7 +132,7 @@ const VibeMatching: React.FC = () => {
 
   return (
     <motion.div 
-      className="h-screen bg-black text-white flex flex-col overflow-hidden"
+      className="min-h-[100svh] bg-black text-white flex flex-col overflow-hidden"
       initial="initial"
       animate="animate"
       exit="exit"

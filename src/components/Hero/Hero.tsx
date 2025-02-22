@@ -46,7 +46,7 @@ const Hero = () => {
 
   return (
     <motion.div 
-      className="min-h-screen flex flex-col items-center justify-center px-4 bg-black text-white" 
+      className="min-h-[100svh] flex flex-col items-center justify-center px-4 bg-black text-white" 
       initial="hidden" 
       animate="visible"
       exit="exit"
