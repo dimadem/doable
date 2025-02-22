@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { Pause } from 'lucide-react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
@@ -8,6 +8,7 @@ import { pageVariants, pulseVariants } from '@/animations/pageTransitions';
 import { StatusIndicator } from '../components/StatusIndicator';
 import { WaveformVisualization } from '../components/WaveformVisualization';
 import { useVoiceAgent } from '../hooks/useVoiceAgent';
+import { useVoiceInteraction } from '../hooks/useVoiceInteraction';
 import type { StatusIndicatorProps } from '../types';
 import { useToast } from '@/hooks/use-toast';
 
@@ -24,10 +25,10 @@ const VoiceDouble: React.FC = () => {
     : DEFAULT_PERSONALITY;
 
   const direction = (location.state as { direction?: number })?.direction || 1;
-  const [status, setStatus] = useState<StatusIndicatorProps['status']>('idle');
   const { toast } = useToast();
 
   const { data: voiceConfig, isLoading, error } = useVoiceAgent(personalityKey);
+  const { status, startVoiceInteraction, stopVoiceInteraction } = useVoiceInteraction(voiceConfig);
 
   if (error) {
     console.error('Error loading voice configuration:', error);
@@ -38,29 +39,29 @@ const VoiceDouble: React.FC = () => {
     });
   }
 
-  const startVoiceInteraction = async () => {
-    if (!voiceConfig?.api_key) {
-      toast({
-        variant: "destructive",
-        title: "Configuration Error",
-        description: "Voice API key not configured. Please check your settings.",
-      });
-      return;
-    }
+  const handleInteractionToggle = async () => {
+    if (status === 'idle') {
+      if (!voiceConfig) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Voice configuration not loaded yet. Please wait.",
+        });
+        return;
+      }
 
-    try {
-      setStatus('connecting');
-      // Initialize voice interaction logic here using voiceConfig
-      setTimeout(() => setStatus('processing'), 2000);
-      setTimeout(() => setStatus('responding'), 4000);
-    } catch (err) {
-      console.error('Voice interaction error:', err);
-      setStatus('idle');
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to start voice interaction. Please try again.",
-      });
+      try {
+        await startVoiceInteraction();
+      } catch (err) {
+        console.error('Voice interaction error:', err);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to start voice interaction. Please try again.",
+        });
+      }
+    } else {
+      stopVoiceInteraction();
     }
   };
 
@@ -89,21 +90,7 @@ const VoiceDouble: React.FC = () => {
             <WaveformVisualization isActive={status === 'responding'} />
 
             <button
-              onClick={() => {
-                if (status === 'idle') {
-                  if (!voiceConfig) {
-                    toast({
-                      variant: "destructive",
-                      title: "Error",
-                      description: "Voice configuration not loaded yet. Please wait.",
-                    });
-                    return;
-                  }
-                  startVoiceInteraction();
-                } else {
-                  setStatus('idle');
-                }
-              }}
+              onClick={handleInteractionToggle}
               disabled={isLoading || !voiceConfig}
               className="w-32 h-32 rounded-full bg-white/5 backdrop-blur-sm flex items-center justify-center 
                        hover:bg-white/10 transition-colors border border-white/20 z-10
