@@ -111,10 +111,10 @@ const VibeMatching = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
               onClick={() => handleImageClick(index)}
-              className="w-full aspect-video relative overflow-hidden rounded-lg cursor-pointer group"
+              className="w-full aspect-square relative overflow-hidden rounded-lg cursor-pointer group"
             >
               <img
-                src={`https://images.unsplash.com/${imageId}?auto=format&fit=crop&w=800`}
+                src={`https://images.unsplash.com/${imageId}?auto=format&fit=crop&w=800&h=800`}
                 alt={`Choice ${index + 1}`}
                 className="w-full h-full object-cover filter grayscale transition-all duration-300 group-hover:grayscale-0 group-hover:scale-105"
               />
