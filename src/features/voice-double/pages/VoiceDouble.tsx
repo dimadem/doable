@@ -3,14 +3,14 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Pause, Mic } from 'lucide-react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { useConversation } from '@11labs/react';
 import { AppHeader } from '@/components/layouts/AppHeader';
 import { pageVariants, pulseVariants } from '@/animations/pageTransitions';
 import { StatusIndicator } from '../components/StatusIndicator';
 import { WaveformVisualization } from '../components/WaveformVisualization';
 import { useVoiceAgent } from '../hooks/useVoiceAgent';
-import { useVoiceInteraction } from '../hooks/useVoiceInteraction';
-import type { StatusIndicatorProps } from '../types';
 import { useToast } from '@/hooks/use-toast';
+import type { StatusIndicatorProps } from '../types';
 
 const ALLOWED_PERSONALITIES = ['emotive', 'hyperthymic', 'persistent_paranoid'];
 const DEFAULT_PERSONALITY = 'persistent_paranoid';
@@ -26,16 +26,32 @@ const VoiceDouble: React.FC = () => {
 
   const direction = (location.state as { direction?: number })?.direction || 1;
   const { toast } = useToast();
+  const [status, setStatus] = React.useState<StatusIndicatorProps['status']>('idle');
 
   const { data: voiceConfig, isLoading, error } = useVoiceAgent(personalityKey);
-  const { 
-    status, 
-    isRecording, 
-    connectionStatus,
-    errorDetails,
-    startVoiceInteraction, 
-    stopVoiceInteraction 
-  } = useVoiceInteraction(voiceConfig);
+
+  const conversation = useConversation({
+    onConnect: () => {
+      setStatus('connected' as any);
+    },
+    onMessage: (msg) => {
+      if (msg.type === 'audio') {
+        setStatus('responding');
+      }
+    },
+    onError: (error) => {
+      console.error('Conversation error:', error);
+      toast({
+        variant: "destructive",
+        title: "Connection Error",
+        description: error.message || "Failed to connect to voice service",
+      });
+      setStatus('idle');
+    },
+    onDisconnect: () => {
+      setStatus('idle');
+    }
+  });
 
   React.useEffect(() => {
     if (error) {
@@ -50,7 +66,7 @@ const VoiceDouble: React.FC = () => {
 
   const handleInteractionToggle = async () => {
     if (status === 'idle') {
-      if (!voiceConfig?.api_key) {
+      if (!voiceConfig?.api_key || !voiceConfig?.agent_id) {
         toast({
           variant: "destructive",
           title: "Configuration Error",
@@ -60,7 +76,15 @@ const VoiceDouble: React.FC = () => {
       }
 
       try {
-        await startVoiceInteraction();
+        setStatus('connecting');
+        await conversation.startSession({
+          agentId: voiceConfig.agent_id,
+          overrides: {
+            tts: {
+              voiceId: voiceConfig.voice_name
+            }
+          }
+        });
       } catch (err) {
         console.error('Voice interaction error:', err);
         toast({
@@ -68,9 +92,11 @@ const VoiceDouble: React.FC = () => {
           title: "Connection Error",
           description: "Failed to start voice interaction. Please try again.",
         });
+        setStatus('idle');
       }
     } else {
-      stopVoiceInteraction();
+      await conversation.endSession();
+      setStatus('idle');
     }
   };
 
@@ -127,17 +153,6 @@ const VoiceDouble: React.FC = () => {
               </motion.div>
 
               <StatusIndicator status={status} />
-
-              {errorDetails && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="absolute bottom-0 left-1/2 -translate-x-1/2 mb-4 text-red-400 text-sm font-mono"
-                >
-                  {errorDetails.message}
-                </motion.div>
-              )}
             </div>
           )}
         </AnimatePresence>
@@ -151,7 +166,7 @@ const VoiceDouble: React.FC = () => {
             {voiceConfig?.voice_name || 'Default Voice'}
           </p>
           <p className="font-mono text-xs text-white/40">
-            Status: {connectionStatus}
+            Status: {status}
           </p>
         </motion.div>
       </main>
