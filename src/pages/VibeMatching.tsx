@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -53,7 +54,12 @@ const VibeMatching: React.FC = () => {
         const processedData = data.map(personality => {
           console.log('Processing personality:', personality);
           try {
-            const parsedArray = personality.url_array ? JSON.parse(personality.url_array) : [];
+            let parsedArray: string[] = [];
+            if (typeof personality.url_array === 'string') {
+              parsedArray = JSON.parse(personality.url_array);
+            } else if (Array.isArray(personality.url_array)) {
+              parsedArray = personality.url_array;
+            }
             console.log('Parsed url_array:', parsedArray);
             return {
               ...personality,
@@ -88,10 +94,14 @@ const VibeMatching: React.FC = () => {
     console.log('Available personalities:', personalities);
     
     // Get one image from each personality for the current step
-    const images = personalities.map(personality => ({
-      name: personality.name,
-      imageId: personality.url_array[step - 1] || ''
-    })).filter(item => item.imageId);
+    const images = personalities.map(personality => {
+      const currentImage = personality.url_array[step - 1];
+      console.log(`Getting image for ${personality.name}, step ${step}:`, currentImage);
+      return {
+        name: personality.name,
+        imageId: currentImage || ''
+      };
+    }).filter(item => item.imageId);
     
     console.log('Current images:', images);
     return images;
