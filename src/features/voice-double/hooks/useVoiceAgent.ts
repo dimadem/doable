@@ -6,31 +6,40 @@ export const useVoiceAgent = (personalityKey: string) => {
   return useQuery({
     queryKey: ['voice-agent', personalityKey],
     queryFn: async () => {
-      // Get voice configuration and API key in parallel for better performance
-      const [voiceConfig, secretResult] = await Promise.all([
-        supabase
-          .from('voices')
-          .select('voice_name, agent_id, agent_settings')
-          .eq('fit_personality_name', personalityKey)
-          .maybeSingle(),
-        supabase.rpc('get_secret', { secret_name: 'ELEVEN_LABS_API_KEY' })
-      ]);
+      // Get voice configuration from the voices table
+      const voiceConfig = await supabase
+        .from('voices')
+        .select('voice_name, agent_id, agent_settings')
+        .eq('fit_personality_name', personalityKey)
+        .maybeSingle();
 
       if (voiceConfig.error) {
         console.error('Error fetching voice configuration:', voiceConfig.error);
-        throw voiceConfig.error;
+        throw new Error('Failed to fetch voice configuration');
       }
 
-      if (secretResult.error) {
-        console.error('Error fetching API key:', secretResult.error);
-        throw secretResult.error;
+      if (!voiceConfig.data) {
+        throw new Error(`No voice configuration found for personality: ${personalityKey}`);
+      }
+
+      // Get the API key from environment secrets
+      const { data: secretData, error: secretError } = await supabase
+        .from('secrets')
+        .select('value')
+        .eq('name', 'ELEVEN_LABS_API_KEY')
+        .single();
+
+      if (secretError) {
+        console.error('Error fetching API key:', secretError);
+        throw new Error('Failed to fetch API key');
       }
 
       return {
         ...voiceConfig.data,
-        api_key: secretResult.data
+        api_key: secretData?.value
       };
     },
     enabled: !!personalityKey,
+    retry: 1, // Only retry once to avoid excessive attempts
   });
 };

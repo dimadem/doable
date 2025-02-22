@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+
+import { useState, useCallback, useEffect } from 'react';
 import type { StatusIndicatorProps } from '../types';
 import type { Json } from '@/integrations/supabase/types';
 
@@ -14,6 +15,18 @@ export const useVoiceInteraction = (voiceConfig?: VoiceConfig | null) => {
   const [isRecording, setIsRecording] = useState(false);
   const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
   const [webSocket, setWebSocket] = useState<WebSocket | null>(null);
+
+  // Cleanup function for WebSocket and audio stream
+  useEffect(() => {
+    return () => {
+      if (webSocket) {
+        webSocket.close();
+      }
+      if (audioStream) {
+        audioStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [webSocket, audioStream]);
 
   const startRecording = useCallback(async () => {
     try {
@@ -49,7 +62,7 @@ export const useVoiceInteraction = (voiceConfig?: VoiceConfig | null) => {
     }
 
     if (!voiceConfig?.api_key) {
-      throw new Error('ElevenLabs API key not configured. Please add it in the Supabase secrets.');
+      throw new Error('ElevenLabs API key not found');
     }
 
     try {
@@ -76,7 +89,9 @@ export const useVoiceInteraction = (voiceConfig?: VoiceConfig | null) => {
           if (data.type === 'speech') {
             setStatus('responding');
             const audio = new Audio(`data:audio/mpeg;base64,${data.audio}`);
-            audio.play();
+            audio.play().catch(err => {
+              console.error('Error playing audio:', err);
+            });
           }
         } catch (err) {
           console.error('Error processing WebSocket message:', err);
@@ -98,12 +113,6 @@ export const useVoiceInteraction = (voiceConfig?: VoiceConfig | null) => {
         setWebSocket(null);
       };
 
-      return () => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.close();
-        }
-        stopRecording();
-      };
     } catch (err) {
       console.error('Voice interaction error:', err);
       stopRecording();
