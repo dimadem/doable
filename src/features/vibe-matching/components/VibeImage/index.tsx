@@ -10,18 +10,48 @@ export const VibeImage: React.FC<VibeImageProps> = ({ imageId, index, onClick })
   const [hasError, setHasError] = useState(false);
   const [optimizedUrl, setOptimizedUrl] = useState<string>('');
   const videoRef = useRef<HTMLVideoElement>(null);
+  const loadTimeoutRef = useRef<NodeJS.Timeout>();
+  const retryCountRef = useRef(0);
   const isVideoContent = isVideo(imageId);
 
   useEffect(() => {
     setOptimizedUrl(optimizeMediaUrl(imageId));
-  }, [imageId]);
+    
+    // Set a loading timeout
+    loadTimeoutRef.current = setTimeout(() => {
+      if (isLoading && !hasError && retryCountRef.current < 2) {
+        console.log(`Retrying load for ${imageId}`);
+        retryCountRef.current += 1;
+        setIsLoading(true);
+        setHasError(false);
+        // Force reload by updating the optimized URL with a cache buster
+        setOptimizedUrl(`${optimizeMediaUrl(imageId)}?t=${Date.now()}`);
+      } else if (isLoading) {
+        setHasError(true);
+        setIsLoading(false);
+      }
+    }, 10000); // 10 second timeout
+
+    return () => {
+      if (loadTimeoutRef.current) {
+        clearTimeout(loadTimeoutRef.current);
+      }
+    };
+  }, [imageId, isLoading, hasError]);
 
   const handleLoad = () => {
+    if (loadTimeoutRef.current) {
+      clearTimeout(loadTimeoutRef.current);
+    }
     setIsLoading(false);
     setHasError(false);
+    console.log(`Successfully loaded ${imageId}`);
   };
 
   const handleError = () => {
+    if (loadTimeoutRef.current) {
+      clearTimeout(loadTimeoutRef.current);
+    }
     setIsLoading(false);
     setHasError(true);
     console.error(`Failed to load media: ${imageId}`);

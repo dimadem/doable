@@ -9,9 +9,12 @@ interface MediaMetadata {
   isVideo: boolean;
 }
 
+// Cache for loaded media to prevent unnecessary reloads
+const mediaCache = new Map<string, MediaMetadata>();
+
 export const isVideo = (url: string): boolean => {
   try {
-    return url.match(/\.(mp4)$/i) !== null;
+    return url.match(/\.(mp4|webm|mov)$/i) !== null;
   } catch {
     return false;
   }
@@ -20,72 +23,92 @@ export const isVideo = (url: string): boolean => {
 export const validateMediaUrl = (url: string): boolean => {
   try {
     new URL(url);
-    return url.match(/\.(jpg|jpeg|png|webp|gif|mp4)$/i) !== null;
+    return url.match(/\.(jpg|jpeg|png|webp|gif|mp4|webm|mov)$/i) !== null;
   } catch {
     return false;
   }
 };
 
 export const preloadMedia = async (url: string): Promise<MediaMetadata> => {
-  if (isVideo(url)) {
-    return new Promise((resolve) => {
-      const video = document.createElement('video');
-      
-      video.onloadedmetadata = () => {
-        resolve({
-          url,
-          width: video.videoWidth,
-          height: video.videoHeight,
-          format: 'mp4',
-          loading: false,
-          error: false,
-          isVideo: true
-        });
-      };
-
-      video.onerror = () => {
-        resolve({
-          url,
-          loading: false,
-          error: true,
-          isVideo: true
-        });
-      };
-
-      video.src = url;
-    });
+  // Check cache first
+  if (mediaCache.has(url)) {
+    return mediaCache.get(url)!;
   }
 
-  return new Promise((resolve) => {
-    const img = new Image();
-    
-    img.onload = () => {
-      resolve({
-        url,
-        width: img.naturalWidth,
-        height: img.naturalHeight,
-        format: url.split('.').pop()?.toLowerCase(),
-        loading: false,
-        error: false,
-        isVideo: false
-      });
-    };
+  const metadata: MediaMetadata = {
+    url,
+    loading: true,
+    error: false,
+    isVideo: isVideo(url)
+  };
 
-    img.onerror = () => {
-      resolve({
-        url,
-        loading: false,
-        error: true,
-        isVideo: false
-      });
-    };
+  try {
+    if (metadata.isVideo) {
+      return await new Promise((resolve) => {
+        const video = document.createElement('video');
+        const timeoutId = setTimeout(() => {
+          video.onerror?.(new Error('Timeout') as any);
+        }, 10000); // 10 second timeout
 
-    img.src = url;
-  });
+        video.onloadedmetadata = () => {
+          clearTimeout(timeoutId);
+          metadata.width = video.videoWidth;
+          metadata.height = video.videoHeight;
+          metadata.format = url.split('.').pop()?.toLowerCase();
+          metadata.loading = false;
+          mediaCache.set(url, metadata);
+          resolve(metadata);
+        };
+
+        video.onerror = () => {
+          clearTimeout(timeoutId);
+          metadata.error = true;
+          metadata.loading = false;
+          mediaCache.set(url, metadata);
+          resolve(metadata);
+        };
+
+        video.src = url;
+        video.load();
+      });
+    }
+
+    return await new Promise((resolve) => {
+      const img = new Image();
+      const timeoutId = setTimeout(() => {
+        img.onerror?.(new Error('Timeout') as any);
+      }, 10000); // 10 second timeout
+
+      img.onload = () => {
+        clearTimeout(timeoutId);
+        metadata.width = img.naturalWidth;
+        metadata.height = img.naturalHeight;
+        metadata.format = url.split('.').pop()?.toLowerCase();
+        metadata.loading = false;
+        mediaCache.set(url, metadata);
+        resolve(metadata);
+      };
+
+      img.onerror = () => {
+        clearTimeout(timeoutId);
+        metadata.error = true;
+        metadata.loading = false;
+        mediaCache.set(url, metadata);
+        resolve(metadata);
+      };
+
+      img.src = url;
+    });
+  } catch (error) {
+    metadata.error = true;
+    metadata.loading = false;
+    mediaCache.set(url, metadata);
+    return metadata;
+  }
 };
 
 export const optimizeMediaUrl = (url: string, width = 800): string => {
-  // Add query parameters for CDN optimization if using one
+  // If using a CDN that supports image optimization, add query parameters here
   // For now, just return the original URL
   return url;
 };
