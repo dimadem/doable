@@ -120,7 +120,7 @@ const VibeMatching: React.FC = () => {
       exit="exit"
       variants={pageVariants}
     >
-      <header className="p-8 flex justify-between items-center relative">
+      <header className="p-8">
         <button 
           onClick={() => navigate('/')}
           className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
@@ -128,12 +128,6 @@ const VibeMatching: React.FC = () => {
           <ArrowLeft size={20} />
           <span className="font-mono">Back</span>
         </button>
-
-        <div className="absolute right-8 top-8">
-          <h1 className="font-mono text-2xl font-bold bg-white text-black px-6 py-3 rounded-lg">
-            Choose Your Vibe
-          </h1>
-        </div>
       </header>
 
       <main className="flex-1 flex flex-col justify-center px-8 gap-6">
