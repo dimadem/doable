@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
@@ -14,21 +15,6 @@ interface VibeImageProps {
   index: number;
   onClick: () => void;
 }
-
-// Animation variants
-const pageVariants = {
-  initial: { opacity: 0, y: 20 },
-  animate: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: "easeOut" }
-  },
-  exit: {
-    opacity: 0,
-    y: -20,
-    transition: { duration: 0.3 }
-  }
-};
 
 // Constants
 const MAX_STEPS = 3;
@@ -68,7 +54,30 @@ const VIBE_GROUPS: Record<string, ImageGroup> = {
   }
 };
 
-// Reusable components
+// Animation variants
+const pageVariants = {
+  initial: { 
+    opacity: 0, 
+    y: 20 
+  },
+  animate: {
+    opacity: 1,
+    y: 0,
+    transition: { 
+      duration: 0.5, 
+      ease: "easeOut" 
+    }
+  },
+  exit: {
+    opacity: 0,
+    y: -20,
+    transition: { 
+      duration: 0.3 
+    }
+  }
+};
+
+// Components
 const BackButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
   <button 
     onClick={onClick}
@@ -122,8 +131,6 @@ const VibeMatching: React.FC = () => {
     }
   };
 
-  const currentGroup = VIBE_GROUPS[currentGroupId];
-
   return (
     <motion.div 
       className="h-screen bg-black text-white flex flex-col overflow-hidden"
@@ -138,7 +145,7 @@ const VibeMatching: React.FC = () => {
       </header>
 
       <main className="flex-1 flex flex-col justify-center px-8 gap-6">
-        {currentGroup.images.map((imageId, index) => (
+        {VIBE_GROUPS[currentGroupId].images.map((imageId, index) => (
           <VibeImage
             key={imageId}
             imageId={imageId}
