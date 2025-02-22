@@ -6,10 +6,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import VibeMatching from "./pages/VibeMatching";
+import { VibeMatching } from "./features/vibe-matching";
 import Struggle from "./pages/Struggle";
 import VoiceDouble from "./pages/VoiceDouble";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
