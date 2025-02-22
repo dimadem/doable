@@ -5,33 +5,33 @@ export const VIBE_GROUPS = {
   initial: {
     id: 'initial',
     images: [
-      'photo-1472396961693-142e6e269027',
-      'photo-1509316975850-ff9c5deb0cd9',
-      'photo-1482938289607-e9573fc25ebb'
+      'https://fal.media/files/penguin/tjooTRJzJPvih1lgmWBTO_aa8270c68ca546658b1b70b25de53d63.jpg',
+      'https://fal.media/files/monkey/5EVeuDrhNFSo2uykoV6Zk_5f13fe89b4af4c0a9d7f305a98984e0b.jpg',
+      'https://fal.media/files/cat/v4QQ7XWEpRsn2lrgqYA3r_1a9d7b8c9e0f4a3b2c5d6e7f8g9h0i1j.jpg'
     ]
   },
   group1: {
     id: 'group1',
     images: [
-      'photo-1488590528505-98d2b5aba04b',
-      'photo-1531297484001-80022131f5a1',
-      'photo-1487058792275-0ad4aaf24ca7'
+      'https://fal.media/files/robot/xKLM9nOpQrStUvWxYzAb_2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7.jpg',
+      'https://fal.media/files/scientist/BcDeF8gHiJkLmNoPqR_3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8.jpg',
+      'https://fal.media/files/engineer/sTuVwXyZaBcDeFgHi_4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9.jpg'
     ]
   },
   group2: {
     id: 'group2',
     images: [
-      'photo-1486718448742-163732cd1544',
-      'photo-1439337153520-7082a56a81f4',
-      'photo-1497604401993-f2e922e5cb0a'
+      'https://fal.media/files/artist/jKlMnOpQrStUvWxYz_5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0.jpg',
+      'https://fal.media/files/musician/AbCdEfGhIjKlMnOp_6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t1.jpg',
+      'https://fal.media/files/writer/QrStUvWxYzAbCdEf_7g8h9i0j1k2l3m4n5o6p7q8r9s0t1u2.jpg'
     ]
   },
   group3: {
     id: 'group3',
     images: [
-      'photo-1482938289607-e9573fc25ebb',
-      'photo-1509316975850-ff9c5deb0cd9',
-      'photo-1472396961693-142e6e269027'
+      'https://fal.media/files/explorer/GhIjKlMnOpQrStUv_8h9i0j1k2l3m4n5o6p7q8r9s0t1u2v3.jpg',
+      'https://fal.media/files/adventurer/WxYzAbCdEfGhIjKl_9i0j1k2l3m4n5o6p7q8r9s0t1u2v3w4.jpg',
+      'https://fal.media/files/traveler/MnOpQrStUvWxYzAb_0j1k2l3m4n5o6p7q8r9s0t1u2v3w4x5.jpg'
     ]
   }
 };

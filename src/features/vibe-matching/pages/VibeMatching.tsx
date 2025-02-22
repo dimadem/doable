@@ -24,10 +24,25 @@ const VibeMatching: React.FC = () => {
 
   const progress = Math.min((step / Object.keys(VIBE_GROUPS).length) * 100, 100);
 
-  const handleImageSelect = async (personalityName: string) => {
+  const handleImageSelect = async (imageUrl: string) => {
+    console.log('Selected image URL:', imageUrl);
+    
+    // Find the personality that matches this image URL
+    const personality = personalities?.find(p => p.url_array?.includes(imageUrl));
+    
+    if (!personality) {
+      console.error('No personality found for image:', imageUrl);
+      toast({
+        title: "Error",
+        description: "Could not match image to personality",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const newSelection: SessionSelection = {
       step,
-      personalityName
+      personalityName: personality.name
     };
 
     const updatedSelections = [...selections, newSelection];
@@ -81,17 +96,12 @@ const VibeMatching: React.FC = () => {
       <ProgressBar progress={progress} />
 
       <main className="flex-1 grid grid-cols-2 gap-4 p-4">
-        {currentGroup.images.map((imageId, index) => (
+        {currentGroup.images.map((imageUrl, index) => (
           <VibeImage
-            key={imageId}
-            imageId={imageId}
+            key={imageUrl}
+            imageId={imageUrl}
             index={index}
-            onClick={() => {
-              const personality = personalities.find(p => p.url_array?.includes(imageId));
-              if (personality) {
-                handleImageSelect(personality.name);
-              }
-            }}
+            onClick={() => handleImageSelect(imageUrl)}
           />
         ))}
       </main>

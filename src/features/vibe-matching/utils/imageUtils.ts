@@ -9,12 +9,12 @@ interface MediaMetadata {
   isVideo: boolean;
 }
 
-// Cache for loaded media to prevent unnecessary reloads
 const mediaCache = new Map<string, MediaMetadata>();
 
 export const isVideo = (url: string): boolean => {
   try {
-    return url.match(/\.(mp4|webm|mov)$/i) !== null;
+    const urlObj = new URL(url);
+    return urlObj.pathname.match(/\.(mp4|webm|mov)$/i) !== null;
   } catch {
     return false;
   }
@@ -22,15 +22,14 @@ export const isVideo = (url: string): boolean => {
 
 export const validateMediaUrl = (url: string): boolean => {
   try {
-    new URL(url);
-    return url.match(/\.(jpg|jpeg|png|webp|gif|mp4|webm|mov)$/i) !== null;
+    const urlObj = new URL(url);
+    return urlObj.pathname.match(/\.(jpg|jpeg|png|webp|gif|mp4|webm|mov)$/i) !== null;
   } catch {
     return false;
   }
 };
 
 export const preloadMedia = async (url: string): Promise<MediaMetadata> => {
-  // Check cache first
   if (mediaCache.has(url)) {
     return mediaCache.get(url)!;
   }
@@ -48,7 +47,7 @@ export const preloadMedia = async (url: string): Promise<MediaMetadata> => {
         const video = document.createElement('video');
         const timeoutId = setTimeout(() => {
           video.onerror?.(new Error('Timeout') as any);
-        }, 10000); // 10 second timeout
+        }, 10000);
 
         video.onloadedmetadata = () => {
           clearTimeout(timeoutId);
@@ -77,7 +76,7 @@ export const preloadMedia = async (url: string): Promise<MediaMetadata> => {
       const img = new Image();
       const timeoutId = setTimeout(() => {
         img.onerror?.(new Error('Timeout') as any);
-      }, 10000); // 10 second timeout
+      }, 10000);
 
       img.onload = () => {
         clearTimeout(timeoutId);
@@ -108,7 +107,12 @@ export const preloadMedia = async (url: string): Promise<MediaMetadata> => {
 };
 
 export const optimizeMediaUrl = (url: string, width = 800): string => {
-  // If using a CDN that supports image optimization, add query parameters here
-  // For now, just return the original URL
-  return url;
+  try {
+    const urlObj = new URL(url);
+    // Add CDN optimization parameters here if needed
+    return urlObj.toString();
+  } catch {
+    console.error('Invalid URL:', url);
+    return url;
+  }
 };
