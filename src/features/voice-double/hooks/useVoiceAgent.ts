@@ -1,12 +1,19 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
+
+interface VoiceConfig {
+  voice_name: string;
+  agent_id: string;
+  agent_settings: Record<string, unknown>;
+  api_key?: string;
+}
 
 export const useVoiceAgent = (personalityKey: string) => {
   return useQuery({
     queryKey: ['voice-agent', personalityKey],
-    queryFn: async () => {
+    queryFn: async (): Promise<VoiceConfig> => {
       // Get voice configuration
       const voiceConfig = await supabase
         .from('voices')
@@ -42,6 +49,6 @@ export const useVoiceAgent = (personalityKey: string) => {
       };
     },
     enabled: !!personalityKey,
-    retry: 1, // Only retry once to avoid excessive attempts
+    retry: 1
   });
 };

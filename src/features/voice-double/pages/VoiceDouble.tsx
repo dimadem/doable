@@ -10,12 +10,13 @@ import { StatusIndicator } from '../components/StatusIndicator';
 import { WaveformVisualization } from '../components/WaveformVisualization';
 import { useVoiceAgent } from '../hooks/useVoiceAgent';
 import { useToast } from '@/hooks/use-toast';
+import { ElevenLabsProvider } from '../providers/ElevenLabsProvider';
 import type { StatusIndicatorProps } from '../types';
 
 const ALLOWED_PERSONALITIES = ['emotive', 'hyperthymic', 'persistent_paranoid'];
 const DEFAULT_PERSONALITY = 'persistent_paranoid';
 
-const VoiceDouble: React.FC = () => {
+const VoiceDoubleContent: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -171,6 +172,14 @@ const VoiceDouble: React.FC = () => {
         </motion.div>
       </main>
     </motion.div>
+  );
+};
+
+const VoiceDouble: React.FC = () => {
+  return (
+    <ElevenLabsProvider>
+      <VoiceDoubleContent />
+    </ElevenLabsProvider>
   );
 };
 
