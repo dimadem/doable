@@ -47,6 +47,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     }
   };
 
+  const navigationItems = [
+    { path: '/vibe-matching', label: 'vibe matching' },
+    { path: '/struggle', label: 'struggle' },
+    { path: '/voice-double', label: 'voice double' }
+  ];
+
   return (
     <header className="w-full p-4 md:p-8 flex justify-between items-center shrink-0">
       <div className="flex items-center gap-4">
@@ -65,6 +71,24 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           </h1>
         )}
       </div>
+
+      {user && location.pathname !== '/' && (
+        <div className="flex items-center gap-4 absolute left-1/2 -translate-x-1/2">
+          {navigationItems.map((item) => (
+            <button
+              key={item.path}
+              onClick={() => navigate(item.path, { state: { direction: 1 } })}
+              className={`font-mono px-4 py-2 transition-colors ${
+                location.pathname === item.path
+                  ? 'bg-white text-black'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="flex items-center">
         {location.pathname === '/' ? (
