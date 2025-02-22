@@ -56,6 +56,7 @@ export type Database = {
           device_info: Json | null
           id: string
           personality_id: string | null
+          personality_key: string | null
           session_data: Json | null
           session_feedback: Json | null
           session_id: string | null
@@ -66,6 +67,7 @@ export type Database = {
           device_info?: Json | null
           id?: string
           personality_id?: string | null
+          personality_key?: string | null
           session_data?: Json | null
           session_feedback?: Json | null
           session_id?: string | null
@@ -76,6 +78,7 @@ export type Database = {
           device_info?: Json | null
           id?: string
           personality_id?: string | null
+          personality_key?: string | null
           session_data?: Json | null
           session_feedback?: Json | null
           session_id?: string | null
@@ -90,6 +93,13 @@ export type Database = {
             referencedRelation: "personalities"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_sessions_personality_key_fkey"
+            columns: ["personality_key"]
+            isOneToOne: false
+            referencedRelation: "personalities"
+            referencedColumns: ["name"]
+          },
         ]
       }
       voices: {
@@ -97,6 +107,7 @@ export type Database = {
           agent_id: string | null
           agent_settings: Json | null
           id: string
+          other_metadata: string | null
           personality_id: string
           personality_name: string
         }
@@ -104,6 +115,7 @@ export type Database = {
           agent_id?: string | null
           agent_settings?: Json | null
           id?: string
+          other_metadata?: string | null
           personality_id?: string
           personality_name: string
         }
@@ -111,6 +123,7 @@ export type Database = {
           agent_id?: string | null
           agent_settings?: Json | null
           id?: string
+          other_metadata?: string | null
           personality_id?: string
           personality_name?: string
         }
