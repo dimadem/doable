@@ -73,7 +73,7 @@ const Hero = () => {
           just do it
         </span>
         <h1 className="font-mono font-bold mb-6 md:text-9xl text-7xl text-white">
-          doible
+          doable
         </h1>
         <p className="font-mono text-lg text-gray-400 max-w-md mx-auto">
           Uncover your authentic personality archetype through our innovative discovery process.
