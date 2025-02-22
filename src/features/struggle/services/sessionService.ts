@@ -6,6 +6,7 @@ export const fetchLatestSession = async (): Promise<SessionResponse> => {
   const { data: sessionData, error: sessionError } = await supabase
     .from('user_sessions')
     .select(`
+      id,
       session_data,
       personality_key,
       personalities!user_sessions_personality_key_fkey (
