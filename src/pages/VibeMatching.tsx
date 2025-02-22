@@ -25,46 +25,37 @@ const VibeMatching: React.FC = () => {
   useEffect(() => {
     const fetchPersonalities = async () => {
       setLoading(true);
-      console.log('Fetching personalities...');
       
       const { data, error } = await supabase
         .from('personalities')
         .select('id, name, url_array');
 
-      console.log('Raw data from Supabase:', data);
-
       if (error) {
-        console.error('Error fetching personalities:', error);
         setError(error.message);
         setLoading(false);
         return;
       }
 
       if (!data || data.length === 0) {
-        console.log('No data received from Supabase');
         setError('No personality data available');
         setLoading(false);
         return;
       }
 
       try {
-        console.log('Processing personalities...');
         const processedData = data.map(personality => {
           try {
             let parsedArray: string[] = [];
-            // Handle both string and array formats
             if (typeof personality.url_array === 'string') {
               parsedArray = JSON.parse(personality.url_array);
             } else if (Array.isArray(personality.url_array)) {
               parsedArray = personality.url_array;
             }
-            console.log(`Parsed URLs for ${personality.name}:`, parsedArray);
             return {
               ...personality,
               url_array: parsedArray
             };
           } catch (parseError) {
-            console.error(`Error parsing URLs for ${personality.name}:`, parseError);
             return {
               ...personality,
               url_array: []
@@ -72,10 +63,8 @@ const VibeMatching: React.FC = () => {
           }
         });
 
-        console.log('Processed personalities:', processedData);
         setPersonalities(processedData);
       } catch (processError) {
-        console.error('Error processing data:', processError);
         setError('Error processing personality data');
       } finally {
         setLoading(false);
@@ -88,24 +77,15 @@ const VibeMatching: React.FC = () => {
   const getCurrentImages = () => {
     if (!personalities.length) return [];
     
-    console.log('Getting images for step:', step);
-    
-    const images = personalities.map(personality => {
-      const currentUrl = personality.url_array[step - 1];
-      console.log(`Image URL for ${personality.name}:`, currentUrl);
-      return {
+    return personalities
+      .map(personality => ({
         name: personality.name,
-        imageId: currentUrl || '' // Using the direct URL
-      };
-    }).filter(item => item.imageId);
-    
-    console.log('Current step images:', images);
-    return images;
+        imageId: personality.url_array[step - 1] || ''
+      }))
+      .filter(item => item.imageId);
   };
 
   const handleImageClick = (selectedPersonality: string) => {
-    console.log('Selected personality:', selectedPersonality);
-    
     if (step < MAX_STEPS) {
       setStep(step + 1);
     } else {
