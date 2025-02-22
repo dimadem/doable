@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { motion } from 'framer-motion';
-import { Pause } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Pause, Mic } from 'lucide-react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { AppHeader } from '@/components/layouts/AppHeader';
 import { pageVariants, pulseVariants } from '@/animations/pageTransitions';
@@ -28,15 +28,15 @@ const VoiceDouble: React.FC = () => {
   const { toast } = useToast();
 
   const { data: voiceConfig, isLoading, error } = useVoiceAgent(personalityKey);
-  const { status, startVoiceInteraction, stopVoiceInteraction } = useVoiceInteraction(voiceConfig);
+  const { status, isRecording, startVoiceInteraction, stopVoiceInteraction } = useVoiceInteraction(voiceConfig);
 
   React.useEffect(() => {
     if (error) {
       console.error('Error loading voice configuration:', error);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to load voice configuration. Please try again.",
+        title: "Configuration Error",
+        description: "Failed to load voice settings. Please try again.",
       });
     }
   }, [error, toast]);
@@ -47,7 +47,7 @@ const VoiceDouble: React.FC = () => {
         toast({
           variant: "destructive",
           title: "Configuration Error",
-          description: "ElevenLabs API key not found. Please configure it in Supabase secrets.",
+          description: "Voice service not configured. Please check your settings.",
         });
         return;
       }
@@ -58,8 +58,8 @@ const VoiceDouble: React.FC = () => {
         console.error('Voice interaction error:', err);
         toast({
           variant: "destructive",
-          title: "Error",
-          description: "Failed to start voice interaction. Please check the console for details.",
+          title: "Connection Error",
+          description: "Failed to start voice interaction. Please try again.",
         });
       }
     } else {
@@ -79,44 +79,61 @@ const VoiceDouble: React.FC = () => {
       <AppHeader title="voice double" />
 
       <main className="flex-1 flex flex-col items-center justify-center px-8">
-        <div className="relative">
-          <motion.div
-            className="relative w-64 h-64 rounded-full flex items-center justify-center"
-            variants={pulseVariants}
-            animate={status === 'idle' ? 'idle' : 'active'}
-          >
-            <div className="absolute inset-0 rounded-full border-4 border-white/10 animate-[pulse_4s_ease-in-out_infinite]" />
-            <div className="absolute inset-2 rounded-full border-2 border-white/20 animate-[pulse_4s_ease-in-out_infinite_1000ms]" />
-            <div className="absolute inset-4 rounded-full border border-white/30 animate-[pulse_4s_ease-in-out_infinite_2000ms]" />
-            
-            <WaveformVisualization isActive={status === 'responding'} />
-
-            <button
-              onClick={handleInteractionToggle}
-              disabled={isLoading || !voiceConfig}
-              className="w-32 h-32 rounded-full bg-white/5 backdrop-blur-sm flex items-center justify-center 
-                       hover:bg-white/10 transition-colors border border-white/20 z-10
-                       disabled:opacity-50 disabled:cursor-not-allowed"
+        <AnimatePresence mode="wait">
+          {isLoading ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="text-white/60 font-mono"
             >
-              {status === 'idle' ? (
-                <span className="font-mono text-sm">
-                  {isLoading ? 'loading...' : 'start'}
-                </span>
-              ) : (
-                <Pause className="w-8 h-8" />
-              )}
-            </button>
-          </motion.div>
+              Loading voice configuration...
+            </motion.div>
+          ) : (
+            <div className="relative">
+              <motion.div
+                className="relative w-64 h-64 rounded-full flex items-center justify-center"
+                variants={pulseVariants}
+                animate={status === 'idle' ? 'idle' : 'active'}
+              >
+                <div className="absolute inset-0 rounded-full border-4 border-white/10 animate-[pulse_4s_ease-in-out_infinite]" />
+                <div className="absolute inset-2 rounded-full border-2 border-white/20 animate-[pulse_4s_ease-in-out_infinite_1000ms]" />
+                <div className="absolute inset-4 rounded-full border border-white/30 animate-[pulse_4s_ease-in-out_infinite_2000ms]" />
+                
+                <WaveformVisualization isActive={status === 'responding'} />
 
-          <StatusIndicator status={status} />
-        </div>
+                <motion.button
+                  onClick={handleInteractionToggle}
+                  disabled={isLoading || !voiceConfig}
+                  className="w-32 h-32 rounded-full bg-white/5 backdrop-blur-sm flex items-center justify-center 
+                           hover:bg-white/10 transition-colors border border-white/20 z-10
+                           disabled:opacity-50 disabled:cursor-not-allowed"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  {status === 'idle' ? (
+                    <Mic className="w-8 h-8" />
+                  ) : (
+                    <Pause className="w-8 h-8" />
+                  )}
+                </motion.button>
+              </motion.div>
+
+              <StatusIndicator status={status} />
+            </div>
+          )}
+        </AnimatePresence>
 
         {voiceConfig && (
-          <div className="mt-8 text-center">
+          <motion.div 
+            className="mt-8 text-center"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
             <p className="font-mono text-sm text-white/60">
               Voice Agent: {voiceConfig.voice_name || 'Default'}
             </p>
-          </div>
+          </motion.div>
         )}
       </main>
     </motion.div>

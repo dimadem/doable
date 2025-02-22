@@ -1,7 +1,9 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { StatusIndicatorProps } from '../types';
 import type { Json } from '@/integrations/supabase/types';
+import { AudioQueue } from '../services/audioService';
+import { toast } from '@/components/ui/use-toast';
 
 interface VoiceConfig {
   voice_name?: string;
@@ -10,23 +12,37 @@ interface VoiceConfig {
   agent_settings?: Json;
 }
 
+const RECONNECT_ATTEMPTS = 3;
+const RECONNECT_DELAY = 2000;
+
 export const useVoiceInteraction = (voiceConfig?: VoiceConfig | null) => {
   const [status, setStatus] = useState<StatusIndicatorProps['status']>('idle');
   const [isRecording, setIsRecording] = useState(false);
-  const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
-  const [webSocket, setWebSocket] = useState<WebSocket | null>(null);
+  const audioStreamRef = useRef<MediaStream | null>(null);
+  const webSocketRef = useRef<WebSocket | null>(null);
+  const audioQueueRef = useRef<AudioQueue | null>(null);
+  const reconnectAttemptsRef = useRef(0);
 
-  // Cleanup function for WebSocket and audio stream
+  // Initialize audio queue
   useEffect(() => {
+    audioQueueRef.current = new AudioQueue();
     return () => {
-      if (webSocket) {
-        webSocket.close();
-      }
-      if (audioStream) {
-        audioStream.getTracks().forEach(track => track.stop());
-      }
+      audioQueueRef.current?.dispose();
     };
-  }, [webSocket, audioStream]);
+  }, []);
+
+  const cleanup = useCallback(() => {
+    if (webSocketRef.current) {
+      webSocketRef.current.close();
+      webSocketRef.current = null;
+    }
+    if (audioStreamRef.current) {
+      audioStreamRef.current.getTracks().forEach(track => track.stop());
+      audioStreamRef.current = null;
+    }
+    setIsRecording(false);
+    setStatus('idle');
+  }, []);
 
   const startRecording = useCallback(async () => {
     try {
@@ -39,98 +55,100 @@ export const useVoiceInteraction = (voiceConfig?: VoiceConfig | null) => {
           autoGainControl: true
         }
       });
-      setAudioStream(stream);
+      audioStreamRef.current = stream;
       setIsRecording(true);
       return stream;
     } catch (err) {
       console.error('Error accessing microphone:', err);
+      toast({
+        variant: "destructive",
+        title: "Microphone Error",
+        description: "Unable to access your microphone. Please check your permissions.",
+      });
       throw new Error('Unable to access microphone');
     }
   }, []);
 
-  const stopRecording = useCallback(() => {
-    if (audioStream) {
-      audioStream.getTracks().forEach(track => track.stop());
-      setAudioStream(null);
-      setIsRecording(false);
-    }
-  }, [audioStream]);
-
-  const startVoiceInteraction = useCallback(async () => {
-    if (!voiceConfig?.agent_id) {
+  const connectWebSocket = useCallback(async () => {
+    if (!voiceConfig?.agent_id || !voiceConfig?.api_key) {
       throw new Error('Voice agent not configured');
     }
 
-    if (!voiceConfig?.api_key) {
-      throw new Error('ElevenLabs API key not found');
-    }
+    const ws = new WebSocket(`wss://api.elevenlabs.io/v1/chat?agent_id=${voiceConfig.agent_id}`);
+    
+    ws.onopen = () => {
+      console.log('WebSocket connected, sending auth...');
+      ws.send(JSON.stringify({
+        type: 'connection.auth',
+        api_key: voiceConfig.api_key
+      }));
+      setStatus('processing');
+      reconnectAttemptsRef.current = 0;
+    };
 
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log('WebSocket message received:', data);
+        
+        if (data.type === 'speech') {
+          setStatus('responding');
+          audioQueueRef.current?.addToQueue(data.audio);
+        }
+      } catch (err) {
+        console.error('Error processing WebSocket message:', err);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      if (reconnectAttemptsRef.current < RECONNECT_ATTEMPTS) {
+        setTimeout(() => {
+          reconnectAttemptsRef.current++;
+          connectWebSocket();
+        }, RECONNECT_DELAY);
+      } else {
+        cleanup();
+        toast({
+          variant: "destructive",
+          title: "Connection Error",
+          description: "Failed to connect to voice service. Please try again.",
+        });
+      }
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket closed');
+      cleanup();
+    };
+
+    webSocketRef.current = ws;
+  }, [voiceConfig, cleanup]);
+
+  const startVoiceInteraction = useCallback(async () => {
     try {
       setStatus('connecting');
       await startRecording();
-      
-      const ws = new WebSocket(`wss://api.elevenlabs.io/v1/chat?agent_id=${voiceConfig.agent_id}`);
-      setWebSocket(ws);
-      
-      ws.onopen = () => {
-        console.log('WebSocket connected, sending auth...');
-        ws.send(JSON.stringify({
-          type: 'connection.auth',
-          api_key: voiceConfig.api_key
-        }));
-        setStatus('processing');
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          console.log('WebSocket message received:', data);
-          
-          if (data.type === 'speech') {
-            setStatus('responding');
-            const audio = new Audio(`data:audio/mpeg;base64,${data.audio}`);
-            audio.play().catch(err => {
-              console.error('Error playing audio:', err);
-            });
-          }
-        } catch (err) {
-          console.error('Error processing WebSocket message:', err);
-        }
-      };
-
-      ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        stopRecording();
-        setStatus('idle');
-        setWebSocket(null);
-        throw new Error('WebSocket connection failed');
-      };
-
-      ws.onclose = () => {
-        console.log('WebSocket closed');
-        stopRecording();
-        setStatus('idle');
-        setWebSocket(null);
-      };
-
+      await connectWebSocket();
     } catch (err) {
       console.error('Voice interaction error:', err);
-      stopRecording();
-      setStatus('idle');
+      cleanup();
       throw err;
     }
-  }, [voiceConfig, startRecording, stopRecording]);
+  }, [startRecording, connectWebSocket, cleanup]);
 
   const stopVoiceInteraction = useCallback(() => {
-    if (webSocket) {
-      if (webSocket.readyState === WebSocket.OPEN) {
-        webSocket.close();
-      }
-      setWebSocket(null);
-    }
-    stopRecording();
-    setStatus('idle');
-  }, [webSocket, stopRecording]);
+    cleanup();
+    audioQueueRef.current?.clear();
+  }, [cleanup]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cleanup();
+      audioQueueRef.current?.dispose();
+    };
+  }, [cleanup]);
 
   return {
     status,
