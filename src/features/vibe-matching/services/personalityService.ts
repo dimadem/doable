@@ -58,7 +58,8 @@ export const saveUserSession = async (
 
     const dataToInsert = {
       session_data: JSON.stringify(sessionData),
-      personality_key: personality.name
+      personality_key: personality.name,
+      personality_id: personality.id
     };
 
     console.log('Data Being Sent to Supabase:', dataToInsert);
