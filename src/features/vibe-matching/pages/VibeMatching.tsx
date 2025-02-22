@@ -20,7 +20,7 @@ const VibeMatching: React.FC = () => {
   const { personalities, loading, error } = usePersonalities();
 
   const getCurrentImages = () => {
-    if (!personalities.length) return [];
+    if (!personalities || personalities.length === 0) return [];
     
     // Get an image from each of the first 3 personalities for the current step
     return personalities
@@ -53,7 +53,7 @@ const VibeMatching: React.FC = () => {
   };
 
   if (loading) return <LoadingState />;
-  if (error || personalities.length === 0) return <ErrorState error={error} onRetry={() => window.location.reload()} />;
+  if (error) return <ErrorState error={error} onRetry={() => window.location.reload()} />;
 
   const currentImages = getCurrentImages();
 

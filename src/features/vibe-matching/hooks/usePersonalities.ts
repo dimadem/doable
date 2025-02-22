@@ -10,48 +10,39 @@ export const usePersonalities = () => {
 
   useEffect(() => {
     const fetchPersonalities = async () => {
-      setLoading(true);
-      
-      const { data, error } = await supabase
-        .from('personalities')
-        .select('id, name, url_array');
-
-      if (error) {
-        setError(error.message);
-        setLoading(false);
-        return;
-      }
-
-      if (!data || data.length === 0) {
-        setError('No personality data available');
-        setLoading(false);
-        return;
-      }
-
       try {
-        const processedData = data.map(personality => {
-          try {
-            let parsedArray: string[] = [];
-            if (typeof personality.url_array === 'string') {
-              parsedArray = JSON.parse(personality.url_array);
-            } else if (Array.isArray(personality.url_array)) {
-              parsedArray = personality.url_array;
-            }
-            return {
-              ...personality,
-              url_array: parsedArray
-            };
-          } catch (parseError) {
-            return {
-              ...personality,
-              url_array: []
-            };
-          }
-        });
+        setLoading(true);
+        setError(null);
+        
+        const { data, error } = await supabase
+          .from('personalities')
+          .select('id, name, url_array');
 
-        setPersonalities(processedData);
-      } catch (processError) {
-        setError('Error processing personality data');
+        if (error) {
+          throw error;
+        }
+
+        if (!data || data.length === 0) {
+          throw new Error('No personality data available');
+        }
+
+        // Process and validate the data
+        const processedData = data.map(personality => ({
+          id: personality.id,
+          name: personality.name,
+          url_array: Array.isArray(personality.url_array) ? personality.url_array : []
+        }));
+
+        // Only set personalities if we have at least one valid personality
+        if (processedData.length > 0) {
+          setPersonalities(processedData);
+        } else {
+          throw new Error('No valid personality data available');
+        }
+
+      } catch (err) {
+        console.error('Error fetching personalities:', err);
+        setError(err instanceof Error ? err.message : 'Error loading personalities');
       } finally {
         setLoading(false);
       }
