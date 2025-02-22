@@ -15,8 +15,7 @@ const VibeMatching: React.FC = () => {
 
   const handleImageClick = () => {
     if (step < MAX_STEPS) {
-      const nextStep = step + 1;
-      setStep(nextStep);
+      setStep(step + 1);
       setCurrentGroupId(`group${step}`);
     } else {
       navigate('/struggle', { replace: true });

@@ -26,22 +26,13 @@ const Hero = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      let response;
-      
-      if (isRegistering) {
-        response = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: window.location.origin + '/vibe-matching'
-          }
-        });
-      } else {
-        response = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
-      }
+      const response = isRegistering 
+        ? await supabase.auth.signUp({
+            email,
+            password,
+            options: { emailRedirectTo: `${window.location.origin}/vibe-matching` }
+          })
+        : await supabase.auth.signInWithPassword({ email, password });
 
       if (response.error) {
         toast({
@@ -49,13 +40,11 @@ const Hero = () => {
           title: "Authentication Error",
           description: response.error.message
         });
-      } else {
-        if (isRegistering) {
-          toast({
-            title: "Check your email",
-            description: "We've sent you a verification link."
-          });
-        }
+      } else if (isRegistering) {
+        toast({
+          title: "Check your email",
+          description: "We've sent you a verification link."
+        });
       }
     } catch (err) {
       console.error('Authentication error:', err);
@@ -69,14 +58,8 @@ const Hero = () => {
 
   const containerVariants = {
     hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.2 }
-    },
-    exit: {
-      opacity: 0,
-      transition: { duration: 0.3 }
-    }
+    visible: { opacity: 1, transition: { staggerChildren: 0.2 } },
+    exit: { opacity: 0, transition: { duration: 0.3 } }
   };
 
   const itemVariants = {
@@ -84,10 +67,7 @@ const Hero = () => {
     visible: {
       opacity: 1,
       y: 0,
-      transition: {
-        duration: 0.5,
-        ease: "easeOut"
-      }
+      transition: { duration: 0.5, ease: "easeOut" }
     }
   };
 
@@ -99,9 +79,8 @@ const Hero = () => {
       exit="exit"
       variants={containerVariants}
     >
-      {/* Progress Indicator */}
       <div className="fixed top-8 right-8 flex gap-2">
-        {[1, 2, 3].map((step, i) => (
+        {[1, 2, 3].map((_, i) => (
           <div 
             key={i} 
             className={`w-2 h-2 rounded-full ${i === 0 ? 'bg-white' : 'bg-gray-800'}`} 
@@ -109,11 +88,7 @@ const Hero = () => {
         ))}
       </div>
 
-      {/* Main Content */}
-      <motion.div 
-        variants={itemVariants} 
-        className="text-center mb-12"
-      >
+      <motion.div variants={itemVariants} className="text-center mb-12">
         <span className="font-mono text-sm tracking-wider text-gray-400 mb-4 block">
           just do it
         </span>
@@ -125,7 +100,6 @@ const Hero = () => {
         </p>
       </motion.div>
 
-      {/* Auth Form */}
       <motion.form 
         variants={itemVariants}
         onSubmit={handleSubmit}
@@ -167,11 +141,7 @@ const Hero = () => {
         </button>
       </motion.form>
 
-      {/* Scroll Indicator */}
-      <motion.div 
-        variants={itemVariants} 
-        className="absolute bottom-8 animate-bounce"
-      >
+      <motion.div variants={itemVariants} className="absolute bottom-8 animate-bounce">
         <ChevronDown className="text-gray-600" />
       </motion.div>
     </motion.div>

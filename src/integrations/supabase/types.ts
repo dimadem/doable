@@ -92,6 +92,27 @@ export type Database = {
           },
         ]
       }
+      voices: {
+        Row: {
+          agent_configuration: Json | null
+          id: string
+          personality_id: string | null
+          personality_name: string | null
+        }
+        Insert: {
+          agent_configuration?: Json | null
+          id?: string
+          personality_id?: string | null
+          personality_name?: string | null
+        }
+        Update: {
+          agent_configuration?: Json | null
+          id?: string
+          personality_id?: string | null
+          personality_name?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
