@@ -1,15 +1,8 @@
 
-interface MediaMetadata {
-  url: string;
-  width?: number;
-  height?: number;
-  format?: string;
-  loading: boolean;
-  error: boolean;
-  isVideo: boolean;
-}
+import { MediaMetadata } from '../types';
 
 const mediaCache = new Map<string, MediaMetadata>();
+const loadingPromises = new Map<string, Promise<MediaMetadata>>();
 
 export const isVideo = (url: string): boolean => {
   try {
@@ -30,89 +23,93 @@ export const validateMediaUrl = (url: string): boolean => {
 };
 
 export const preloadMedia = async (url: string): Promise<MediaMetadata> => {
+  // Return cached result if available
   if (mediaCache.has(url)) {
     return mediaCache.get(url)!;
   }
 
-  const metadata: MediaMetadata = {
-    url,
-    loading: true,
-    error: false,
-    isVideo: isVideo(url)
-  };
+  // Return existing promise if media is already loading
+  if (loadingPromises.has(url)) {
+    return loadingPromises.get(url)!;
+  }
 
-  try {
-    if (metadata.isVideo) {
-      return await new Promise((resolve) => {
+  const loadPromise = new Promise<MediaMetadata>(async (resolve) => {
+    const metadata: MediaMetadata = {
+      url,
+      loading: true,
+      error: false,
+      isVideo: isVideo(url)
+    };
+
+    try {
+      if (metadata.isVideo) {
         const video = document.createElement('video');
-        const timeoutId = setTimeout(() => {
-          video.onerror?.(new Error('Timeout') as any);
-        }, 10000);
+        await new Promise((resolve, reject) => {
+          const timeoutId = setTimeout(() => reject(new Error('Timeout')), 10000);
 
-        video.onloadedmetadata = () => {
-          clearTimeout(timeoutId);
-          metadata.width = video.videoWidth;
-          metadata.height = video.videoHeight;
-          metadata.format = url.split('.').pop()?.toLowerCase();
-          metadata.loading = false;
-          mediaCache.set(url, metadata);
-          resolve(metadata);
-        };
+          video.onloadedmetadata = () => {
+            clearTimeout(timeoutId);
+            metadata.width = video.videoWidth;
+            metadata.height = video.videoHeight;
+            metadata.format = url.split('.').pop()?.toLowerCase();
+            metadata.loading = false;
+            resolve(null);
+          };
 
-        video.onerror = () => {
-          clearTimeout(timeoutId);
-          metadata.error = true;
-          metadata.loading = false;
-          mediaCache.set(url, metadata);
-          resolve(metadata);
-        };
+          video.onerror = () => {
+            clearTimeout(timeoutId);
+            reject(new Error('Failed to load video'));
+          };
 
-        video.src = url;
-        video.load();
-      });
+          video.src = url;
+          video.load();
+        });
+      } else {
+        const img = new Image();
+        await new Promise((resolve, reject) => {
+          const timeoutId = setTimeout(() => reject(new Error('Timeout')), 10000);
+
+          img.onload = () => {
+            clearTimeout(timeoutId);
+            metadata.width = img.naturalWidth;
+            metadata.height = img.naturalHeight;
+            metadata.format = url.split('.').pop()?.toLowerCase();
+            metadata.loading = false;
+            resolve(null);
+          };
+
+          img.onerror = () => {
+            clearTimeout(timeoutId);
+            reject(new Error('Failed to load image'));
+          };
+
+          img.src = url;
+        });
+      }
+    } catch (error) {
+      metadata.error = true;
+      console.error(`Failed to load media: ${url}`, error);
+    } finally {
+      metadata.loading = false;
+      mediaCache.set(url, metadata);
+      loadingPromises.delete(url);
     }
 
-    return await new Promise((resolve) => {
-      const img = new Image();
-      const timeoutId = setTimeout(() => {
-        img.onerror?.(new Error('Timeout') as any);
-      }, 10000);
+    resolve(metadata);
+  });
 
-      img.onload = () => {
-        clearTimeout(timeoutId);
-        metadata.width = img.naturalWidth;
-        metadata.height = img.naturalHeight;
-        metadata.format = url.split('.').pop()?.toLowerCase();
-        metadata.loading = false;
-        mediaCache.set(url, metadata);
-        resolve(metadata);
-      };
-
-      img.onerror = () => {
-        clearTimeout(timeoutId);
-        metadata.error = true;
-        metadata.loading = false;
-        mediaCache.set(url, metadata);
-        resolve(metadata);
-      };
-
-      img.src = url;
-    });
-  } catch (error) {
-    metadata.error = true;
-    metadata.loading = false;
-    mediaCache.set(url, metadata);
-    return metadata;
-  }
+  loadingPromises.set(url, loadPromise);
+  return loadPromise;
 };
 
 export const optimizeMediaUrl = (url: string, width = 800): string => {
   try {
     const urlObj = new URL(url);
     // Add CDN optimization parameters here if needed
+    // For example: urlObj.searchParams.set('w', width.toString());
     return urlObj.toString();
-  } catch {
-    console.error('Invalid URL:', url);
+  } catch (error) {
+    console.error('Invalid URL:', url, error);
     return url;
   }
 };

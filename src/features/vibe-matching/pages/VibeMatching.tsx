@@ -1,14 +1,13 @@
 
-import React, { useState } from 'react';
+import React, { useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { PageHeader } from '@/components/layouts/PageHeader';
 import { pageVariants } from '@/animations/pageTransitions';
 import { useToast } from '@/hooks/use-toast';
 import { determinePersonality, saveUserSession } from '../services/personalityService';
 import { usePersonalities } from '../hooks/usePersonalities';
-import { SessionSelection } from '../types';
+import { useVibeState } from '../hooks/useVibeState';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import ProgressBar from '../components/ProgressBar';
@@ -18,44 +17,26 @@ import { VIBE_GROUPS } from '../constants';
 const VibeMatching: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [step, setStep] = useState(0);
-  const [selections, setSelections] = useState<SessionSelection[]>([]);
-  const { personalities, loading, error } = usePersonalities();
+  const { personalities, loading, error: loadError } = usePersonalities();
+  const { step, selections, isComplete, error, selectVibe, setError, reset } = useVibeState();
 
-  const progress = Math.min((step / Object.keys(VIBE_GROUPS).length) * 100, 100);
+  const handleImageSelect = useCallback(async (imageUrl: string) => {
+    try {
+      console.log('Selected image URL:', imageUrl);
+      
+      const personality = personalities?.find(p => p.url_array?.includes(imageUrl));
+      
+      if (!personality) {
+        throw new Error('Could not match image to personality');
+      }
 
-  const handleImageSelect = async (imageUrl: string) => {
-    console.log('Selected image URL:', imageUrl);
-    
-    // Find the personality that matches this image URL
-    const personality = personalities?.find(p => p.url_array?.includes(imageUrl));
-    
-    if (!personality) {
-      console.error('No personality found for image:', imageUrl);
-      toast({
-        title: "Error",
-        description: "Could not match image to personality",
-        variant: "destructive"
-      });
-      return;
-    }
+      selectVibe(personality.name);
 
-    const newSelection: SessionSelection = {
-      step,
-      personalityName: personality.name
-    };
-
-    const updatedSelections = [...selections, newSelection];
-    setSelections(updatedSelections);
-
-    if (step < Object.keys(VIBE_GROUPS).length - 1) {
-      setStep(step + 1);
-    } else {
-      try {
+      if (isComplete) {
         if (!personalities) throw new Error('No personalities data available');
         
-        const dominantPersonality = determinePersonality(updatedSelections);
-        await saveUserSession(dominantPersonality, updatedSelections, personalities);
+        const dominantPersonality = determinePersonality(selections);
+        await saveUserSession(dominantPersonality, selections, personalities);
         
         toast({
           title: "Success",
@@ -63,21 +44,39 @@ const VibeMatching: React.FC = () => {
         });
         
         navigate('/struggle');
-      } catch (error) {
-        console.error('Error saving session:', error);
-        toast({
-          title: "Error",
-          description: error instanceof Error ? error.message : 'Failed to save session',
-          variant: "destructive"
-        });
       }
+    } catch (error) {
+      console.error('Error processing selection:', error);
+      const message = error instanceof Error ? error.message : 'Failed to process selection';
+      setError(message);
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive"
+      });
     }
-  };
+  }, [personalities, isComplete, selections, selectVibe, setError, toast, navigate]);
+
+  const handleRetry = useCallback(() => {
+    reset();
+    window.location.reload();
+  }, [reset]);
 
   if (loading) return <LoadingState />;
-  if (error) return <ErrorState error={error} onRetry={() => window.location.reload()} />;
-  if (!personalities) return <ErrorState error="No personality data available" onRetry={() => window.location.reload()} />;
+  if (loadError || error) return (
+    <ErrorState 
+      error={error || loadError} 
+      onRetry={handleRetry}
+    />
+  );
+  if (!personalities) return (
+    <ErrorState 
+      error="No personality data available" 
+      onRetry={handleRetry}
+    />
+  );
 
+  const progress = Math.min((step / Object.keys(VIBE_GROUPS).length) * 100, 100);
   const currentGroup = VIBE_GROUPS[`group${step}`] || VIBE_GROUPS.initial;
 
   return (
