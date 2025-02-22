@@ -11,10 +11,17 @@ import { useVoiceAgent } from '../hooks/useVoiceAgent';
 import type { StatusIndicatorProps } from '../types';
 import { useToast } from '@/hooks/use-toast';
 
+const ALLOWED_PERSONALITIES = ['emotive', 'hyperthymic', 'persistent_paranoid'];
+const DEFAULT_PERSONALITY = 'persistent_paranoid';
+
 const VoiceDouble: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const personalityKey = searchParams.get('personality') || 'dysthymic';
+  const personalityParam = searchParams.get('personality');
+  const personalityKey = ALLOWED_PERSONALITIES.includes(personalityParam || '') 
+    ? personalityParam 
+    : DEFAULT_PERSONALITY;
+
   const [status, setStatus] = useState<StatusIndicatorProps['status']>('idle');
   const { toast } = useToast();
 

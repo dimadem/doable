@@ -123,7 +123,17 @@ const Struggle: React.FC = () => {
           <div className="flex justify-center mt-8">
             <Button 
               variant="outline"
-              onClick={() => navigate('/voice-double')}
+              onClick={() => {
+                if (personality?.type) {
+                  navigate(`/voice-double?personality=${personality.type}`);
+                } else {
+                  toast({
+                    title: "Error",
+                    description: "No personality type available",
+                    variant: "destructive"
+                  });
+                }
+              }}
             >
               Continue to Voice Double
             </Button>
@@ -135,3 +145,4 @@ const Struggle: React.FC = () => {
 };
 
 export default Struggle;
+
