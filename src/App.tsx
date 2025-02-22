@@ -7,8 +7,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import Index from "./pages/Index";
 import { VibeMatching } from "./features/vibe-matching";
-import Struggle from "./pages/Struggle";
-import VoiceDouble from "./pages/VoiceDouble";
+import { Struggle } from "./features/struggle";
+import { VoiceDouble } from "./features/voice-double";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
