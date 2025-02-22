@@ -1,51 +1,39 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { Square } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { PageHeader } from '@/components/layouts/PageHeader';
 import { pageVariants } from '@/animations/pageTransitions';
-import { supabase } from '@/integrations/supabase/client';
-import { SessionResponse } from '../types';
+import { useToast } from '@/hooks/use-toast';
+import { fetchLatestSession } from '../services/sessionService';
 
 const Struggle: React.FC = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
 
-  useEffect(() => {
-    const fetchLatestSession = async () => {
-      const { data: sessionData, error: sessionError } = await supabase
-        .from('user_sessions')
-        .select(`
-          session_data,
-          personality_key,
-          personalities!user_sessions_personality_key_fkey (
-            name,
-            core_traits,
-            behavior_patterns
-          )
-        `)
-        .order('id', { ascending: false })
-        .limit(1)
-        .single();
+  const { data: sessionData } = useQuery({
+    queryKey: ['latestSession'],
+    queryFn: fetchLatestSession,
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to load session data",
+        variant: "destructive",
+      });
+    }
+  });
 
-      if (sessionError) {
-        console.error('Error fetching session:', sessionError);
-        return;
-      }
-
-      if (sessionData) {
-        const typedSessionData = sessionData as unknown as SessionResponse;
-        console.log('Personality Analysis:', {
-          type: typedSessionData.personalities?.name,
-          traits: typedSessionData.personalities?.core_traits,
-          patterns: typedSessionData.personalities?.behavior_patterns,
-          selections: typedSessionData.session_data.selections
-        });
-      }
-    };
-
-    fetchLatestSession();
-  }, []);
+  // Log personality data when available
+  if (sessionData?.personalities) {
+    console.log('Personality Analysis:', {
+      type: sessionData.personalities.name,
+      traits: sessionData.personalities.core_traits,
+      patterns: sessionData.personalities.behavior_patterns,
+      selections: sessionData.session_data.selections
+    });
+  }
 
   return (
     <motion.div 
