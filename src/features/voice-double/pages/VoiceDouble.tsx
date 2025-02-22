@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Pause } from 'lucide-react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { PageHeader } from '@/components/layouts/PageHeader';
 import { pageVariants, pulseVariants } from '@/animations/pageTransitions';
 import { StatusIndicator } from '../components/StatusIndicator';
@@ -16,12 +16,14 @@ const DEFAULT_PERSONALITY = 'persistent_paranoid';
 
 const VoiceDouble: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const personalityParam = searchParams.get('personality');
   const personalityKey = ALLOWED_PERSONALITIES.includes(personalityParam || '') 
     ? personalityParam 
     : DEFAULT_PERSONALITY;
 
+  const direction = (location.state as { direction?: number })?.direction || 1;
   const [status, setStatus] = useState<StatusIndicatorProps['status']>('idle');
   const { toast } = useToast();
 
@@ -43,10 +45,11 @@ const VoiceDouble: React.FC = () => {
       animate="animate"
       exit="exit"
       variants={pageVariants}
+      custom={direction}
     >
       <PageHeader 
         title="voice double"
-        onBack={() => navigate('/struggle')}
+        onBack={() => navigate('/struggle', { state: { direction: -1 } })}
       />
 
       <main className="flex-1 flex flex-col items-center justify-center px-8">
