@@ -14,6 +14,8 @@ import ProgressBar from '../components/ProgressBar';
 import VibeImage from '../components/VibeImage';
 import { VIBE_GROUPS } from '../constants';
 
+const TOTAL_STEPS = Object.keys(VIBE_GROUPS).length - 1; // Subtract 1 for 'initial'
+
 const VibeMatching: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -27,7 +29,7 @@ const VibeMatching: React.FC = () => {
 
       selectVibe(personality.name);
 
-      if (step + 1 >= VIBE_GROUPS.length) {
+      if (step + 1 >= TOTAL_STEPS) {
         const dominantPersonality = determinePersonality(selections);
         await saveUserSession(dominantPersonality, selections, personalities);
         toast({
@@ -51,7 +53,7 @@ const VibeMatching: React.FC = () => {
   if (loadError || error) return <ErrorState error={error || loadError} onRetry={reset} />;
   if (!personalities?.length) return <ErrorState error="No personality data available" onRetry={reset} />;
 
-  const progress = (step / Object.keys(VIBE_GROUPS).length) * 100;
+  const progress = (step / TOTAL_STEPS) * 100;
   const currentGroup = VIBE_GROUPS[`group${step}`] || VIBE_GROUPS.initial;
 
   return (

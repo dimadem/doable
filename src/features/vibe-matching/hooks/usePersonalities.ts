@@ -10,7 +10,7 @@ export const usePersonalities = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('personalities')
-        .select('name, url_array')
+        .select('id, name, url_array, url_metadata, core_traits, behavior_patterns')
         .filter('url_array', 'not.is', null)
         .order('name');
 
@@ -19,7 +19,6 @@ export const usePersonalities = () => {
         throw new Error('No personality data available');
       }
 
-      // Filter personalities with valid URLs and enough images
       const validPersonalities = data.filter(p => 
         p.url_array && 
         p.url_array.length >= MAX_STEPS
@@ -29,10 +28,10 @@ export const usePersonalities = () => {
         throw new Error('Not enough valid personalities available (need at least 3)');
       }
 
-      return validPersonalities;
+      return validPersonalities as Personality[];
     },
     retry: 1,
-    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 
   return {

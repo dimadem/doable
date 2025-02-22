@@ -29,11 +29,6 @@ export const saveUserSession = async (
   personalities: Personality[]
 ): Promise<void> => {
   try {
-    const matchingPersonality = personalities.find(p => p.name === dominantPersonality);
-    if (!matchingPersonality) {
-      throw new Error('No matching personality found');
-    }
-
     const sessionData: Json = {
       selections: selections.map(s => ({
         step: s.step,
