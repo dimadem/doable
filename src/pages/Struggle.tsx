@@ -16,8 +16,11 @@ const Struggle: React.FC = () => {
         .from('user_sessions')
         .select(`
           session_data,
+          personality_id,
           personalities (
-            name
+            name,
+            core_traits,
+            behavior_patterns
           )
         `)
         .order('created_at', { ascending: false })
@@ -30,9 +33,11 @@ const Struggle: React.FC = () => {
       }
 
       if (sessionData) {
-        console.log('Final Personality Result:', {
-          personality: sessionData.personalities?.name,
-          sessionData: sessionData.session_data
+        console.log('Personality Analysis:', {
+          type: sessionData.personalities?.name,
+          traits: sessionData.personalities?.core_traits,
+          patterns: sessionData.personalities?.behavior_patterns,
+          selections: sessionData.session_data.selections
         });
       }
     };

@@ -115,22 +115,32 @@ const VibeMatching: React.FC = () => {
 
   const saveUserSession = async (personalityName: string) => {
     try {
-      const { data: sessionData, error: sessionError } = await supabase
+      // Find the corresponding personality ID
+      const personality = personalities.find(p => p.name === personalityName);
+      
+      if (!personality) {
+        toast.error('Could not determine personality type');
+        return;
+      }
+
+      const { error: sessionError } = await supabase
         .from('user_sessions')
         .insert([
           {
-            session_data: { selections },
-            personality_id: personalities.find(p => p.name === personalityName)?.id,
+            session_data: {
+              selections,
+              finalPersonality: personalityName
+            },
+            personality_id: personality.id
           }
-        ])
-        .select();
+        ]);
 
       if (sessionError) {
         toast.error('Failed to save session data');
         return;
       }
 
-      toast.success('Personality match complete!');
+      toast.success(`Your personality type: ${personalityName}`);
     } catch (error) {
       toast.error('An error occurred while saving the session');
     }
@@ -149,49 +159,45 @@ const VibeMatching: React.FC = () => {
     if (step < MAX_STEPS) {
       setStep(step + 1);
     } else {
-      // Determine final personality and save session
+      // Determine final personality based on all selections
       const finalPersonality = determinePersonality(updatedSelections);
       await saveUserSession(finalPersonality);
       navigate('/struggle', { replace: true });
     }
   };
 
-  if (loading) {
-    return (
-      <motion.div 
-        className="min-h-[100svh] bg-black text-white flex flex-col items-center justify-center"
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        variants={pageVariants}
-      >
-        <div className="animate-pulse">Loading...</div>
-      </motion.div>
-    );
-  }
+  if (loading) return (
+    <motion.div 
+      className="min-h-[100svh] bg-black text-white flex flex-col items-center justify-center"
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      variants={pageVariants}
+    >
+      <div className="animate-pulse">Loading...</div>
+    </motion.div>
+  );
 
-  if (error || personalities.length === 0) {
-    return (
-      <motion.div 
-        className="min-h-[100svh] bg-black text-white flex flex-col items-center justify-center"
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        variants={pageVariants}
+  if (error || personalities.length === 0) return (
+    <motion.div 
+      className="min-h-[100svh] bg-black text-white flex flex-col items-center justify-center"
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      variants={pageVariants}
+    >
+      <div className="text-red-500 max-w-md text-center px-4">
+        <p className="text-lg font-bold mb-2">Error Loading Personalities</p>
+        <p>{error || 'No personality data available'}</p>
+      </div>
+      <button 
+        onClick={() => window.location.reload()} 
+        className="mt-4 px-4 py-2 bg-white text-black rounded hover:bg-gray-200"
       >
-        <div className="text-red-500 max-w-md text-center px-4">
-          <p className="text-lg font-bold mb-2">Error Loading Personalities</p>
-          <p>{error || 'No personality data available'}</p>
-        </div>
-        <button 
-          onClick={() => window.location.reload()} 
-          className="mt-4 px-4 py-2 bg-white text-black rounded hover:bg-gray-200"
-        >
-          Retry
-        </button>
-      </motion.div>
-    );
-  }
+        Retry
+      </button>
+    </motion.div>
+  );
 
   const currentImages = getCurrentImages();
 
