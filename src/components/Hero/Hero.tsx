@@ -1,16 +1,19 @@
 
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import { Input } from "@/components/ui/input";
 
 const Hero = () => {
   const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
 
   useEffect(() => {
-    // Check for existing session on mount
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
         navigate('/vibe-matching');
@@ -20,55 +23,64 @@ const Hero = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const handleGoogleSignIn = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin + '/vibe-matching'
-        }
-      });
+      let response;
+      
+      if (isRegistering) {
+        response = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: window.location.origin + '/vibe-matching'
+          }
+        });
+      } else {
+        response = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+      }
 
-      if (error) {
+      if (response.error) {
         toast({
           variant: "destructive",
           title: "Authentication Error",
-          description: error.message
+          description: response.error.message
         });
+      } else {
+        if (isRegistering) {
+          toast({
+            title: "Check your email",
+            description: "We've sent you a verification link."
+          });
+        }
       }
     } catch (err) {
       console.error('Authentication error:', err);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to connect with Google. Please try again."
+        description: "An unexpected error occurred. Please try again."
       });
     }
   };
 
   const containerVariants = {
-    hidden: {
-      opacity: 0
-    },
+    hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: {
-        staggerChildren: 0.2
-      }
+      transition: { staggerChildren: 0.2 }
     },
     exit: {
       opacity: 0,
-      transition: {
-        duration: 0.3
-      }
+      transition: { duration: 0.3 }
     }
   };
 
   const itemVariants = {
-    hidden: {
-      opacity: 0,
-      y: 20
-    },
+    hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
       y: 0,
@@ -92,9 +104,7 @@ const Hero = () => {
         {[1, 2, 3].map((step, i) => (
           <div 
             key={i} 
-            className={`w-2 h-2 rounded-full ${
-              i === 0 ? 'bg-white' : 'bg-gray-800'
-            }`} 
+            className={`w-2 h-2 rounded-full ${i === 0 ? 'bg-white' : 'bg-gray-800'}`} 
           />
         ))}
       </div>
@@ -115,30 +125,47 @@ const Hero = () => {
         </p>
       </motion.div>
 
-      {/* Google Sign In Button */}
-      <motion.button 
-        variants={itemVariants} 
-        onClick={handleGoogleSignIn}
-        className={`
-          font-mono px-8 py-4 
-          bg-black text-white 
-          border-2 border-white 
-          font-bold text-lg
-          transition-all duration-300
-          hover:bg-white hover:text-black
-          flex items-center gap-3
-        `}
+      {/* Auth Form */}
+      <motion.form 
+        variants={itemVariants}
+        onSubmit={handleSubmit}
+        className="w-full max-w-md space-y-4"
       >
-        <svg viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
-          <g transform="matrix(1, 0, 0, 1, 27.009001, -39.238998)">
-            <path fill="currentColor" d="M -3.264 51.509 C -3.264 50.719 -3.334 49.969 -3.454 49.239 L -14.754 49.239 L -14.754 53.749 L -8.284 53.749 C -8.574 55.229 -9.424 56.479 -10.684 57.329 L -10.684 60.329 L -6.824 60.329 C -4.564 58.239 -3.264 55.159 -3.264 51.509 Z"/>
-            <path fill="currentColor" d="M -14.754 63.239 C -11.514 63.239 -8.804 62.159 -6.824 60.329 L -10.684 57.329 C -11.764 58.049 -13.134 58.489 -14.754 58.489 C -17.884 58.489 -20.534 56.379 -21.484 53.529 L -25.464 53.529 L -25.464 56.619 C -23.494 60.539 -19.444 63.239 -14.754 63.239 Z"/>
-            <path fill="currentColor" d="M -21.484 53.529 C -21.734 52.809 -21.864 52.039 -21.864 51.239 C -21.864 50.439 -21.724 49.669 -21.484 48.949 L -21.484 45.859 L -25.464 45.859 C -26.284 47.479 -26.754 49.299 -26.754 51.239 C -26.754 53.179 -26.284 54.999 -25.464 56.619 L -21.484 53.529 Z"/>
-            <path fill="currentColor" d="M -14.754 43.989 C -12.984 43.989 -11.404 44.599 -10.154 45.789 L -6.734 42.369 C -8.804 40.429 -11.514 39.239 -14.754 39.239 C -19.444 39.239 -23.494 41.939 -25.464 45.859 L -21.484 48.949 C -20.534 46.099 -17.884 43.989 -14.754 43.989 Z"/>
-          </g>
-        </svg>
-        Continue with Google
-      </motion.button>
+        <div className="space-y-2">
+          <Input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="font-mono bg-transparent border-2 border-white text-white placeholder:text-gray-400"
+            required
+          />
+          <Input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="font-mono bg-transparent border-2 border-white text-white placeholder:text-gray-400"
+            required
+          />
+        </div>
+
+        <button
+          type="submit"
+          className="w-full font-mono px-8 py-4 bg-black text-white border-2 border-white 
+                   font-bold text-lg transition-all duration-300 hover:bg-white hover:text-black"
+        >
+          {isRegistering ? 'Sign Up' : 'Sign In'}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setIsRegistering(!isRegistering)}
+          className="w-full font-mono text-sm text-gray-400 hover:text-white transition-colors"
+        >
+          {isRegistering ? 'Already have an account? Sign in' : 'Need an account? Sign up'}
+        </button>
+      </motion.form>
 
       {/* Scroll Indicator */}
       <motion.div 
