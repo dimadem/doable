@@ -14,9 +14,25 @@ const Hero = () => {
   const [isRegistering, setIsRegistering] = useState(false);
 
   useEffect(() => {
+    // Check for existing session on mount
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        navigate('/vibe-matching');
+      }
+    };
+    
+    checkSession();
+
+    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
+        // Save session to localStorage
+        localStorage.setItem('userSession', JSON.stringify(session));
         navigate('/vibe-matching');
+      } else if (event === 'SIGNED_OUT') {
+        // Remove session from localStorage
+        localStorage.removeItem('userSession');
       }
     });
 
@@ -45,6 +61,9 @@ const Hero = () => {
           title: "Check your email",
           description: "We've sent you a verification link."
         });
+      } else if (response.data.session) {
+        // Save session to localStorage on successful login
+        localStorage.setItem('userSession', JSON.stringify(response.data.session));
       }
     } catch (err) {
       console.error('Authentication error:', err);
@@ -79,6 +98,7 @@ const Hero = () => {
       exit="exit"
       variants={containerVariants}
     >
+      {/* Progress Indicator */}
       <div className="fixed top-8 right-8 flex gap-2">
         {[1, 2, 3].map((_, i) => (
           <div 
