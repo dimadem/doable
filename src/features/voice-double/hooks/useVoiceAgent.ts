@@ -6,22 +6,29 @@ export const useVoiceAgent = (personalityKey: string) => {
   return useQuery({
     queryKey: ['voice-agent', personalityKey],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('voices')
-        .select('voice_name, api_key, agent_id, agent_settings')
-        .eq('fit_personality_name', personalityKey)
-        .maybeSingle();
+      const [voiceConfig, secretResult] = await Promise.all([
+        supabase
+          .from('voices')
+          .select('voice_name, agent_id, agent_settings')
+          .eq('fit_personality_name', personalityKey)
+          .maybeSingle(),
+        supabase.rpc('get_secret', { secret_name: 'ELEVEN_LABS_API_KEY' })
+      ]);
 
-      if (error) {
-        console.error('Error fetching voice configuration:', error);
-        throw error;
+      if (voiceConfig.error) {
+        console.error('Error fetching voice configuration:', voiceConfig.error);
+        throw voiceConfig.error;
       }
-      
-      if (!data?.api_key) {
-        console.error('No API key found for personality:', personalityKey);
+
+      if (secretResult.error) {
+        console.error('Error fetching API key:', secretResult.error);
+        throw secretResult.error;
       }
-      
-      return data;
+
+      return {
+        ...voiceConfig.data,
+        api_key: secretResult.data
+      };
     },
     enabled: !!personalityKey,
   });

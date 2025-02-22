@@ -45,7 +45,7 @@ const VoiceDouble: React.FC = () => {
         toast({
           variant: "destructive",
           title: "Configuration Error",
-          description: "Voice API key not found for this personality. Please check the configuration.",
+          description: "ElevenLabs API key not found. Please configure it in Supabase secrets.",
         });
         return;
       }
@@ -57,7 +57,7 @@ const VoiceDouble: React.FC = () => {
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Failed to start voice interaction. Please try again.",
+          description: "Failed to start voice interaction. Please check the console for details.",
         });
       }
     } else {

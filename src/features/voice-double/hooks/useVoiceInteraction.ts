@@ -50,7 +50,7 @@ export const useVoiceInteraction = (voiceConfig?: VoiceConfig | null) => {
     }
 
     if (!voiceConfig?.api_key) {
-      throw new Error('API key not configured');
+      throw new Error('ElevenLabs API key not configured. Please add it in the Supabase secrets.');
     }
 
     try {
