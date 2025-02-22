@@ -2,73 +2,68 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { PageHeader } from '@/components/layouts/PageHeader';
 import { pageVariants } from '@/animations/pageTransitions';
-import { VibeImage } from '../components/VibeImage';
-import { ProgressBar } from '../components/ProgressBar';
-import { LoadingState } from '../components/LoadingState';
-import { ErrorState } from '../components/ErrorState';
-import { usePersonalities } from '../hooks/usePersonalities';
+import { useToast } from '@/hooks/use-toast';
 import { determinePersonality, saveUserSession } from '../services/personalityService';
-import { MAX_STEPS } from '../constants';
+import { usePersonalities } from '../hooks/usePersonalities';
 import { SessionSelection } from '../types';
-import { toast } from '@/hooks/use-toast';
+import LoadingState from '../components/LoadingState';
+import ErrorState from '../components/ErrorState';
+import ProgressBar from '../components/ProgressBar';
+import VibeImage from '../components/VibeImage';
+import { vibeGroups } from '../constants';
 
 const VibeMatching: React.FC = () => {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1);
+  const { toast } = useToast();
+  const [step, setStep] = useState(0);
   const [selections, setSelections] = useState<SessionSelection[]>([]);
-  const { personalities, loading, error } = usePersonalities();
+  const { data: personalities, isLoading, error, refetch } = usePersonalities();
 
-  const getCurrentImages = () => {
-    if (!personalities || personalities.length === 0) return [];
-    
-    return personalities
-      .slice(0, 3)
-      .map(personality => ({
-        name: personality.name,
-        imageId: personality.url_array[step - 1] || ''
-      }))
-      .filter(item => item.imageId);
-  };
+  const progress = Math.min((step / vibeGroups.length) * 100, 100);
 
-  const handleImageClick = async (selectedPersonality: string) => {
-    const newSelection = {
+  const handleImageSelect = async (personalityName: string) => {
+    const newSelection: SessionSelection = {
       step,
-      personalityName: selectedPersonality
+      personalityName
     };
-    
+
     const updatedSelections = [...selections, newSelection];
     setSelections(updatedSelections);
 
-    if (step < MAX_STEPS) {
+    if (step < vibeGroups.length - 1) {
       setStep(step + 1);
-      toast({
-        title: "Selection saved",
-        description: `Step ${step} of ${MAX_STEPS} completed`,
-      });
     } else {
-      const finalPersonality = determinePersonality(updatedSelections);
-      const success = await saveUserSession(finalPersonality, updatedSelections, personalities);
-      if (success) {
-        navigate('/struggle', { replace: true });
+      try {
+        if (!personalities) throw new Error('No personalities data available');
+        
+        const dominantPersonality = determinePersonality(updatedSelections);
+        await saveUserSession(dominantPersonality, updatedSelections, personalities);
+        
+        toast({
+          title: "Success",
+          description: `Your personality type: ${dominantPersonality}`
+        });
+        
+        navigate('/struggle');
+      } catch (error) {
+        console.error('Error saving session:', error);
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : 'Failed to save session',
+          variant: "destructive"
+        });
       }
     }
   };
 
-  if (loading) return <LoadingState />;
-  if (error) return <ErrorState error={error} onRetry={() => window.location.reload()} />;
+  if (isLoading) return <LoadingState />;
+  if (error) return <ErrorState error={error.message} onRetry={refetch} />;
+  if (!personalities) return <ErrorState error="No personality data available" onRetry={refetch} />;
 
-  const currentImages = getCurrentImages();
-
-  if (currentImages.length !== 3) {
-    return (
-      <ErrorState 
-        error="Not enough valid images available for this step. Please try again later." 
-        onRetry={() => window.location.reload()} 
-      />
-    );
-  }
+  const currentGroup = vibeGroups[step];
 
   return (
     <motion.div 
@@ -78,25 +73,25 @@ const VibeMatching: React.FC = () => {
       exit="exit"
       variants={pageVariants}
     >
-      <PageHeader 
-        title="check the vibe"
-        onBack={() => navigate('/')}
-      />
+      <PageHeader title="vibe matching" />
+      
+      <ProgressBar progress={progress} />
 
-      <main className="flex-1 flex flex-col justify-evenly px-4 py-2 gap-3 overflow-y-auto">
-        {currentImages.map(({ imageId, name }, index) => (
+      <main className="flex-1 grid grid-cols-2 gap-4 p-4">
+        {currentGroup.map((imageId, index) => (
           <VibeImage
-            key={`${name}-${imageId}`}
+            key={imageId}
             imageId={imageId}
             index={index}
-            onClick={() => handleImageClick(name)}
+            onClick={() => {
+              const personality = personalities.find(p => p.url_array?.includes(imageId));
+              if (personality) {
+                handleImageSelect(personality.name);
+              }
+            }}
           />
         ))}
       </main>
-
-      <footer className="p-4 shrink-0">
-        <ProgressBar progress={(step / MAX_STEPS) * 100} />
-      </footer>
     </motion.div>
   );
 };

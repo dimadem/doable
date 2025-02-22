@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { SessionSelection, Personality } from '../types';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { Json } from '@/integrations/supabase/types';
 
 export const determinePersonality = (selections: SessionSelection[]): string => {
@@ -32,12 +32,7 @@ export const saveUserSession = async (
     const personality = personalities.find(p => p.name === personalityName);
     
     if (!personality) {
-      toast({
-        title: "Error",
-        description: 'Could not determine personality type',
-        variant: "destructive"
-      });
-      return false;
+      throw new Error('Could not determine personality type');
     }
 
     const sessionData = {
@@ -51,30 +46,18 @@ export const saveUserSession = async (
     const { error: sessionError } = await supabase
       .from('user_sessions')
       .insert({
-        personality_key: personality.name,
+        personality_key: personalityName, // Using name as the key
         session_data: sessionData as Json
       });
 
     if (sessionError) {
-      toast({
-        title: "Error",
-        description: 'Failed to save session data',
-        variant: "destructive"
-      });
-      return false;
+      console.error('Session save error:', sessionError);
+      throw new Error('Failed to save session data');
     }
 
-    toast({
-      title: "Success",
-      description: `Your personality type: ${personalityName}`
-    });
     return true;
   } catch (error) {
-    toast({
-      title: "Error",
-      description: 'An error occurred while saving the session',
-      variant: "destructive"
-    });
-    return false;
+    console.error('Save session error:', error);
+    throw error;
   }
 };
