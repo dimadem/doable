@@ -29,7 +29,8 @@ export const saveUserSession = async (
   personalities: Personality[]
 ): Promise<void> => {
   try {
-    const sessionData: SessionData = {
+    // Create a plain object that matches the Json type
+    const sessionData = {
       selections: selections.map(s => ({
         step: s.step,
         personalityName: s.personalityName
@@ -41,7 +42,7 @@ export const saveUserSession = async (
       .from('user_sessions')
       .insert({
         personality_key: dominantPersonality,
-        session_data: sessionData as Json,
+        session_data: sessionData as unknown as Json,
         started_at: new Date().toISOString()
       });
 
