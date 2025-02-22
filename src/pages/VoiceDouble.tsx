@@ -48,7 +48,7 @@ const VoiceDouble: React.FC = () => {
       variants={pageVariants}
     >
       <header className="p-8 flex justify-between items-center">
-        <BackButton onClick={() => navigate('/')} />
+        <BackButton onClick={() => navigate('/vibe-matching')} />
         <h1 className="font-mono text-lg px-4 py-2 bg-white text-black">voice double</h1>
       </header>
 

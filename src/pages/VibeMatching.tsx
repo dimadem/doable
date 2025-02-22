@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
@@ -127,7 +126,7 @@ const VibeMatching: React.FC = () => {
       setStep(nextStep);
       setCurrentGroupId(`group${step}`);
     } else {
-      navigate('/');
+      navigate('/voice-double', { replace: true });
     }
   };
 
