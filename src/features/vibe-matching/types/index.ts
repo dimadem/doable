@@ -1,4 +1,6 @@
 
+import { Json } from '@/integrations/supabase/types';
+
 export interface VibeImageProps {
   imageId: string;
   index: number;
@@ -40,18 +42,27 @@ export interface BehaviorPatterns {
   work_style?: 'structured' | 'flexible' | 'deadline-driven' | 'self-paced';
 }
 
-export interface PersonalityData {
+export interface Personality {
+  id: string;
   name: string;
+  url_array: string[] | null;
+  url_metadata: Json[] | null;
   core_traits: CoreTraits | null;
   behavior_patterns: BehaviorPatterns | null;
+  description?: string | null;
+  created_at?: string | null;
 }
 
-export interface SessionResponse {
-  session_data: SessionData;
-  personalities: PersonalityData | null;
-}
-
-export interface Personality {
-  name: string;
-  url_array: string[];
+export interface UserSession {
+  id: string;
+  personality_key: string;
+  session_data: Json;
+  started_at: string | null;
+  ended_at: string | null;
+  user_id?: string | null;
+  session_id?: string | null;
+  struggle_type?: string | null;
+  session_feedback?: Json | null;
+  device_info?: Json | null;
+  relevant_agent?: string | null;
 }

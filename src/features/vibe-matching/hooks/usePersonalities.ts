@@ -11,26 +11,21 @@ export const usePersonalities = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('personalities')
-        .select('id, name, url_array, url_metadata')
+        .select('id, name, url_array, url_metadata, core_traits, behavior_patterns, description, created_at')
         .filter('url_array', 'not.is', null)
         .order('name');
 
-      if (error) {
-        throw error;
-      }
-
+      if (error) throw error;
       if (!data || data.length === 0) {
         throw new Error('No personality data available');
       }
 
-      // Process and validate personalities
       const validPersonalities = await Promise.all(
         data.map(async (personality) => {
           const validUrls = (personality.url_array || [])
             .filter(validateMediaUrl)
             .slice(0, MAX_STEPS);
 
-          // Preload media and gather metadata
           const mediaMetadata = await Promise.all(
             validUrls.map(url => preloadMedia(url))
           );
@@ -39,12 +34,11 @@ export const usePersonalities = () => {
             ...personality,
             url_array: validUrls,
             url_metadata: mediaMetadata
-          };
+          } as Personality;
         })
       );
 
-      // We need at least 3 valid personalities
-      if (validPersonalities.filter(p => p.url_array.length >= MAX_STEPS).length < 3) {
+      if (validPersonalities.filter(p => p.url_array && p.url_array.length >= MAX_STEPS).length < 3) {
         throw new Error('Not enough valid personalities available (need at least 3)');
       }
 
@@ -55,7 +49,7 @@ export const usePersonalities = () => {
   });
 
   return {
-    personalities: personalities || [],
+    personalities,
     loading: isLoading,
     error: error instanceof Error ? error.message : error ? 'Error loading personalities' : null
   };
