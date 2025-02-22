@@ -1,7 +1,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Personality } from '../types';
+import { Personality, MediaMetadata } from '../types';
 import { MAX_STEPS } from '../constants';
 import { validateMediaUrl, preloadMedia } from '../utils/imageUtils';
 
@@ -34,7 +34,7 @@ export const usePersonalities = () => {
             ...personality,
             url_array: validUrls,
             url_metadata: mediaMetadata
-          } as Personality;
+          };
         })
       );
 

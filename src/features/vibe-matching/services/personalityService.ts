@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { SessionSelection, Personality } from '../types';
+import { Json } from '@/integrations/supabase/types';
 import { toast } from '@/hooks/use-toast';
 
 export const determinePersonality = (selections: SessionSelection[]): string => {
@@ -33,14 +34,19 @@ export const saveUserSession = async (
       throw new Error('No matching personality found');
     }
 
+    const sessionData: Json = {
+      selections: selections.map(s => ({
+        step: s.step,
+        personalityName: s.personalityName
+      })),
+      finalPersonality: dominantPersonality
+    };
+
     const { error } = await supabase
       .from('user_sessions')
       .insert({
         personality_key: dominantPersonality,
-        session_data: {
-          selections,
-          finalPersonality: dominantPersonality
-        },
+        session_data: sessionData,
         started_at: new Date().toISOString()
       });
 

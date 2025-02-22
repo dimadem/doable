@@ -1,6 +1,16 @@
 
 import { Json } from '@/integrations/supabase/types';
 
+export interface MediaMetadata {
+  url: string;
+  width?: number;
+  height?: number;
+  format?: string;
+  loading: boolean;
+  error: boolean;
+  isVideo: boolean;
+}
+
 export interface VibeImageProps {
   imageId: string;
   index: number;
@@ -46,7 +56,7 @@ export interface Personality {
   id: string;
   name: string;
   url_array: string[] | null;
-  url_metadata: Json[] | null;
+  url_metadata: MediaMetadata[] | null;
   core_traits: CoreTraits | null;
   behavior_patterns: BehaviorPatterns | null;
   description?: string | null;
