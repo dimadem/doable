@@ -1,8 +1,7 @@
-
 import React, { useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { PageHeader } from '@/components/layouts/PageHeader';
+import { AppHeader } from '@/components/layouts/AppHeader';
 import { pageVariants } from '@/animations/pageTransitions';
 import { useToast } from '@/hooks/use-toast';
 import { determinePersonality, saveUserSession } from '../services/personalityService';
@@ -22,11 +21,9 @@ const VibeMatching: React.FC = () => {
   const { personalities, loading, error: loadError } = usePersonalities();
   const { step, selections, error, selectVibe, setError, reset } = useVibeState();
 
-  // Filter and prepare media groups from allowed personalities only
   const mediaGroups = useMemo(() => {
     if (!personalities?.length) return [];
     
-    // Filter to only include our three specific personalities
     const filteredPersonalities = personalities.filter(p => 
       ALLOWED_PERSONALITIES.includes(p.name)
     );
@@ -36,13 +33,10 @@ const VibeMatching: React.FC = () => {
       return [];
     }
 
-    // Keep track of used URLs to avoid repetition
     const usedUrls = new Set<string>();
 
-    // Create media groups for each step
     return Array.from({ length: MAX_STEPS }, (_, stepIndex) => {
       const stepGroup = filteredPersonalities.map(personality => {
-        // Get available media for this personality that hasn't been used yet
         const availableMedia = (personality.url_array || []).filter(url => 
           !usedUrls.has(url)
         );
@@ -52,20 +46,17 @@ const VibeMatching: React.FC = () => {
           return null;
         }
 
-        // Randomly select one media item from available options
         const randomIndex = Math.floor(Math.random() * availableMedia.length);
         const selectedUrl = availableMedia[randomIndex];
         
-        // Mark this URL as used
         usedUrls.add(selectedUrl);
 
         return {
           url: selectedUrl,
           personalityName: personality.name
         };
-      }).filter(Boolean); // Remove any null entries
+      }).filter(Boolean);
 
-      // Shuffle the media items within this step
       return stepGroup.sort(() => Math.random() - 0.5);
     });
   }, [personalities]);
@@ -98,7 +89,6 @@ const VibeMatching: React.FC = () => {
           personalities
         );
         
-        // Set direction for forward navigation
         navigate('/struggle', { state: { direction: 1 } });
       }
     } catch (error) {
@@ -129,10 +119,7 @@ const VibeMatching: React.FC = () => {
       variants={pageVariants}
       custom={1}
     >
-      <PageHeader 
-        title="vibe matching"
-        onBack={() => navigate('/', { state: { direction: -1 } })}
-      />
+      <AppHeader title="vibe matching" />
       
       <ProgressBar progress={progress} />
 

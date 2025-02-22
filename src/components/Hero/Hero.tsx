@@ -3,10 +3,10 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronDown, ArrowRight } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { supabase } from "@/integrations/supabase/client";
 import AuthDialog from '../auth/AuthDialog';
 import { pageVariants } from '@/animations/pageTransitions';
 import { useAuth } from '@/contexts/AuthContext';
+import { AppHeader } from '../layouts/AppHeader';
 
 const Hero = () => {
   const navigate = useNavigate();
@@ -33,14 +33,7 @@ const Hero = () => {
       variants={pageVariants}
       custom={direction}
     >
-      <div className="fixed top-8 right-8 flex gap-2">
-        {[1, 2, 3].map((_, i) => (
-          <div 
-            key={i} 
-            className={`w-2 h-2 rounded-full ${i === 0 ? 'bg-white' : 'bg-gray-800'}`} 
-          />
-        ))}
-      </div>
+      <AppHeader showBack={false} showStatusDots={true} />
 
       <motion.div 
         initial={{ opacity: 0, y: 20 }}

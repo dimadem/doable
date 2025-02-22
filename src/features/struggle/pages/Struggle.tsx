@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Square } from 'lucide-react';
@@ -9,7 +8,7 @@ import { SessionResponse, PersonalityAnalysis } from '../types';
 import { pageVariants } from '@/animations/pageTransitions';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { PageHeader } from '@/components/layouts/PageHeader';
+import { AppHeader } from '@/components/layouts/AppHeader';
 
 const formatTraits = (traits: Record<string, any> | null) => {
   if (!traits) return {};
@@ -58,10 +57,7 @@ const Struggle: React.FC = () => {
         variants={pageVariants}
         custom={direction}
       >
-        <PageHeader 
-          title="struggle" 
-          onBack={() => navigate('/vibe-matching', { state: { direction: -1 } })}
-        />
+        <AppHeader title="struggle" />
         <div className="flex-1 flex items-center justify-center">
           <p>Loading session data...</p>
         </div>
@@ -86,10 +82,7 @@ const Struggle: React.FC = () => {
       variants={pageVariants}
       custom={direction}
     >
-      <PageHeader 
-        title="struggle" 
-        onBack={() => navigate('/vibe-matching', { state: { direction: -1 } })}
-      />
+      <AppHeader title="struggle" />
 
       <main className="flex-1 p-4">
         <div className="space-y-6">

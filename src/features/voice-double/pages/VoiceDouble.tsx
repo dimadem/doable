@@ -1,9 +1,8 @@
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Pause } from 'lucide-react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { PageHeader } from '@/components/layouts/PageHeader';
+import { AppHeader } from '@/components/layouts/AppHeader';
 import { pageVariants, pulseVariants } from '@/animations/pageTransitions';
 import { StatusIndicator } from '../components/StatusIndicator';
 import { WaveformVisualization } from '../components/WaveformVisualization';
@@ -47,10 +46,7 @@ const VoiceDouble: React.FC = () => {
       variants={pageVariants}
       custom={direction}
     >
-      <PageHeader 
-        title="voice double"
-        onBack={() => navigate('/struggle', { state: { direction: -1 } })}
-      />
+      <AppHeader title="voice double" />
 
       <main className="flex-1 flex flex-col items-center justify-center px-8">
         <div className="relative">
