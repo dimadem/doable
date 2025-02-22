@@ -39,13 +39,19 @@ export const saveUserSession = async (
       return false;
     }
 
+    // Convert session data to a JSON-compatible format
+    const sessionData = {
+      selections: selections.map(selection => ({
+        step: selection.step,
+        personalityName: selection.personalityName
+      })),
+      finalPersonality: personalityName
+    };
+
     const { error: sessionError } = await supabase
       .from('user_sessions')
       .insert({
-        session_data: {
-          selections,
-          finalPersonality: personalityName
-        },
+        session_data: JSON.stringify(sessionData), // Explicitly stringify the data
         personality_key: personality.name
       });
 
