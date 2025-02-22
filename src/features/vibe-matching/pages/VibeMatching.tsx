@@ -14,46 +14,87 @@ import ProgressBar from '../components/ProgressBar';
 import VibeMedia from '../components/VibeMedia';
 import { MAX_STEPS, MEDIA_PER_STEP } from '../constants';
 
+const ALLOWED_PERSONALITIES = ['emotive', 'hyperthymic', 'persistent_paranoid'];
+
 const VibeMatching: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { personalities, loading, error: loadError } = usePersonalities();
-  const { step, selections, isComplete, error, selectVibe, setError, reset } = useVibeState();
+  const { step, selections, error, selectVibe, setError, reset } = useVibeState();
 
-  // Group media URLs from personalities for exactly 3 steps with 3 items each
+  // Filter and prepare media groups from allowed personalities only
   const mediaGroups = useMemo(() => {
     if (!personalities?.length) return [];
     
-    const allMedia = personalities.flatMap(p => 
-      (p.url_array || []).map(url => ({ url, personalityName: p.name }))
+    // Filter to only include our three specific personalities
+    const filteredPersonalities = personalities.filter(p => 
+      ALLOWED_PERSONALITIES.includes(p.name)
     );
 
-    // Shuffle media to randomize choices
-    const shuffled = [...allMedia].sort(() => Math.random() - 0.5);
-    
-    // Take exactly 9 items (3 steps × 3 items per step)
-    const selectedMedia = shuffled.slice(0, MAX_STEPS * MEDIA_PER_STEP);
-    
-    // Group into sets of 3 for each step
-    return Array.from({ length: MAX_STEPS }, (_, i) => 
-      selectedMedia.slice(i * MEDIA_PER_STEP, (i + 1) * MEDIA_PER_STEP)
-    );
+    if (filteredPersonalities.length !== ALLOWED_PERSONALITIES.length) {
+      console.error('Missing some required personalities');
+      return [];
+    }
+
+    // Create media groups for each step
+    const groups = Array.from({ length: MAX_STEPS }, (_, stepIndex) => {
+      // For each step, select one media item from each personality
+      const stepGroup = filteredPersonalities.map(personality => {
+        // Get available media for this personality that hasn't been used in previous steps
+        const availableMedia = (personality.url_array || []).filter(url => {
+          // Check if this URL has been used in any previous step
+          const isUsedInPreviousSteps = mediaGroups.slice(0, stepIndex)
+            .some(group => group.some(item => item.url === url));
+          return !isUsedInPreviousSteps;
+        });
+
+        // Randomly select one media item from available options
+        const randomIndex = Math.floor(Math.random() * availableMedia.length);
+        const selectedUrl = availableMedia[randomIndex];
+
+        return {
+          url: selectedUrl,
+          personalityName: personality.name
+        };
+      });
+
+      // Shuffle the media items within this step
+      return stepGroup.sort(() => Math.random() - 0.5);
+    });
+
+    console.log('Generated media groups:', groups);
+    return groups;
   }, [personalities]);
 
   const handleImageSelect = useCallback(async (imageUrl: string) => {
     try {
-      const personality = personalities?.find(p => p.url_array?.includes(imageUrl));
-      if (!personality) throw new Error('Could not match image to personality');
+      // Find which personality this media belongs to
+      const selectedPersonality = personalities?.find(p => 
+        p.url_array?.includes(imageUrl)
+      );
 
-      selectVibe(personality.name);
+      if (!selectedPersonality) {
+        throw new Error('Could not match image to personality');
+      }
+
+      if (!ALLOWED_PERSONALITIES.includes(selectedPersonality.name)) {
+        throw new Error('Invalid personality type selected');
+      }
+
+      selectVibe(selectedPersonality.name);
 
       if (step + 1 >= MAX_STEPS) {
-        const dominantPersonality = determinePersonality(selections);
-        await saveUserSession(dominantPersonality, selections, personalities);
-        toast({
-          title: "Success",
-          description: `Your personality type: ${dominantPersonality}`
-        });
+        const dominantPersonality = determinePersonality([...selections, { 
+          step, 
+          personalityName: selectedPersonality.name 
+        }]);
+        
+        await saveUserSession(
+          dominantPersonality, 
+          [...selections, { step, personalityName: selectedPersonality.name }],
+          personalities
+        );
+        
         navigate('/struggle');
       }
     } catch (error) {
@@ -93,7 +134,7 @@ const VibeMatching: React.FC = () => {
       <main className="flex-1 flex flex-col gap-4 p-4 max-w-md mx-auto w-full">
         {currentGroup.map((media, index) => (
           <VibeMedia
-            key={media.url}
+            key={`${media.url}-${index}`}
             imageId={media.url}
             index={index}
             onClick={() => handleImageSelect(media.url)}
@@ -105,3 +146,4 @@ const VibeMatching: React.FC = () => {
 };
 
 export default VibeMatching;
+
