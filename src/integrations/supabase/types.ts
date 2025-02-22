@@ -57,6 +57,7 @@ export type Database = {
           ended_at: string | null
           id: string
           personality_key: string
+          relevant_agent: string | null
           session_data: Json | null
           session_feedback: Json | null
           session_id: string | null
@@ -69,6 +70,7 @@ export type Database = {
           ended_at?: string | null
           id?: string
           personality_key: string
+          relevant_agent?: string | null
           session_data?: Json | null
           session_feedback?: Json | null
           session_id?: string | null
@@ -81,6 +83,7 @@ export type Database = {
           ended_at?: string | null
           id?: string
           personality_key?: string
+          relevant_agent?: string | null
           session_data?: Json | null
           session_feedback?: Json | null
           session_id?: string | null
