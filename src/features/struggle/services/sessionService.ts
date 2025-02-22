@@ -37,3 +37,20 @@ export const updateSessionStartTime = async (sessionId: string): Promise<void> =
     throw new Error(`Failed to update session start time: ${error.message}`);
   }
 };
+
+export type StruggleType = 'pomodoro' | 'hard_task' | 'deep_focus';
+
+export const updateSessionStruggleType = async (
+  sessionId: string,
+  struggleType: StruggleType
+): Promise<void> => {
+  const { error } = await supabase
+    .from('user_sessions')
+    .update({ struggle_type: struggleType })
+    .eq('id', sessionId);
+
+  if (error) {
+    console.error('Supabase error:', error);
+    throw new Error(`Failed to update struggle type: ${error.message}`);
+  }
+};

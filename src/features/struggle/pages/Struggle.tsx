@@ -1,9 +1,10 @@
+
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Square } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Timer, Target, Focus } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { fetchLatestSession } from '../services/sessionService';
+import { fetchLatestSession, updateSessionStruggleType, type StruggleType } from '../services/sessionService';
 import { SessionResponse, PersonalityAnalysis } from '../types';
 import { pageVariants } from '@/animations/pageTransitions';
 import { useToast } from '@/hooks/use-toast';
@@ -20,13 +21,7 @@ const formatTraits = (traits: Record<string, any> | null) => {
   }, {} as Record<string, number>);
 };
 
-const formatPatterns = (patterns: Record<string, any> | null) => {
-  if (!patterns) return {};
-  return patterns;
-};
-
 const Struggle: React.FC = () => {
-  const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
   const direction = (location.state as { direction?: number })?.direction || 1;
@@ -46,6 +41,31 @@ const Struggle: React.FC = () => {
       }
     }
   });
+
+  const handleStruggleTypeSelect = async (struggleType: StruggleType) => {
+    if (!sessionData?.id) {
+      toast({
+        title: "Error",
+        description: "No active session found",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await updateSessionStruggleType(sessionData.id, struggleType);
+      toast({
+        title: "Success",
+        description: `${struggleType.replace('_', ' ')} mode activated`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update struggle type",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (!sessionData) {
     return (
@@ -69,7 +89,7 @@ const Struggle: React.FC = () => {
   const personality: PersonalityAnalysis | null = personalityData ? {
     type: personalityData.name,
     traits: formatTraits(personalityData.core_traits),
-    patterns: formatPatterns(personalityData.behavior_patterns),
+    patterns: {},
     selections: sessionData.session_data.selections
   } : null;
 
@@ -84,59 +104,43 @@ const Struggle: React.FC = () => {
     >
       <AppHeader title="struggle" />
 
-      <main className="flex-1 p-4">
-        <div className="space-y-6">
-          {personality && (
-            <>
-              <section>
-                <h2 className="text-xl font-mono mb-4">Personality Type: {personality.type}</h2>
-                <div className="grid grid-cols-2 gap-4">
-                  {Object.entries(personality.traits).map(([trait, value]) => (
-                    <div key={trait} className="border border-white/20 p-4 rounded-lg">
-                      <h3 className="font-mono text-sm mb-2">{trait}</h3>
-                      <div className="flex items-center space-x-2">
-                        <Square className="w-4 h-4" />
-                        <span>{value}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section>
-                <h2 className="text-xl font-mono mb-4">Behavior Patterns</h2>
-                <div className="grid grid-cols-2 gap-4">
-                  {Object.entries(personality.patterns).map(([pattern, value]) => (
-                    <div key={pattern} className="border border-white/20 p-4 rounded-lg">
-                      <h3 className="font-mono text-sm mb-2">{pattern}</h3>
-                      <p>{String(value)}</p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </>
-          )}
-
-          <div className="flex justify-center mt-8">
-            <Button 
-              variant="outline"
-              onClick={() => {
-                if (personality?.type) {
-                  navigate(`/voice-double?personality=${personality.type}`, { 
-                    state: { direction: 1 } 
-                  });
-                } else {
-                  toast({
-                    title: "Error",
-                    description: "No personality type available",
-                    variant: "destructive"
-                  });
-                }
-              }}
-            >
-              Continue to Voice Double
-            </Button>
+      <main className="flex-1 flex flex-col items-center justify-center p-4">
+        {personality && (
+          <div className="text-center mb-12">
+            <h2 className="text-lg font-mono mb-2 text-gray-400">personality type</h2>
+            <div className="text-3xl font-mono bg-white text-black px-6 py-3">
+              {personality.type}
+            </div>
           </div>
+        )}
+
+        <div className="grid grid-cols-3 gap-6 max-w-3xl w-full px-4">
+          <Button
+            variant="outline"
+            onClick={() => handleStruggleTypeSelect('pomodoro')}
+            className="flex flex-col items-center gap-4 p-6 h-auto aspect-square border-white/20 hover:bg-white hover:text-black transition-colors"
+          >
+            <Timer className="w-8 h-8" />
+            <span className="font-mono">pomodoro</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={() => handleStruggleTypeSelect('hard_task')}
+            className="flex flex-col items-center gap-4 p-6 h-auto aspect-square border-white/20 hover:bg-white hover:text-black transition-colors"
+          >
+            <Target className="w-8 h-8" />
+            <span className="font-mono">hard task</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={() => handleStruggleTypeSelect('deep_focus')}
+            className="flex flex-col items-center gap-4 p-6 h-auto aspect-square border-white/20 hover:bg-white hover:text-black transition-colors"
+          >
+            <Focus className="w-8 h-8" />
+            <span className="font-mono">deep focus</span>
+          </Button>
         </div>
       </main>
     </motion.div>
