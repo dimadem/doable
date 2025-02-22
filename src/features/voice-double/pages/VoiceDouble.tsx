@@ -30,14 +30,16 @@ const VoiceDouble: React.FC = () => {
   const { data: voiceConfig, isLoading, error } = useVoiceAgent(personalityKey);
   const { status, startVoiceInteraction, stopVoiceInteraction } = useVoiceInteraction(voiceConfig);
 
-  if (error) {
-    console.error('Error loading voice configuration:', error);
-    toast({
-      variant: "destructive",
-      title: "Error",
-      description: "Failed to load voice configuration. Please try again.",
-    });
-  }
+  React.useEffect(() => {
+    if (error) {
+      console.error('Error loading voice configuration:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load voice configuration. Please try again.",
+      });
+    }
+  }, [error, toast]);
 
   const handleInteractionToggle = async () => {
     if (status === 'idle') {
