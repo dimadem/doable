@@ -32,7 +32,6 @@ const VibeMatching: React.FC = () => {
         .select('id, name, url_array');
 
       console.log('Raw data from Supabase:', data);
-      console.log('Supabase error:', error);
 
       if (error) {
         console.error('Error fetching personalities:', error);
@@ -48,25 +47,24 @@ const VibeMatching: React.FC = () => {
         return;
       }
 
-      // Transform the data
       try {
-        console.log('Attempting to process data...');
+        console.log('Processing personalities...');
         const processedData = data.map(personality => {
-          console.log('Processing personality:', personality);
           try {
             let parsedArray: string[] = [];
+            // Handle both string and array formats
             if (typeof personality.url_array === 'string') {
               parsedArray = JSON.parse(personality.url_array);
             } else if (Array.isArray(personality.url_array)) {
               parsedArray = personality.url_array;
             }
-            console.log('Parsed url_array:', parsedArray);
+            console.log(`Parsed URLs for ${personality.name}:`, parsedArray);
             return {
               ...personality,
               url_array: parsedArray
             };
           } catch (parseError) {
-            console.error('Error parsing url_array for personality:', personality.name, parseError);
+            console.error(`Error parsing URLs for ${personality.name}:`, parseError);
             return {
               ...personality,
               url_array: []
@@ -74,7 +72,7 @@ const VibeMatching: React.FC = () => {
           }
         });
 
-        console.log('Processed data:', processedData);
+        console.log('Processed personalities:', processedData);
         setPersonalities(processedData);
       } catch (processError) {
         console.error('Error processing data:', processError);
@@ -90,20 +88,18 @@ const VibeMatching: React.FC = () => {
   const getCurrentImages = () => {
     if (!personalities.length) return [];
     
-    console.log('Current step:', step);
-    console.log('Available personalities:', personalities);
+    console.log('Getting images for step:', step);
     
-    // Get one image from each personality for the current step
     const images = personalities.map(personality => {
-      const currentImage = personality.url_array[step - 1];
-      console.log(`Getting image for ${personality.name}, step ${step}:`, currentImage);
+      const currentUrl = personality.url_array[step - 1];
+      console.log(`Image URL for ${personality.name}:`, currentUrl);
       return {
         name: personality.name,
-        imageId: currentImage || ''
+        imageId: currentUrl || '' // Using the direct URL
       };
     }).filter(item => item.imageId);
     
-    console.log('Current images:', images);
+    console.log('Current step images:', images);
     return images;
   };
 

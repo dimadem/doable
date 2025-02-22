@@ -12,7 +12,7 @@ export const VibeImage: React.FC<VibeImageProps> = ({ imageId, index, onClick })
     className="w-full aspect-[4/3] relative overflow-hidden rounded-lg cursor-pointer group"
   >
     <img
-      src={`https://images.unsplash.com/${imageId}?auto=format&fit=crop&w=800&h=600`}
+      src={imageId} // Now using the direct URL
       alt={`choice ${index + 1}`}
       className="w-full h-full object-cover filter grayscale transition-all duration-300 
                 group-hover:grayscale-0 group-hover:scale-105"
