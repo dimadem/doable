@@ -14,43 +14,48 @@ type Personality = {
   url_array: string[];
 };
 
+const PERSONALITY_TYPES = ['hyperthymic', 'emotive', 'persistent_paranoid'];
+
 const VibeMatching: React.FC = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentPersonality, setCurrentPersonality] = useState<Personality | null>(null);
+  const [personalities, setPersonalities] = useState<Personality[]>([]);
 
   useEffect(() => {
-    const fetchPersonality = async () => {
+    const fetchPersonalities = async () => {
       try {
         setLoading(true);
         setError(null);
         
-        let personalityName = 'hyperthymic';
-        if (step === 2) personalityName = 'emotive';
-        if (step === 3) personalityName = 'persistent_paranoid'; // Fixed typo here
-
         const { data, error: supabaseError } = await supabase
           .from('personalities')
           .select('name, url_array')
-          .eq('name', personalityName)
-          .maybeSingle(); // Changed from single() to maybeSingle() to handle no results more gracefully
+          .in('name', PERSONALITY_TYPES)
+          .maybeSingle();
 
         if (supabaseError) throw supabaseError;
-        if (!data) throw new Error(`No personality data found for ${personalityName}`);
+        if (!data) throw new Error('No personality data found');
 
-        setCurrentPersonality(data);
+        setPersonalities([data].flat());
       } catch (err) {
-        console.error('Error fetching personality:', err);
+        console.error('Error fetching personalities:', err);
         setError(err instanceof Error ? err.message : 'Failed to load images');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchPersonality();
-  }, [step]);
+    fetchPersonalities();
+  }, []);
+
+  const getCurrentImages = () => {
+    return personalities.map(personality => ({
+      name: personality.name,
+      imageId: personality.url_array?.[step - 1] || ''
+    })).filter(item => item.imageId);
+  };
 
   const handleImageClick = () => {
     if (step < MAX_STEPS) {
@@ -74,7 +79,7 @@ const VibeMatching: React.FC = () => {
     );
   }
 
-  if (error || !currentPersonality) {
+  if (error || personalities.length === 0) {
     return (
       <motion.div 
         className="min-h-[100svh] bg-black text-white flex flex-col items-center justify-center"
@@ -94,6 +99,8 @@ const VibeMatching: React.FC = () => {
     );
   }
 
+  const currentImages = getCurrentImages();
+
   return (
     <motion.div 
       className="min-h-[100svh] bg-black text-white flex flex-col overflow-hidden"
@@ -108,9 +115,9 @@ const VibeMatching: React.FC = () => {
       />
 
       <main className="flex-1 flex flex-col justify-evenly px-4 py-2 gap-3 overflow-y-auto">
-        {currentPersonality.url_array.map((imageId, index) => (
+        {currentImages.map(({ imageId, name }, index) => (
           <VibeImage
-            key={imageId}
+            key={`${name}-${imageId}`}
             imageId={imageId}
             index={index}
             onClick={handleImageClick}
