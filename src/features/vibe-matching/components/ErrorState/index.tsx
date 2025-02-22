@@ -2,23 +2,32 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ErrorStateProps } from '../../types';
+import { motion } from 'framer-motion';
+import { pageVariants } from '@/animations/pageTransitions';
 
 const ErrorState: React.FC<ErrorStateProps> = ({ error, onRetry }) => {
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-4 p-4">
-      <div className="text-red-500 text-center font-mono">
-        {error || 'An error occurred'}
+    <motion.div
+      className="min-h-[100svh] bg-black text-white flex flex-col items-center justify-center"
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      variants={pageVariants}
+    >
+      <div className="text-red-500 max-w-md text-center px-4">
+        <p className="text-lg font-bold mb-2 font-mono">Error Loading Personalities</p>
+        <p className="font-mono">{error || 'No personality data available'}</p>
       </div>
       {onRetry && (
         <Button 
           onClick={onRetry}
           variant="outline"
-          className="font-mono"
+          className="mt-4 font-mono"
         >
           Try again
         </Button>
       )}
-    </div>
+    </motion.div>
   );
 };
 
