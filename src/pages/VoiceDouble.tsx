@@ -108,7 +108,7 @@ const VoiceDouble = () => {
       variants={pageVariants}
     >
       <header className="p-8 flex justify-between items-center">
-        <BackButton onClick={() => navigate('/vibe-matching')} />
+        <BackButton onClick={() => navigate('/struggle')} />
         <h1 className="font-mono text-lg px-4 py-2 bg-white text-black">voice double</h1>
       </header>
 

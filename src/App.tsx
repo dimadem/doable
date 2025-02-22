@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import VibeMatching from "./pages/VibeMatching";
 import Struggle from "./pages/Struggle";
+import VoiceDouble from "./pages/VoiceDouble";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +24,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/vibe-matching" element={<VibeMatching />} />
             <Route path="/struggle" element={<Struggle />} />
+            <Route path="/voice-double" element={<VoiceDouble />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AnimatePresence>

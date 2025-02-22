@@ -54,6 +54,7 @@ const Struggle = () => {
 
       <main className="flex-1 flex flex-col items-center justify-center px-8 gap-8">
         <motion.button
+          onClick={() => navigate('/voice-double')}
           className="relative flex flex-col items-center justify-center w-64 h-64"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
