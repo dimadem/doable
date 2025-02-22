@@ -63,12 +63,13 @@ export const updateSessionStruggleType = async (
   // First get the matching voice
   const matchingVoice = await getVoiceForPersonality(personalityName);
   
-  // Update both struggle_type and relevant_agent in one operation
+  // Update struggle_type, relevant_agent, and started_at in one operation
   const { error } = await supabase
     .from('user_sessions')
     .update({ 
       struggle_type: struggleType,
-      relevant_agent: matchingVoice?.voice_name || null
+      relevant_agent: matchingVoice?.voice_name || null,
+      started_at: new Date().toISOString() // Add the timestamp here
     })
     .eq('id', sessionId);
 
