@@ -82,13 +82,13 @@ const VibeMatching = () => {
           <span className="font-mono">Back</span>
         </button>
 
-        <h1 className="font-mono text-2xl font-bold text-center absolute left-1/2 -translate-x-1/2">
+        <h1 className="font-mono text-2xl font-bold text-center absolute left-1/2 -translate-x-1/2 mt-8">
           Choose Your Vibe
         </h1>
       </header>
 
       {/* Main Content - Images */}
-      <main className="flex-1 flex flex-col justify-center px-8 gap-4">
+      <main className="flex-1 flex flex-col justify-center px-8 gap-6">
         {imageGroups[currentGroup].map((imageId, index) => (
           <motion.div
             key={imageId}
@@ -96,7 +96,7 @@ const VibeMatching = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
             onClick={() => handleImageClick(index)}
-            className="w-full aspect-[3/2] relative overflow-hidden rounded-lg cursor-pointer group"
+            className="w-full aspect-square relative overflow-hidden rounded-lg cursor-pointer group"
           >
             <img
               src={`https://images.unsplash.com/${imageId}?auto=format&fit=crop&w=800&h=800`}
