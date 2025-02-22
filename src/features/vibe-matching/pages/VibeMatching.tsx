@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/layouts/PageHeader';
@@ -19,31 +19,6 @@ const VibeMatching: React.FC = () => {
   const [step, setStep] = useState(1);
   const [selections, setSelections] = useState<SessionSelection[]>([]);
   const { personalities, loading, error } = usePersonalities();
-  const [preloadedImages, setPreloadedImages] = useState<Set<string>>(new Set());
-
-  // Preload next step images
-  useEffect(() => {
-    if (!personalities || personalities.length === 0) return;
-
-    const preloadImage = (url: string) => {
-      if (preloadedImages.has(url)) return;
-
-      const img = new Image();
-      img.src = url;
-      img.onload = () => {
-        setPreloadedImages(prev => new Set([...prev, url]));
-      };
-    };
-
-    // Preload current and next step images
-    personalities.slice(0, 3).forEach(personality => {
-      const currentImg = personality.url_array[step - 1];
-      const nextImg = personality.url_array[step];
-
-      if (currentImg) preloadImage(currentImg);
-      if (nextImg) preloadImage(nextImg);
-    });
-  }, [personalities, step, preloadedImages]);
 
   const getCurrentImages = () => {
     if (!personalities || personalities.length === 0) return [];

@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { SessionSelection, Personality } from '../types';
-import { toast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 
 export const determinePersonality = (selections: SessionSelection[]): string => {
   const counts = selections.reduce((acc, selection) => {
@@ -31,29 +31,44 @@ export const saveUserSession = async (
     const personality = personalities.find(p => p.name === personalityName);
     
     if (!personality) {
-      toast.error('Could not determine personality type');
+      toast({
+        title: "Error",
+        description: 'Could not determine personality type',
+        variant: "destructive"
+      });
       return false;
     }
 
     const { error: sessionError } = await supabase
       .from('user_sessions')
       .insert({
-        session_data: JSON.stringify({
+        session_data: {
           selections,
           finalPersonality: personalityName
-        }),
-        personality_id: personality.id
+        },
+        personality_key: personality.name
       });
 
     if (sessionError) {
-      toast.error('Failed to save session data');
+      toast({
+        title: "Error",
+        description: 'Failed to save session data',
+        variant: "destructive"
+      });
       return false;
     }
 
-    toast.success(`Your personality type: ${personalityName}`);
+    toast({
+      title: "Success",
+      description: `Your personality type: ${personalityName}`
+    });
     return true;
   } catch (error) {
-    toast.error('An error occurred while saving the session');
+    toast({
+      title: "Error",
+      description: 'An error occurred while saving the session',
+      variant: "destructive"
+    });
     return false;
   }
 };
