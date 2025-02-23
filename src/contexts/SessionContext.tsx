@@ -1,28 +1,10 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { SessionSelection } from '@/features/vibe-matching/types';
 import { isSessionExpired, getSessionData, clearSessionData } from '@/utils/sessionUtils';
-import { retryWithBackoff } from '@/utils/retryUtils';
-
-interface SessionState {
-  sessionId: string | null;
-  loading: boolean;
-  personalityKey?: string;
-  sessionData?: {
-    selections: SessionSelection[];
-    finalPersonality: string;
-  };
-  error: Error | null;
-}
-
-interface SessionContextType extends SessionState {
-  startSession: () => Promise<boolean>;
-  endSession: () => void;
-  setPersonalityData: (personalityKey: string, selections: SessionSelection[]) => void;
-  validateSession: () => Promise<boolean>;
-}
+import { SessionState, SessionContextType } from './types/session.types';
+import { initializeSession, validateSessionInDb, updatePersonalityData } from './services/sessionService';
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
@@ -39,16 +21,10 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
     try {
       if (!state.sessionId) return false;
 
-      const { data, error } = await supabase
-        .from('user_sessions')
-        .select('started_at')
-        .eq('session_id', state.sessionId)
-        .single();
+      const startedAt = await validateSessionInDb(state.sessionId);
+      if (!startedAt) return false;
 
-      if (error) throw error;
-      if (!data?.started_at) return false;
-
-      if (isSessionExpired(data.started_at)) {
+      if (isSessionExpired(startedAt)) {
         endSession();
         toast({
           title: "Session Expired",
@@ -67,7 +43,7 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
   };
 
   useEffect(() => {
-    const initializeSession = async () => {
+    const initSession = async () => {
       try {
         const { sessionId, personalityData } = getSessionData();
         
@@ -97,33 +73,13 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
       }
     };
 
-    initializeSession();
+    initSession();
   }, []);
-
-  const createSession = async (sessionId: string) => {
-    const { error } = await supabase
-      .from('user_sessions')
-      .insert({
-        session_id: sessionId,
-        started_at: new Date().toISOString(),
-        session_data: {},
-        device_info: {}
-      });
-
-    if (error) throw error;
-    return true;
-  };
 
   const startSession = async () => {
     try {
       const sessionId = generateSessionId();
-      
-      // Use retry mechanism for session creation
-      await retryWithBackoff(
-        () => createSession(sessionId),
-        3, // max 3 retries
-        200 // start with 200ms delay
-      );
+      await initializeSession(sessionId);
       
       localStorage.setItem('sessionId', sessionId);
       setState(prev => ({ ...prev, sessionId, error: null }));
@@ -160,21 +116,7 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
       };
       
       if (state.sessionId) {
-        const { error } = await supabase
-          .from('user_sessions')
-          .update({
-            personality_key: personalityKey,
-            session_data: {
-              selections: selections.map(s => ({
-                step: s.step,
-                personalityName: s.personalityName
-              })),
-              finalPersonality: personalityKey
-            }
-          })
-          .eq('session_id', state.sessionId);
-
-        if (error) throw error;
+        await updatePersonalityData(state.sessionId, personalityKey, selections);
       }
       
       localStorage.setItem('personalityData', JSON.stringify(personalityData));
