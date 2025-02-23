@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext } from 'react';
-import { VoiceContextType } from '../../types';
+import { VoiceContextType } from '../../types/voice';
 
 const VoiceContext = createContext<VoiceContextType | null>(null);
 

@@ -11,12 +11,10 @@ interface VoiceControlContainerProps {
 export const VoiceControlContainer: React.FC<VoiceControlContainerProps> = ({ children }) => {
   const voiceState = useVoiceState();
   
-  // Memoize the context value to prevent unnecessary re-renders
   const contextValue = useMemo(() => voiceState, [
     voiceState.status,
     voiceState.isSpeaking,
     voiceState.conversationId,
-    voiceState.volume,
     voiceState.timerState
   ]);
 
