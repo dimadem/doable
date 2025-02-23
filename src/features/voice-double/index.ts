@@ -1,2 +1,2 @@
 
-export { default as VoiceDouble } from './pages/VoiceDouble';
+export { VoiceDouble } from './pages/VoiceDouble';
