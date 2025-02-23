@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useRef, useEffect, useReducer, useMemo } from 'react';
 import { useConversation } from '@11labs/react';
 import { sessionLogger } from '@/utils/sessionLogger';
@@ -54,27 +55,28 @@ export const useVoiceState = (): VoiceContextType => {
   const connectionTimeoutRef = useRef<NodeJS.Timeout>();
   const lastConnectionAttemptRef = useRef<number>(0);
   const endConversationAllowedRef = useRef(false);
+  const isConnectingRef = useRef(false);
   
   const conversation = useConversation({
     clientTools: {
       set_timer_state: async ({ timer_on }) => {
-        if (!unmountingRef.current) {
-          console.log('Setting timer state:', timer_on);
-          setTimerState(prev => ({ ...prev, isRunning: timer_on }));
-        }
+        if (unmountingRef.current) return "Component unmounted";
+        
+        console.log('Setting timer state:', timer_on);
+        setTimerState(prev => ({ ...prev, isRunning: timer_on }));
         return "Timer state updated";
       },
       set_timer_duration: async ({ timer_duration }) => {
-        if (!unmountingRef.current) {
-          console.log('Setting timer duration:', timer_duration);
-          const durationInSeconds = timer_duration * 60;
-          setTimerState(prev => ({
-            ...prev,
-            duration: timer_duration,
-            remainingTime: durationInSeconds
-          }));
-          endConversationAllowedRef.current = false;
-        }
+        if (unmountingRef.current) return "Component unmounted";
+        
+        console.log('Setting timer duration:', timer_duration);
+        const durationInSeconds = timer_duration * 60;
+        setTimerState(prev => ({
+          ...prev,
+          duration: timer_duration,
+          remainingTime: durationInSeconds
+        }));
+        endConversationAllowedRef.current = false;
         return "Timer duration set";
       },
       set_task: async ({ task_description, end_conversation = false }) => {
@@ -100,49 +102,61 @@ export const useVoiceState = (): VoiceContextType => {
       }
     },
     onConnect: () => {
-      if (!unmountingRef.current) {
-        console.log('WebSocket connected');
-        dispatch({ type: 'CONNECTION_ESTABLISHED', conversationId: state.conversationId || '' });
-        clearTimeout(connectionTimeoutRef.current);
-        toast({
-          title: "Connected",
-          description: "Voice connection established"
-        });
-      }
+      if (unmountingRef.current) return;
+      
+      console.log('WebSocket connected');
+      isConnectingRef.current = false;
+      clearTimeout(connectionTimeoutRef.current);
+      
+      dispatch({ type: 'CONNECTION_ESTABLISHED', conversationId: state.conversationId || '' });
+      
+      toast({
+        title: "Connected",
+        description: "Voice connection established"
+      });
     },
     onDisconnect: () => {
-      if (!unmountingRef.current) {
-        console.log('WebSocket disconnected naturally');
-        dispatch({ type: 'CONNECTION_CLOSED' });
-        setTimerState(initialTimerState);
-        endConversationAllowedRef.current = false;
-      }
+      if (unmountingRef.current) return;
+      
+      console.log('WebSocket disconnected naturally');
+      isConnectingRef.current = false;
+      dispatch({ type: 'CONNECTION_CLOSED' });
+      setTimerState(initialTimerState);
+      endConversationAllowedRef.current = false;
     },
     onError: (error) => {
-      if (!unmountingRef.current) {
-        console.error('WebSocket error:', error);
-        dispatch({ type: 'CONNECTION_ERROR' });
-        sessionLogger.error('Voice connection error', error);
-        toast({
-          variant: "destructive",
-          title: "Connection Error",
-          description: "Failed to establish voice connection"
-        });
-      }
+      if (unmountingRef.current) return;
+      
+      console.error('WebSocket error:', error);
+      isConnectingRef.current = false;
+      dispatch({ type: 'CONNECTION_ERROR' });
+      sessionLogger.error('Voice connection error', error);
+      
+      toast({
+        variant: "destructive",
+        title: "Connection Error",
+        description: "Failed to establish voice connection"
+      });
     }
   });
 
   useEffect(() => {
     conversationRef.current = conversation;
+    return () => {
+      conversationRef.current = undefined;
+    };
   }, [conversation]);
 
   useEffect(() => {
+    console.log('Initializing voice state');
     unmountingRef.current = false;
     endConversationAllowedRef.current = false;
+    isConnectingRef.current = false;
     
     return () => {
       console.log('Component unmounting cleanup');
       unmountingRef.current = true;
+      
       clearTimeout(connectionTimeoutRef.current);
       
       if (conversationRef.current && state.status !== 'idle') {
@@ -160,6 +174,11 @@ export const useVoiceState = (): VoiceContextType => {
       return;
     }
     
+    if (isConnectingRef.current) {
+      console.log('Connection already in progress');
+      return;
+    }
+    
     const now = Date.now();
     if (now - lastConnectionAttemptRef.current < DEBOUNCE_DELAY) {
       console.log('Debouncing connection attempt');
@@ -167,6 +186,8 @@ export const useVoiceState = (): VoiceContextType => {
     }
     
     lastConnectionAttemptRef.current = now;
+    isConnectingRef.current = true;
+    
     console.log('Starting interaction, current status:', state.status);
 
     try {
@@ -175,8 +196,14 @@ export const useVoiceState = (): VoiceContextType => {
       console.log('Requesting microphone permission...');
       await navigator.mediaDevices.getUserMedia({ audio: true });
       
+      if (unmountingRef.current) {
+        console.log('Component unmounted during connection attempt');
+        return;
+      }
+      
       connectionTimeoutRef.current = setTimeout(() => {
-        if (!unmountingRef.current && state.status === 'connecting') {
+        if (!unmountingRef.current && isConnectingRef.current) {
+          isConnectingRef.current = false;
           dispatch({ type: 'CONNECTION_ERROR' });
           toast({
             variant: "destructive",
@@ -198,12 +225,13 @@ export const useVoiceState = (): VoiceContextType => {
       });
 
       if (!unmountingRef.current) {
-        console.log('Session started, updating state with conversationId:', conversationId);
+        console.log('Session started with ID:', conversationId);
         dispatch({ type: 'CONNECTION_ESTABLISHED', conversationId });
       }
     } catch (error) {
       if (!unmountingRef.current) {
         console.error('Failed to start interaction:', error);
+        isConnectingRef.current = false;
         dispatch({ type: 'CONNECTION_ERROR' });
         sessionLogger.error('Failed to start voice interaction', error);
         
@@ -225,8 +253,12 @@ export const useVoiceState = (): VoiceContextType => {
       return;
     }
     
+    if (state.status === 'idle') {
+      console.log('Already in idle state');
+      return;
+    }
+    
     console.log('Stopping interaction, current status:', state.status);
-    if (state.status === 'idle') return;
 
     try {
       dispatch({ type: 'START_DISCONNECTING' });
