@@ -22,6 +22,7 @@ export const useVoiceConnection = () => {
   const { personalityData, sessionId, struggleType } = useSession();
   const [state, setState] = useState<VoiceConnectionState>(initialState);
   const { permissionState, requestPermission, cleanup: cleanupAudio } = useVoiceAudioPermission();
+  const isDisconnectingRef = useRef(false);
   
   // Refs for managing client tools
   const clientToolsRef = useRef<{
@@ -40,7 +41,6 @@ export const useVoiceConnection = () => {
     currentTask: state.taskState.currentTask || undefined,
     sessionId,
     onTimerComplete: async () => {
-      // When timer completes, notify agent tools
       if (clientToolsRef.current.setTimerState) {
         await clientToolsRef.current.setTimerState(false);
       }
@@ -126,7 +126,6 @@ export const useVoiceConnection = () => {
         sessionLogger.info('Timer duration update requested', { timer_duration });
         setTimerDurationMinutes(timer_duration);
 
-        // Store reference to this function
         clientToolsRef.current.setTimerDuration = async (duration: number) => {
           setTimerDurationMinutes(duration);
         };
@@ -140,7 +139,6 @@ export const useVoiceConnection = () => {
 
         const success = setTimerRunning(timer_on);
 
-        // Store reference to this function
         clientToolsRef.current.setTimerState = async (isRunning: boolean) => {
           setTimerRunning(isRunning);
         };
@@ -150,6 +148,7 @@ export const useVoiceConnection = () => {
     },
     onConnect: () => {
       wsReadyRef.current = true;
+      isDisconnectingRef.current = false;
       updateConnectionStatus('connected');
       toast({
         title: "Connected",
@@ -159,7 +158,13 @@ export const useVoiceConnection = () => {
     onDisconnect: () => {
       wsReadyRef.current = false;
       isProcessingRef.current = false;
+      isDisconnectingRef.current = false;
       updateConnectionStatus('idle');
+      
+      // Cleanup timer state on disconnect
+      setTimerRunning(false);
+      setTimerDurationMinutes(0);
+      
       toast({
         title: "Disconnected",
         description: "Voice connection closed"
@@ -167,6 +172,8 @@ export const useVoiceConnection = () => {
     },
     onError: (error) => {
       wsReadyRef.current = false;
+      isProcessingRef.current = false;
+      isDisconnectingRef.current = false;
       updateConnectionStatus('error');
       sessionLogger.error('Voice connection error', { error });
       toast({
@@ -188,6 +195,10 @@ export const useVoiceConnection = () => {
 
       if (!struggleType) {
         throw new Error('No struggle type selected');
+      }
+
+      if (isDisconnectingRef.current) {
+        throw new Error('Cannot connect while disconnecting');
       }
 
       updateConnectionStatus('connecting');
@@ -225,15 +236,33 @@ export const useVoiceConnection = () => {
   }, [conversation, sessionId, struggleType, personalityData, requestPermission, updateConnectionStatus]);
 
   const disconnect = useCallback(async () => {
-    if (state.connectionStatus === 'disconnecting' || !wsReadyRef.current) {
+    if (isDisconnectingRef.current || !wsReadyRef.current) {
+      sessionLogger.info('Already disconnecting or not connected');
       return;
     }
 
     try {
+      isDisconnectingRef.current = true;
       updateConnectionStatus('disconnecting');
+      
+      // Stop timer if running
+      if (timerState.isRunning) {
+        setTimerRunning(false);
+      }
+      
+      // Reset timer duration
+      setTimerDurationMinutes(0);
+      
+      // Clean up audio first
+      cleanupAudio();
+      
+      // Clean up timer
+      cleanupTimer();
+      
+      // End WebSocket session
       wsReadyRef.current = false;
       await conversation.endSession();
-      cleanupAudio();
+      
       sessionLogger.info('Voice session ended', { sessionId });
     } catch (error) {
       if (error.message?.includes('CLOSING') || error.message?.includes('CLOSED')) {
@@ -243,9 +272,10 @@ export const useVoiceConnection = () => {
         throw error;
       }
     } finally {
+      isDisconnectingRef.current = false;
       updateConnectionStatus('idle');
     }
-  }, [conversation, sessionId, state.connectionStatus, cleanupAudio, updateConnectionStatus]);
+  }, [conversation, sessionId, timerState.isRunning, cleanupAudio, cleanupTimer, updateConnectionStatus, setTimerRunning, setTimerDurationMinutes]);
 
   // Cleanup effect
   useEffect(() => {
