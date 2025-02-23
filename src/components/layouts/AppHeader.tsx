@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -15,7 +16,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { sessionId, personalityKey } = useSession();
+  const { sessionId, personalityData } = useSession();
 
   const handleBack = () => {
     const direction = -1;
@@ -38,7 +39,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   const handleContinueJourney = () => {
     const direction = 1;
     // If we have personality data, go directly to struggle page
-    if (personalityKey) {
+    if (personalityData) {
       navigate('/struggle', { state: { direction } });
     } else {
       // Otherwise go to vibe-matching to complete personality assessment
