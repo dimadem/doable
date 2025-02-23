@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { SessionSelection, Personality, SessionData } from '../types';
+import { SessionSelection, Personality } from '../types';
 import { Json } from '@/integrations/supabase/types';
 import { toast } from '@/hooks/use-toast';
 
@@ -42,12 +42,12 @@ export const determinePersonality = (selections: SessionSelection[]): string => 
 export const saveUserSession = async (
   dominantPersonality: string,
   selections: SessionSelection[],
-  personalities: Personality[]
+  personalities: Personality[],
+  setPersonalityData: (personalityKey: string, selections: SessionSelection[]) => void
 ): Promise<void> => {
   try {
     console.log('Saving session with personality:', dominantPersonality);
     
-    // Verify the personality is one of our allowed types
     if (!ALLOWED_PERSONALITIES.includes(dominantPersonality)) {
       throw new Error('Invalid personality type');
     }
@@ -75,6 +75,9 @@ export const saveUserSession = async (
       throw error;
     }
 
+    // Use the passed setPersonalityData function instead of the hook
+    setPersonalityData(dominantPersonality, selections);
+
     console.log('Session saved successfully:', data);
 
     toast({
@@ -91,4 +94,3 @@ export const saveUserSession = async (
     throw error;
   }
 };
-

@@ -1,50 +1,50 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
-import { ChevronDown, ArrowRight } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { supabase } from "@/integrations/supabase/client";
-import AuthDialog from '../auth/AuthDialog';
+import { ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { pageVariants } from '@/animations/pageTransitions';
+import { AppHeader } from '../layouts/AppHeader';
+import { useSession } from '@/contexts/SessionContext';
+import { useToast } from '@/hooks/use-toast';
 
 const Hero = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [showAuthDialog, setShowAuthDialog] = useState(false);
-  const direction = (location.state as { direction?: number })?.direction || 1;
+  const { toast } = useToast();
+  const { startSession } = useSession();
 
   const handleStart = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      navigate('/vibe-matching', { state: { direction: 1 } });
-    } else {
-      setShowAuthDialog(true);
+    try {
+      const success = await startSession();
+      
+      if (success) {
+        navigate('/vibe-matching');
+      }
+    } catch (error) {
+      console.error('Error starting journey:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start journey. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
   return (
     <motion.div 
-      className="min-h-[100svh] flex flex-col items-center justify-center px-4 bg-black text-white" 
+      className="min-h-[100svh] flex flex-col items-center bg-black text-white"
       initial="initial"
       animate="animate"
       exit="exit"
       variants={pageVariants}
-      custom={direction}
     >
-      <div className="fixed top-8 right-8 flex gap-2">
-        {[1, 2, 3].map((_, i) => (
-          <div 
-            key={i} 
-            className={`w-2 h-2 rounded-full ${i === 0 ? 'bg-white' : 'bg-gray-800'}`} 
-          />
-        ))}
-      </div>
+      <AppHeader showBack={false} />
 
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="text-center mb-12"
+        className="text-center mt-32 mb-12"
       >
         <span className="font-mono text-sm tracking-wider text-gray-400 mb-4 block">
           just do it
@@ -67,20 +67,6 @@ const Hero = () => {
           <ArrowRight className="transition-transform group-hover:translate-x-1" />
         </motion.button>
       </motion.div>
-
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.4 }}
-        className="absolute bottom-8"
-      >
-        <ChevronDown className="text-gray-600 animate-bounce" />
-      </motion.div>
-
-      <AuthDialog 
-        isOpen={showAuthDialog} 
-        onOpenChange={setShowAuthDialog} 
-      />
     </motion.div>
   );
 };

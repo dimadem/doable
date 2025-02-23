@@ -2,17 +2,18 @@
 import React, { useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { PageHeader } from '@/components/layouts/PageHeader';
+import { AppHeader } from '@/components/layouts/AppHeader';
 import { pageVariants } from '@/animations/pageTransitions';
 import { useToast } from '@/hooks/use-toast';
-import { determinePersonality, saveUserSession } from '../services/personalityService';
+import { determinePersonality } from '../services/personalityService';
 import { usePersonalities } from '../hooks/usePersonalities';
 import { useVibeState } from '../hooks/useVibeState';
+import { updateSessionPersonalityData, getSessionData } from '@/features/session/utils/sessionStorage';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import ProgressBar from '../components/ProgressBar';
 import VibeMedia from '../components/VibeMedia';
-import { MAX_STEPS, MEDIA_PER_STEP } from '../constants';
+import { MAX_STEPS } from '../constants';
 
 const ALLOWED_PERSONALITIES = ['emotive', 'hyperthymic', 'persistent_paranoid'];
 
@@ -22,11 +23,9 @@ const VibeMatching: React.FC = () => {
   const { personalities, loading, error: loadError } = usePersonalities();
   const { step, selections, error, selectVibe, setError, reset } = useVibeState();
 
-  // Filter and prepare media groups from allowed personalities only
   const mediaGroups = useMemo(() => {
     if (!personalities?.length) return [];
     
-    // Filter to only include our three specific personalities
     const filteredPersonalities = personalities.filter(p => 
       ALLOWED_PERSONALITIES.includes(p.name)
     );
@@ -36,13 +35,10 @@ const VibeMatching: React.FC = () => {
       return [];
     }
 
-    // Keep track of used URLs to avoid repetition
     const usedUrls = new Set<string>();
 
-    // Create media groups for each step
     return Array.from({ length: MAX_STEPS }, (_, stepIndex) => {
       const stepGroup = filteredPersonalities.map(personality => {
-        // Get available media for this personality that hasn't been used yet
         const availableMedia = (personality.url_array || []).filter(url => 
           !usedUrls.has(url)
         );
@@ -52,26 +48,29 @@ const VibeMatching: React.FC = () => {
           return null;
         }
 
-        // Randomly select one media item from available options
         const randomIndex = Math.floor(Math.random() * availableMedia.length);
         const selectedUrl = availableMedia[randomIndex];
         
-        // Mark this URL as used
         usedUrls.add(selectedUrl);
 
         return {
           url: selectedUrl,
           personalityName: personality.name
         };
-      }).filter(Boolean); // Remove any null entries
+      }).filter(Boolean);
 
-      // Shuffle the media items within this step
       return stepGroup.sort(() => Math.random() - 0.5);
     });
   }, [personalities]);
 
   const handleImageSelect = useCallback(async (imageUrl: string) => {
     try {
+      // Verify session exists before proceeding
+      const sessionData = getSessionData();
+      if (!sessionData) {
+        throw new Error('No active session found');
+      }
+
       const selectedPersonality = personalities?.find(p => 
         p.url_array?.includes(imageUrl)
       );
@@ -87,22 +86,44 @@ const VibeMatching: React.FC = () => {
       selectVibe(selectedPersonality.name);
 
       if (step + 1 >= MAX_STEPS) {
-        const dominantPersonality = determinePersonality([...selections, { 
+        const updatedSelections = [...selections, { 
           step, 
           personalityName: selectedPersonality.name 
-        }]);
+        }];
         
-        await saveUserSession(
-          dominantPersonality, 
-          [...selections, { step, personalityName: selectedPersonality.name }],
-          personalities
-        );
+        const dominantPersonality = determinePersonality(updatedSelections);
         
-        // Set direction for forward navigation
+        const personalityData = {
+          personalityKey: dominantPersonality,
+          selections: updatedSelections,
+          finalPersonality: dominantPersonality,
+          ...(selectedPersonality.core_traits && { 
+            core_traits: selectedPersonality.core_traits as Record<string, number> 
+          }),
+          ...(selectedPersonality.behavior_patterns && { 
+            behavior_patterns: selectedPersonality.behavior_patterns as Record<string, string> 
+          })
+        };
+
+        // Try to store personality data with verification
+        const success = updateSessionPersonalityData(personalityData);
+        if (!success) {
+          throw new Error('Failed to store personality data');
+        }
+
+        // Verify the data was stored correctly
+        const verifiedData = getSessionData();
+        if (!verifiedData?.personalityData) {
+          throw new Error('Failed to verify stored personality data');
+        }
+
+        console.log('Successfully stored personality data:', verifiedData.personalityData);
+        
         navigate('/struggle', { state: { direction: 1 } });
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to process selection';
+      console.error('VibeMatching error:', error);
       setError(message);
       toast({
         title: "Error",
@@ -129,10 +150,7 @@ const VibeMatching: React.FC = () => {
       variants={pageVariants}
       custom={1}
     >
-      <PageHeader 
-        title="vibe matching"
-        onBack={() => navigate('/', { state: { direction: -1 } })}
-      />
+      <AppHeader title="vibe matching" />
       
       <ProgressBar progress={progress} />
 

@@ -37,3 +37,44 @@ export const updateSessionStartTime = async (sessionId: string): Promise<void> =
     throw new Error(`Failed to update session start time: ${error.message}`);
   }
 };
+
+export type StruggleType = 'pomodoro' | 'hard_task' | 'deep_focus';
+
+const getVoiceForPersonality = async (personalityName: string) => {
+  const { data, error } = await supabase
+    .from('voices')
+    .select('voice_name')
+    .eq('fit_personality_name', personalityName)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching voice:', error);
+    throw new Error(`Failed to fetch voice for personality: ${error.message}`);
+  }
+
+  return data;
+};
+
+export const updateSessionStruggleType = async (
+  sessionId: string,
+  struggleType: StruggleType,
+  personalityName: string
+): Promise<void> => {
+  // First get the matching voice
+  const matchingVoice = await getVoiceForPersonality(personalityName);
+  
+  // Update struggle_type, relevant_agent, and started_at in one operation
+  const { error } = await supabase
+    .from('user_sessions')
+    .update({ 
+      struggle_type: struggleType,
+      relevant_agent: matchingVoice?.voice_name || null,
+      started_at: new Date().toISOString() // Add the timestamp here
+    })
+    .eq('id', sessionId);
+
+  if (error) {
+    console.error('Supabase error:', error);
+    throw new Error(`Failed to update session: ${error.message}`);
+  }
+};
