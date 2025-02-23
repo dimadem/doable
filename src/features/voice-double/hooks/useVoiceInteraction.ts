@@ -2,11 +2,10 @@
 import { useState, useCallback } from 'react';
 import { useConversation } from '@11labs/react';
 import { sessionLogger } from '@/utils/sessionLogger';
-import { useSupabase } from '@/integrations/supabase/client'; // Add this import
+import { supabase } from '@/integrations/supabase/client';
 
 export const useVoiceInteraction = () => {
   const [conversationId, setConversationId] = useState<string | null>(null);
-  const supabase = useSupabase();
   
   const conversation = useConversation({
     onConnect: () => {
@@ -54,7 +53,7 @@ export const useVoiceInteraction = () => {
       sessionLogger.error('Failed to start conversation', error);
       throw error;
     }
-  }, [conversation, supabase]);
+  }, [conversation]);
 
   const stopInteraction = useCallback(async () => {
     try {
