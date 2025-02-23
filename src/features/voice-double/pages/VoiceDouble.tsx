@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { pageVariants } from '@/animations/pageTransitions';
 import { AppHeader } from '@/components/layouts/AppHeader';
@@ -14,6 +14,7 @@ const VoiceDouble = () => {
   const [isActive, setIsActive] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [sessionData, setSessionData] = useState<{ agentId: string; signedUrl: string } | null>(null);
+  const micStreamRef = useRef<MediaStream | null>(null);
 
   const conversation = useConversation({
     onConnect: () => {
@@ -23,15 +24,25 @@ const VoiceDouble = () => {
     },
     onDisconnect: () => {
       sessionLogger.info('Voice connection closed');
+      // Stop and cleanup microphone stream
+      if (micStreamRef.current) {
+        micStreamRef.current.getTracks().forEach(track => track.stop());
+        micStreamRef.current = null;
+      }
       setIsActive(false);
       setIsConnecting(false);
-      setSessionData(null); // Clear session data on disconnect
+      setSessionData(null);
     },
     onError: (error) => {
       sessionLogger.error('Voice connection error', error);
+      // Stop and cleanup microphone stream on error
+      if (micStreamRef.current) {
+        micStreamRef.current.getTracks().forEach(track => track.stop());
+        micStreamRef.current = null;
+      }
       setIsActive(false);
       setIsConnecting(false);
-      setSessionData(null); // Clear session data on error
+      setSessionData(null);
       toast({
         variant: "destructive",
         title: "Connection Error",
@@ -46,6 +57,11 @@ const VoiceDouble = () => {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      // Clean up microphone and session when component unmounts
+      if (micStreamRef.current) {
+        micStreamRef.current.getTracks().forEach(track => track.stop());
+        micStreamRef.current = null;
+      }
       if (isActive) {
         conversation.endSession().catch(error => {
           sessionLogger.error('Error cleaning up session', error);
@@ -75,14 +91,21 @@ const VoiceDouble = () => {
     try {
       if (isActive) {
         setIsConnecting(true);
+        // Stop microphone stream before ending session
+        if (micStreamRef.current) {
+          micStreamRef.current.getTracks().forEach(track => track.stop());
+          micStreamRef.current = null;
+        }
         await conversation.endSession();
         sessionLogger.info('Ended conversation');
       } else {
         setIsConnecting(true);
 
-        // First request microphone access
+        // Request and store microphone stream
         try {
-          await navigator.mediaDevices.getUserMedia({ audio: true });
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          micStreamRef.current = stream;
+          sessionLogger.info('Microphone access granted');
         } catch (micError) {
           throw new Error('Microphone access is required. Please allow microphone access and try again.');
         }
@@ -105,6 +128,11 @@ const VoiceDouble = () => {
       }
     } catch (error) {
       console.error('Error toggling voice:', error);
+      // Clean up microphone stream on error
+      if (micStreamRef.current) {
+        micStreamRef.current.getTracks().forEach(track => track.stop());
+        micStreamRef.current = null;
+      }
       setIsActive(false);
       setIsConnecting(false);
       setSessionData(null);
