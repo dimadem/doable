@@ -8,7 +8,7 @@ import { VoiceStatus } from '../components/VoiceStatus';
 import { useVoiceInteraction } from '../hooks/useVoiceInteraction';
 import { toast } from '@/components/ui/use-toast';
 
-export const VoiceDouble = () => {
+const VoiceDouble = () => {
   const { status, isSpeaking, startInteraction, stopInteraction } = useVoiceInteraction();
 
   useEffect(() => {
@@ -54,3 +54,5 @@ export const VoiceDouble = () => {
     </motion.div>
   );
 };
+
+export default VoiceDouble;
