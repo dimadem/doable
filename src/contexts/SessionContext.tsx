@@ -4,7 +4,7 @@ import { toast } from "@/components/ui/use-toast";
 import { SessionSelection } from '@/features/vibe-matching/types';
 import { SessionState, SessionContextType } from './types/session.types';
 import { createLocalSession, getSessionData, clearSessionData, updateSessionPersonalityData } from '@/features/session/utils/sessionStorage';
-import { validateSessionInDb, updatePersonalityData } from './services/sessionService';
+import { validateSessionInDb, updatePersonalityData, initializeSession } from './services/sessionService';
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
@@ -17,10 +17,16 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
 
   const validateSession = async () => {
     try {
-      if (!state.sessionId) return false;
+      if (!state.sessionId) {
+        console.log('No session ID to validate');
+        return false;
+      }
 
+      console.log('Validating session:', state.sessionId);
       const isValid = await validateSessionInDb(state.sessionId);
+      
       if (!isValid) {
+        console.log('Session invalid, cleaning up...');
         endSession();
         toast({
           title: "Session Error",
@@ -30,6 +36,7 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
         return false;
       }
 
+      console.log('Session validated successfully');
       return true;
     } catch (error) {
       console.error('Session validation error:', error);
@@ -41,21 +48,26 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
   useEffect(() => {
     const initSession = async () => {
       try {
+        console.log('Initializing session from storage');
         const sessionData = getSessionData();
         
         if (!sessionData) {
+          console.log('No session data found in storage');
           setState({ sessionId: null, loading: false, error: null });
           return;
         }
 
-        // Validate the session
+        console.log('Found session data, validating:', sessionData.sessionId);
         const isValid = await validateSessionInDb(sessionData.sessionId);
+        
         if (!isValid) {
+          console.log('Stored session invalid, clearing...');
           clearSessionData();
           setState({ sessionId: null, loading: false, error: null });
           return;
         }
 
+        console.log('Session validated, updating state');
         setState({
           sessionId: sessionData.sessionId,
           personalityData: sessionData.personalityData,
@@ -77,10 +89,15 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
 
   const startSession = async () => {
     try {
+      console.log('Starting new session');
       const sessionData = createLocalSession();
+      
       if (!sessionData) {
         throw new Error('Failed to create local session');
       }
+
+      console.log('Created local session, initializing in DB:', sessionData.sessionId);
+      await initializeSession(sessionData.sessionId);
 
       setState({ 
         sessionId: sessionData.sessionId, 
@@ -93,6 +110,7 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
         description: "Your journey has begun."
       });
 
+      console.log('Session started successfully');
       return true;
     } catch (error) {
       console.error('Failed to start session:', error);
