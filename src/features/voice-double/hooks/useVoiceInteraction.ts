@@ -4,81 +4,63 @@ import { useConversation } from '@11labs/react';
 import { sessionLogger } from '@/utils/sessionLogger';
 
 export const useVoiceInteraction = () => {
-  const [hasMicPermission, setHasMicPermission] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  
   const conversation = useConversation({
     onConnect: () => {
       sessionLogger.info('Voice interaction connected');
     },
     onDisconnect: () => {
       sessionLogger.info('Voice interaction disconnected');
+      setConversationId(null);
     },
     onError: (error) => {
       sessionLogger.error('Voice interaction error', error);
+      setConversationId(null);
     },
     onMessage: (message) => {
-      sessionLogger.info('Voice interaction message received', message);
+      sessionLogger.info('Voice interaction message', message);
     }
   });
 
-  const requestMicrophonePermission = useCallback(async () => {
-    try {
-      await navigator.mediaDevices.getUserMedia({ audio: true });
-      setHasMicPermission(true);
-      return true;
-    } catch (error) {
-      sessionLogger.error('Microphone permission denied', error);
-      return false;
-    }
-  }, []);
-
   const startInteraction = useCallback(async () => {
     try {
-      if (!hasMicPermission) {
-        const granted = await requestMicrophonePermission();
-        if (!granted) {
-          throw new Error('Microphone permission is required');
-        }
-      }
-
-      sessionLogger.info('Starting voice interaction');
-      const conversationId = await conversation.startSession({
-        agentId: "agent_1", // Replace with your actual agent ID
+      // Request microphone access first
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      // Start the conversation session
+      const newConversationId = await conversation.startSession({
+        agentId: "agent_1" // Replace with actual agent ID
       });
       
-      sessionLogger.info('Voice interaction started', { conversationId });
-      return conversationId;
+      setConversationId(newConversationId);
+      sessionLogger.info('Started conversation', { conversationId: newConversationId });
+      
+      return newConversationId;
     } catch (error) {
-      sessionLogger.error('Failed to start voice interaction', error);
+      sessionLogger.error('Failed to start conversation', error);
       throw error;
     }
-  }, [conversation, hasMicPermission, requestMicrophonePermission]);
+  }, [conversation]);
 
   const stopInteraction = useCallback(async () => {
     try {
-      sessionLogger.info('Stopping voice interaction');
-      await conversation.endSession();
+      if (conversationId) {
+        await conversation.endSession();
+        sessionLogger.info('Ended conversation', { conversationId });
+        setConversationId(null);
+      }
     } catch (error) {
-      sessionLogger.error('Failed to stop voice interaction', error);
+      sessionLogger.error('Failed to end conversation', error);
       throw error;
     }
-  }, [conversation]);
-
-  const setVolume = useCallback(async (volume: number) => {
-    try {
-      await conversation.setVolume({ volume: Math.max(0, Math.min(1, volume)) });
-    } catch (error) {
-      sessionLogger.error('Failed to set volume', error);
-      throw error;
-    }
-  }, [conversation]);
+  }, [conversation, conversationId]);
 
   return {
     status: conversation.status,
     isSpeaking: conversation.isSpeaking,
-    hasMicPermission,
-    requestMicrophonePermission,
+    conversationId,
     startInteraction,
     stopInteraction,
-    setVolume
   };
 };

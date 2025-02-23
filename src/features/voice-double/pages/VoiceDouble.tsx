@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { pageVariants } from '@/animations/pageTransitions';
 import { AppHeader } from '@/components/layouts/AppHeader';
@@ -12,43 +12,25 @@ const VoiceDouble = () => {
   const { 
     status, 
     isSpeaking, 
-    hasMicPermission,
-    requestMicrophonePermission, 
     startInteraction, 
     stopInteraction 
   } = useVoiceInteraction();
 
-  useEffect(() => {
-    const requestPermission = async () => {
-      try {
-        await requestMicrophonePermission();
-      } catch (error) {
-        toast({
-          variant: "destructive",
-          title: "Microphone Access Required",
-          description: "Please allow microphone access to use the voice features."
-        });
-      }
-    };
-
-    requestPermission();
-  }, [requestMicrophonePermission]);
-
   const handleToggleVoice = async () => {
-    if (status === 'connected') {
-      await stopInteraction();
-    } else if (status === 'disconnected') {
-      if (!hasMicPermission) {
+    try {
+      if (status === 'connected') {
+        await stopInteraction();
+      } else {
+        await startInteraction();
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === 'NotAllowedError') {
         toast({
           variant: "destructive",
           title: "Microphone Access Required",
-          description: "Please allow microphone access to use the voice features."
+          description: "Please allow microphone access to use voice features."
         });
-        return;
-      }
-      try {
-        await startInteraction();
-      } catch (error) {
+      } else {
         toast({
           variant: "destructive",
           title: "Connection Error",
@@ -76,21 +58,9 @@ const VoiceDouble = () => {
         />
         
         <VoiceStatus 
-          status={status === 'connected' ? 'connected' : 
-                 status === 'connecting' ? 'connecting' : 'idle'}
+          status={status === 'connected' ? 'connected' : 'idle'}
           isSpeaking={isSpeaking}
         />
-
-        {!hasMicPermission && (
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-red-400 text-sm font-mono text-center max-w-md px-4"
-          >
-            Microphone access is required for voice interaction.
-            Please allow access when prompted.
-          </motion.p>
-        )}
       </div>
     </motion.div>
   );
