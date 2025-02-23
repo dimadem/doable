@@ -11,15 +11,30 @@ interface VoiceControlContainerProps {
 export const VoiceControlContainer: React.FC<VoiceControlContainerProps> = ({ children }) => {
   const voiceState = useVoiceState();
   
-  const contextValue = useMemo(() => voiceState, [
+  const contextValue = useMemo(() => ({
+    connection: {
+      status: voiceState.status,
+      conversationId: voiceState.conversationId
+    },
+    speech: {
+      isSpeaking: voiceState.isSpeaking
+    },
+    timer: voiceState.timerState,
+    actions: {
+      startInteraction: voiceState.startInteraction,
+      stopInteraction: voiceState.stopInteraction
+    }
+  }), [
     voiceState.status,
-    voiceState.isSpeaking,
     voiceState.conversationId,
-    voiceState.timerState
+    voiceState.isSpeaking,
+    voiceState.timerState,
+    voiceState.startInteraction,
+    voiceState.stopInteraction
   ]);
 
   return (
-    <VoiceProvider value={contextValue}>
+    <VoiceProvider value={voiceState}>
       <motion.div 
         className="flex flex-col items-center gap-4"
         initial={{ opacity: 0, y: 20 }}
