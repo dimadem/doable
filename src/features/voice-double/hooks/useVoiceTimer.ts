@@ -1,3 +1,4 @@
+
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { sessionLogger } from '@/utils/sessionLogger';
 import { TimerState } from '../types/timer';
@@ -20,15 +21,16 @@ export const useVoiceTimer = (currentTask: string | undefined, sessionId: string
     });
 
     setTimerState(prev => ({ ...prev, isRunning: false, remainingTime: 0 }));
-    toast({
-      title: "Timer Completed",
-      description: currentTask ? `Task "${currentTask}" timer has ended` : "Timer has ended"
-    });
-
+    
     if (timerInterval.current) {
       clearInterval(timerInterval.current);
       timerInterval.current = undefined;
     }
+
+    toast({
+      title: "Timer Completed",
+      description: currentTask ? `Task "${currentTask}" timer has ended` : "Timer has ended"
+    });
   }, [currentTask, sessionId]);
 
   useEffect(() => {
@@ -39,12 +41,14 @@ export const useVoiceTimer = (currentTask: string | undefined, sessionId: string
 
       timerInterval.current = setInterval(() => {
         setTimerState(prev => {
-          if (!prev.remainingTime || prev.remainingTime <= 0) {
+          const newRemainingTime = prev.remainingTime ? prev.remainingTime - 1 : 0;
+          
+          if (newRemainingTime <= 0) {
             handleTimerEnd();
             return { ...prev, isRunning: false, remainingTime: 0 };
           }
           
-          return { ...prev, remainingTime: prev.remainingTime - 1 };
+          return { ...prev, remainingTime: newRemainingTime };
         });
       }, 1000);
 
@@ -63,22 +67,36 @@ export const useVoiceTimer = (currentTask: string | undefined, sessionId: string
       ...prev,
       remainingTime: seconds
     }));
-  }, []);
+    
+    sessionLogger.info('Timer duration set', { 
+      minutes, 
+      seconds, 
+      sessionId 
+    });
+  }, [sessionId]);
 
   const setTimerRunning = useCallback((isRunning: boolean) => {
     if (isRunning && timerDuration <= 0) {
+      sessionLogger.warn('Cannot start timer without duration', { 
+        timerDuration,
+        sessionId 
+      });
       return false;
     }
 
     setTimerState(prev => ({
       ...prev,
       isRunning,
-      startedAt: isRunning ? new Date().toISOString() : undefined,
-      remainingTime: prev.remainingTime
+      startedAt: isRunning ? new Date().toISOString() : undefined
     }));
 
+    sessionLogger.info('Timer state updated', { 
+      isRunning,
+      sessionId 
+    });
+
     return true;
-  }, [timerDuration]);
+  }, [timerDuration, sessionId]);
 
   const cleanup = useCallback(() => {
     isCleaningUp.current = true;
@@ -90,12 +108,8 @@ export const useVoiceTimer = (currentTask: string | undefined, sessionId: string
   }, []);
 
   useEffect(() => {
-    return () => {
-      if (timerInterval.current) {
-        clearInterval(timerInterval.current);
-      }
-    };
-  }, []);
+    return cleanup;
+  }, [cleanup]);
 
   return {
     timerState,

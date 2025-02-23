@@ -1,5 +1,5 @@
 
-import { useCallback, useState, useRef } from 'react';
+import { useCallback, useState, useRef, useEffect } from 'react';
 import { useConversation } from '@11labs/react';
 import { sessionLogger } from '@/utils/sessionLogger';
 import { useSession } from '@/contexts/SessionContext';
@@ -8,12 +8,19 @@ import { PUBLIC_AGENT_ID } from '../constants/voice';
 import { useVoiceTimer } from './useVoiceTimer';
 import { useVoiceAudioPermission } from './useVoiceAudioPermission';
 import { saveVoiceContext, loadVoiceContext } from '../services/voiceStorageService';
+import { ConnectionStatus, VoiceConnectionState } from '../types/connection';
+
+const initialState: VoiceConnectionState = {
+  connectionStatus: 'idle',
+  taskState: {
+    currentTask: null,
+    isProcessing: false
+  }
+};
 
 export const useVoiceConnection = () => {
   const { personalityData, sessionId, struggleType } = useSession();
-  const [currentTask, setCurrentTask] = useState<string>();
-  const isClosing = useRef<boolean>(false);
-  const isSettingUpTimer = useRef<boolean>(false);
+  const [state, setState] = useState<VoiceConnectionState>(initialState);
   const { permissionState, requestPermission, cleanup: cleanupAudio } = useVoiceAudioPermission();
   
   const {
@@ -22,107 +29,115 @@ export const useVoiceConnection = () => {
     setTimerDurationMinutes,
     setTimerRunning,
     cleanup: cleanupTimer
-  } = useVoiceTimer(currentTask, sessionId);
+  } = useVoiceTimer(state.taskState.currentTask || undefined, sessionId);
 
-  const handleEndConversation = async (conversation: any, task_description: string) => {
-    if (isClosing.current || timerState.isRunning || isSettingUpTimer.current) {
+  // Refs for managing async operations
+  const isProcessingRef = useRef(false);
+  const wsReadyRef = useRef(false);
+
+  const updateConnectionStatus = useCallback((status: ConnectionStatus) => {
+    setState(prev => ({ ...prev, connectionStatus: status }));
+    sessionLogger.info('Connection status updated', { status, sessionId });
+  }, [sessionId]);
+
+  const handleTask = useCallback(async (task_description: string, end_conversation: boolean) => {
+    if (isProcessingRef.current || !wsReadyRef.current) {
+      sessionLogger.warn('Task handling blocked - processing or WS not ready', { 
+        isProcessing: isProcessingRef.current, 
+        wsReady: wsReadyRef.current 
+      });
       return;
     }
 
-    isClosing.current = true;
-    sessionLogger.info('Agent requesting session end', {
-      task_description,
-      sessionId,
-      timestamp: new Date().toISOString()
-    });
+    isProcessingRef.current = true;
+    setState(prev => ({
+      ...prev,
+      taskState: {
+        ...prev.taskState,
+        isProcessing: true,
+        currentTask: task_description
+      }
+    }));
 
     try {
-      await conversation.endSession();
-    } catch (error) {
-      if (error.message?.includes('CLOSING') || error.message?.includes('CLOSED')) {
-        sessionLogger.info('WebSocket already closing or closed');
-      } else {
-        throw error;
+      saveVoiceContext(
+        task_description,
+        struggleType,
+        timerDuration,
+        timerState,
+        sessionId
+      );
+
+      if (end_conversation && !timerState.isRunning) {
+        updateConnectionStatus('disconnecting');
       }
+
+      isProcessingRef.current = false;
+      setState(prev => ({
+        ...prev,
+        taskState: {
+          ...prev.taskState,
+          isProcessing: false,
+          currentTask: task_description
+        }
+      }));
+
+      return "Task handled successfully";
+    } catch (error) {
+      isProcessingRef.current = false;
+      setState(prev => ({
+        ...prev,
+        taskState: { ...prev.taskState, isProcessing: false }
+      }));
+      throw error;
     }
-  };
+  }, [sessionId, struggleType, timerDuration, timerState, updateConnectionStatus]);
 
   const conversation = useConversation({
     clientTools: {
-      set_task: async ({ end_conversation, task_description }) => {
-        sessionLogger.info('Task identified by agent', { 
-          task_description,
-          sessionId,
-          struggleType,
-          timestamp: new Date().toISOString()
-        });
-
-        saveVoiceContext(
-          task_description,
-          struggleType,
-          timerDuration,
-          timerState,
-          sessionId
-        );
-        
-        setCurrentTask(task_description);
-        
-        if (end_conversation) {
-          await handleEndConversation(conversation, task_description);
-        }
-
-        return "Task context stored successfully";
+      set_task: async ({ task_description, end_conversation = false }) => {
+        sessionLogger.info('Task request received', { task_description, end_conversation });
+        return handleTask(task_description, end_conversation);
       },
       set_timer_duration: async ({ timer_duration }) => {
-        isSettingUpTimer.current = true;
-        sessionLogger.info('Timer duration update requested', {
-          timer_duration,
-          sessionId,
-          timestamp: new Date().toISOString()
-        });
-
+        if (!wsReadyRef.current) {
+          return "WebSocket not ready";
+        }
+        
+        sessionLogger.info('Timer duration update requested', { timer_duration });
         setTimerDurationMinutes(timer_duration);
-        isSettingUpTimer.current = false;
         return "Timer duration set successfully";
       },
       set_timer_state: async ({ timer_on }) => {
-        isSettingUpTimer.current = true;
-        sessionLogger.info('Timer state update requested', {
-          timer_on,
-          sessionId,
-          timestamp: new Date().toISOString()
-        });
-
-        const success = setTimerRunning(timer_on);
-        isSettingUpTimer.current = false;
-        
-        if (!success) {
-          return "Cannot start timer without duration";
+        if (!wsReadyRef.current) {
+          return "WebSocket not ready";
         }
 
-        return "Timer state updated successfully";
+        const success = setTimerRunning(timer_on);
+        return success ? "Timer state updated successfully" : "Cannot start timer without duration";
       }
     },
     onConnect: () => {
-      isClosing.current = false;
-      isSettingUpTimer.current = false;
-      sessionLogger.info('Voice connection established', { sessionId });
+      wsReadyRef.current = true;
+      updateConnectionStatus('connected');
       toast({
         title: "Connected",
         description: "Voice connection established"
       });
     },
     onDisconnect: () => {
-      isClosing.current = false;
-      isSettingUpTimer.current = false;
-      sessionLogger.info('Voice connection closed', { sessionId });
+      wsReadyRef.current = false;
+      isProcessingRef.current = false;
+      updateConnectionStatus('idle');
       toast({
         title: "Disconnected",
         description: "Voice connection closed"
       });
     },
     onError: (error) => {
-      sessionLogger.error('Voice connection error', { error, sessionId });
+      wsReadyRef.current = false;
+      updateConnectionStatus('error');
+      sessionLogger.error('Voice connection error', { error });
       toast({
         variant: "destructive",
         title: "Connection Error",
@@ -130,7 +145,7 @@ export const useVoiceConnection = () => {
       });
     },
     onMessage: (message) => {
-      sessionLogger.info('Voice message received', { message, sessionId });
+      sessionLogger.info('Voice message received', { message });
     }
   });
 
@@ -144,6 +159,7 @@ export const useVoiceConnection = () => {
         throw new Error('No struggle type selected');
       }
 
+      updateConnectionStatus('connecting');
       const hasPermission = await requestPermission();
       if (!hasPermission) {
         throw new Error('Audio permission denied');
@@ -171,42 +187,49 @@ export const useVoiceConnection = () => {
 
       return conversationId;
     } catch (error) {
+      updateConnectionStatus('error');
       sessionLogger.error('Failed to start voice session', error);
       throw error;
     }
-  }, [conversation, sessionId, personalityData, struggleType, requestPermission]);
+  }, [conversation, sessionId, struggleType, personalityData, requestPermission, updateConnectionStatus]);
 
   const disconnect = useCallback(async () => {
-    try {
-      if (!isClosing.current) {
-        isClosing.current = true;
-        try {
-          await conversation.endSession();
-        } catch (error) {
-          if (error.message?.includes('CLOSING') || error.message?.includes('CLOSED')) {
-            // WebSocket already closing/closed, ignore the error
-            sessionLogger.info('WebSocket already closing or closed');
-          } else {
-            throw error;
-          }
-        }
-      }
-      
-      sessionLogger.info('Voice session ended', { sessionId });
-      cleanupAudio();
-      // Don't cleanup timer here, let it run independently
-    } catch (error) {
-      sessionLogger.error('Failed to end voice session', error);
-      throw error;
+    if (state.connectionStatus === 'disconnecting' || !wsReadyRef.current) {
+      return;
     }
-  }, [conversation, sessionId, cleanupAudio]);
+
+    try {
+      updateConnectionStatus('disconnecting');
+      wsReadyRef.current = false;
+      await conversation.endSession();
+      cleanupAudio();
+      sessionLogger.info('Voice session ended', { sessionId });
+    } catch (error) {
+      if (error.message?.includes('CLOSING') || error.message?.includes('CLOSED')) {
+        sessionLogger.info('WebSocket already closing or closed');
+      } else {
+        sessionLogger.error('Failed to end voice session', error);
+        throw error;
+      }
+    } finally {
+      updateConnectionStatus('idle');
+    }
+  }, [conversation, sessionId, state.connectionStatus, cleanupAudio, updateConnectionStatus]);
+
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      cleanupTimer();
+      cleanupAudio();
+    };
+  }, [cleanupTimer, cleanupAudio]);
 
   return {
     connect,
     disconnect,
-    status: conversation.status,
+    status: state.connectionStatus,
     isSpeaking: conversation.isSpeaking,
-    currentTask,
+    currentTask: state.taskState.currentTask,
     timerState,
     timerDuration,
     permissionState
