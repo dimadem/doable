@@ -22,21 +22,46 @@ serve(async (req) => {
 
   try {
     const apiKey = Deno.env.get('ELEVENLABS_API_KEY');
+    const agentId = Deno.env.get('ELEVENLABS_AGENT_ID');
+
     if (!apiKey) {
       throw new Error('ElevenLabs API key not configured');
     }
 
+    if (!agentId) {
+      throw new Error('ElevenLabs Agent ID not configured');
+    }
+
+    // Get signed URL from ElevenLabs API
+    const response = await fetch(
+      `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agentId}`,
+      {
+        method: 'GET',
+        headers: {
+          'xi-api-key': apiKey,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to get signed URL');
+    }
+
+    const data = await response.json();
+    
     return new Response(
-      JSON.stringify({ apiKey }),
+      JSON.stringify({ signed_url: data.signed_url }),
       { 
         headers: { 
           ...corsHeaders, 
-          'Content-Type': 'application/json',
-          'xi-api-key': apiKey 
+          'Content-Type': 'application/json'
         } 
       },
     );
   } catch (error) {
+    console.error('Error in get-eleven-labs-key:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
