@@ -1,65 +1,64 @@
 
 import { useState, useCallback } from 'react';
 import { useConversation } from '@11labs/react';
-import { supabase } from '@/integrations/supabase/client';
 import { sessionLogger } from '@/utils/sessionLogger';
 
 export const useVoiceInteraction = () => {
-  const [status, setStatus] = useState<'idle' | 'connecting' | 'connected' | 'error'>('idle');
+  const [hasMicPermission, setHasMicPermission] = useState(false);
   const conversation = useConversation({
     onConnect: () => {
-      setStatus('connected');
       sessionLogger.info('Voice interaction connected');
     },
     onDisconnect: () => {
-      setStatus('idle');
       sessionLogger.info('Voice interaction disconnected');
     },
     onError: (error) => {
       sessionLogger.error('Voice interaction error', error);
-      setStatus('error');
+    },
+    onMessage: (message) => {
+      sessionLogger.info('Voice interaction message received', message);
     }
   });
 
+  const requestMicrophonePermission = useCallback(async () => {
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      setHasMicPermission(true);
+      return true;
+    } catch (error) {
+      sessionLogger.error('Microphone permission denied', error);
+      return false;
+    }
+  }, []);
+
   const startInteraction = useCallback(async () => {
     try {
-      setStatus('connecting');
+      if (!hasMicPermission) {
+        const granted = await requestMicrophonePermission();
+        if (!granted) {
+          throw new Error('Microphone permission is required');
+        }
+      }
+
       sessionLogger.info('Starting voice interaction');
-      
-      // Get the signed URL using our Supabase function
-      const { data, error } = await supabase
-        .functions.invoke('get-eleven-labs-key');
-      
-      if (error) {
-        sessionLogger.error('Failed to get signed URL', error);
-        throw error;
-      }
-      
-      if (!data?.signed_url) {
-        throw new Error('No signed URL received from server');
-      }
-      
-      // Start the conversation with the signed URL
-      await conversation.startSession({
-        url: data.signed_url
+      const conversationId = await conversation.startSession({
+        agentId: "agent_1", // Replace with your actual agent ID
       });
       
-      sessionLogger.info('Voice interaction started successfully');
+      sessionLogger.info('Voice interaction started', { conversationId });
+      return conversationId;
     } catch (error) {
       sessionLogger.error('Failed to start voice interaction', error);
-      setStatus('error');
-      throw error; // Re-throw to let the component handle the error
+      throw error;
     }
-  }, [conversation]);
+  }, [conversation, hasMicPermission, requestMicrophonePermission]);
 
   const stopInteraction = useCallback(async () => {
     try {
       sessionLogger.info('Stopping voice interaction');
       await conversation.endSession();
-      setStatus('idle');
     } catch (error) {
       sessionLogger.error('Failed to stop voice interaction', error);
-      setStatus('error');
       throw error;
     }
   }, [conversation]);
@@ -74,8 +73,10 @@ export const useVoiceInteraction = () => {
   }, [conversation]);
 
   return {
-    status,
+    status: conversation.status,
     isSpeaking: conversation.isSpeaking,
+    hasMicPermission,
+    requestMicrophonePermission,
     startInteraction,
     stopInteraction,
     setVolume
