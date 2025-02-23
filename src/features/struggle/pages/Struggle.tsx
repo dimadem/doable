@@ -10,7 +10,7 @@ import { pageVariants } from '@/animations/pageTransitions';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { AppHeader } from '@/components/layouts/AppHeader';
-import { getSessionData } from '@/utils/sessionUtils';
+import { getSessionData } from '@/features/session/utils/sessionStorage';
 
 const formatTraits = (traits: Record<string, any> | null) => {
   if (!traits) return {};
@@ -25,12 +25,13 @@ const formatTraits = (traits: Record<string, any> | null) => {
 const Struggle: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { sessionId, personalityData } = getSessionData();
+  const sessionData = getSessionData();
 
-  const { data: sessionData } = useQuery<SessionResponse>({
+  // Only fetch if we don't have local data
+  const { data: sessionResponse } = useQuery<SessionResponse>({
     queryKey: ['latestSession'],
     queryFn: fetchLatestSession,
-    enabled: !personalityData, // Only fetch if we don't have local data
+    enabled: !sessionData?.personalityData,
     meta: {
       onSettled: (data, error) => {
         if (error) {
@@ -39,37 +40,40 @@ const Struggle: React.FC = () => {
             description: "Failed to load session data",
             variant: "destructive",
           });
+          navigate('/'); // Redirect to home on error
         }
       }
     }
   });
 
   const handleStruggleTypeSelect = async (struggleType: StruggleType) => {
-    if (!sessionId) {
+    if (!sessionData?.sessionId) {
       toast({
         title: "Error",
         description: "No active session found",
         variant: "destructive",
       });
+      navigate('/');
       return;
     }
 
-    const currentPersonalityData = personalityData || sessionData?.personalities?.name;
+    const personalityData = sessionData.personalityData || sessionResponse?.personalities?.name;
 
-    if (!currentPersonalityData) {
+    if (!personalityData) {
       toast({
         title: "Error",
-        description: "No personality type found for this session",
+        description: "No personality type found",
         variant: "destructive",
       });
+      navigate('/');
       return;
     }
 
     try {
       await updateSessionStruggleType(
-        sessionId, 
+        sessionData.sessionId,
         struggleType,
-        typeof currentPersonalityData === 'string' ? currentPersonalityData : currentPersonalityData.finalPersonality
+        typeof personalityData === 'string' ? personalityData : personalityData.finalPersonality
       );
       
       toast({
@@ -87,7 +91,8 @@ const Struggle: React.FC = () => {
     }
   };
 
-  if (!personalityData && !sessionData) {
+  // Show loading state while fetching data
+  if (!sessionData?.personalityData && !sessionResponse) {
     return (
       <motion.div
         className="min-h-[100svh] bg-black text-white flex flex-col"
@@ -98,18 +103,24 @@ const Struggle: React.FC = () => {
       >
         <AppHeader title="struggle" />
         <div className="flex-1 flex items-center justify-center">
-          <p>Loading session data...</p>
+          <p className="font-mono">Loading session data...</p>
         </div>
       </motion.div>
     );
   }
 
-  const personalityInfo = personalityData || sessionData?.personalities;
+  const personalityInfo = sessionData?.personalityData || sessionResponse?.personalities;
   const personality: PersonalityAnalysis | null = personalityInfo ? {
-    type: typeof personalityInfo === 'string' ? personalityInfo : personalityInfo.name,
-    traits: formatTraits(typeof personalityInfo === 'object' ? personalityInfo.core_traits : null),
+    type: typeof personalityInfo === 'string' ? personalityInfo : 
+          'personalityKey' in personalityInfo ? personalityInfo.personalityKey : personalityInfo.name,
+    traits: formatTraits(
+      typeof personalityInfo === 'object' && 'core_traits' in personalityInfo 
+        ? personalityInfo.core_traits 
+        : null
+    ),
     patterns: {},
-    selections: sessionData?.session_data.selections || []
+    selections: sessionResponse?.session_data.selections || 
+               ('selections' in personalityInfo ? personalityInfo.selections : [])
   } : null;
 
   return (

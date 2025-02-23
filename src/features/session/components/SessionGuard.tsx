@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSessionData } from '../utils/sessionStorage';
+import { useToast } from '@/hooks/use-toast';
 
 interface SessionGuardProps {
   children: React.ReactNode;
@@ -9,14 +10,15 @@ interface SessionGuardProps {
 
 export const SessionGuard = ({ children }: SessionGuardProps) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [isValidating, setIsValidating] = useState(true);
   const [hasSession, setHasSession] = useState(false);
 
   useEffect(() => {
     let mounted = true;
     let retryCount = 0;
-    const maxRetries = 3;
-    const retryDelay = 100; // 100ms between retries
+    const maxRetries = 5;
+    const retryDelay = 200; // 200ms between retries
 
     const validateSession = async () => {
       while (retryCount < maxRetries) {
@@ -40,7 +42,12 @@ export const SessionGuard = ({ children }: SessionGuardProps) => {
       if (mounted) {
         setHasSession(false);
         setIsValidating(false);
-        navigate('/');
+        toast({
+          title: "Session Error",
+          description: "No valid session found. Redirecting to home.",
+          variant: "destructive",
+        });
+        navigate('/', { replace: true });
       }
     };
 
@@ -49,9 +56,8 @@ export const SessionGuard = ({ children }: SessionGuardProps) => {
     return () => {
       mounted = false;
     };
-  }, [navigate]);
+  }, [navigate, toast]);
 
-  // Show loading state while validating
   if (isValidating) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-black">
@@ -60,6 +66,5 @@ export const SessionGuard = ({ children }: SessionGuardProps) => {
     );
   }
 
-  // Show children only if we have a valid session
   return hasSession ? <>{children}</> : null;
 };

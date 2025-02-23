@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { determinePersonality } from '../services/personalityService';
 import { usePersonalities } from '../hooks/usePersonalities';
 import { useVibeState } from '../hooks/useVibeState';
-import { updateSessionPersonalityData } from '@/features/session/utils/sessionStorage';
+import { updateSessionPersonalityData, getSessionData } from '@/features/session/utils/sessionStorage';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import ProgressBar from '../components/ProgressBar';
@@ -87,13 +87,27 @@ const VibeMatching: React.FC = () => {
         
         const dominantPersonality = determinePersonality(updatedSelections);
         
-        // Store personality data locally
-        updateSessionPersonalityData({
+        // Store personality data and verify storage
+        const personalityData = {
           personalityKey: dominantPersonality,
           selections: updatedSelections,
-          finalPersonality: dominantPersonality
-        });
+          finalPersonality: dominantPersonality,
+          core_traits: selectedPersonality.core_traits || {},
+          behavior_patterns: selectedPersonality.behavior_patterns || {}
+        };
+
+        const success = updateSessionPersonalityData(personalityData);
         
+        if (!success) {
+          throw new Error('Failed to store personality data');
+        }
+
+        // Verify session data exists before navigation
+        const sessionData = getSessionData();
+        if (!sessionData?.personalityData) {
+          throw new Error('Session data verification failed');
+        }
+
         navigate('/struggle', { state: { direction: 1 } });
       }
     } catch (error) {
