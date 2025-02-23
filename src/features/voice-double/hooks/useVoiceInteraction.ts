@@ -2,9 +2,11 @@
 import { useState, useCallback } from 'react';
 import { useConversation } from '@11labs/react';
 import { sessionLogger } from '@/utils/sessionLogger';
+import { useSupabase } from '@/integrations/supabase/client'; // Add this import
 
 export const useVoiceInteraction = () => {
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const supabase = useSupabase();
   
   const conversation = useConversation({
     onConnect: () => {
@@ -28,9 +30,20 @@ export const useVoiceInteraction = () => {
       // Request microphone access first
       await navigator.mediaDevices.getUserMedia({ audio: true });
       
-      // Start the conversation session
+      // Get the agent ID from Supabase
+      const { data: secretData, error: secretError } = await supabase
+        .from('secrets')
+        .select('value')
+        .eq('name', 'ELEVENLABS_AGENT_ID')
+        .single();
+
+      if (secretError || !secretData) {
+        throw new Error('Failed to retrieve agent ID');
+      }
+
+      // Start the conversation session with the agent ID
       const newConversationId = await conversation.startSession({
-        agentId: "agent_1" // Replace with actual agent ID
+        agentId: secretData.value
       });
       
       setConversationId(newConversationId);
@@ -41,7 +54,7 @@ export const useVoiceInteraction = () => {
       sessionLogger.error('Failed to start conversation', error);
       throw error;
     }
-  }, [conversation]);
+  }, [conversation, supabase]);
 
   const stopInteraction = useCallback(async () => {
     try {
