@@ -1,9 +1,9 @@
 
 import React, { useState } from 'react';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Mic, MicOff } from 'lucide-react';
 import { useConversation } from '@11labs/react';
+import { AppHeader } from '@/components/layouts/AppHeader';
 
 export const VoiceDouble = () => {
   const [isActive, setIsActive] = useState(false);
@@ -28,17 +28,16 @@ export const VoiceDouble = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white font-mono">
-      <Card className="w-full max-w-md p-8 bg-black border border-white">
-        <div className="flex flex-col items-center gap-8">
-          <Button
-            onClick={handleClick}
-            className="w-32 h-32 rounded-full bg-black border-2 border-white hover:bg-white hover:text-black"
-          >
-            {isActive ? <MicOff className="w-8 h-8" /> : <Mic className="w-8 h-8" />}
-          </Button>
-        </div>
-      </Card>
+    <div className="flex flex-col min-h-screen bg-black text-white font-mono">
+      <AppHeader title="Voice Double" />
+      <div className="flex-1 flex items-center justify-center">
+        <Button
+          onClick={handleClick}
+          className="w-32 h-32 rounded-full bg-black border-2 border-white hover:bg-white hover:text-black"
+        >
+          {isActive ? <MicOff className="w-8 h-8" /> : <Mic className="w-8 h-8" />}
+        </Button>
+      </div>
     </div>
   );
 };
