@@ -1,5 +1,5 @@
 
-import { useReducer, useRef, useCallback, useState } from 'react';
+import { useReducer, useRef, useCallback, useState, useEffect } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { toast } from '@/components/ui/use-toast';
 import { TimerState } from '../types/voice';
@@ -28,11 +28,27 @@ export const useVoiceState = () => {
   const isConnectingRef = useRef(false);
   const unmountingRef = useRef(false);
 
+  const clearConnectionTimeout = useCallback(() => {
+    if (connectTimeoutRef.current) {
+      clearTimeout(connectTimeoutRef.current);
+      connectTimeoutRef.current = undefined;
+    }
+    isConnectingRef.current = false;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      unmountingRef.current = true;
+      clearConnectionTimeout();
+    };
+  }, [clearConnectionTimeout]);
+
   const stopInteraction = useCallback(async () => {
     if (unmountingRef.current) return;
     
     try {
       dispatch({ type: 'BEGIN_DISCONNECT' });
+      clearConnectionTimeout();
       
       if (timerState.isRunning) {
         setTimerState(prev => ({ ...prev, isRunning: false }));
@@ -47,7 +63,7 @@ export const useVoiceState = () => {
       console.error('Failed to stop interaction:', error);
       dispatch({ type: 'CONNECTION_FAILED', error: error as Error });
     }
-  }, [timerState.isRunning]);
+  }, [timerState.isRunning, clearConnectionTimeout]);
 
   const clientTools = createClientTools(setTimerState, stopInteraction, unmountingRef);
   const conversation = useConversationManager({
@@ -55,6 +71,7 @@ export const useVoiceState = () => {
     clientTools,
     unmountingRef,
     conversationRef,
+    clearConnectionTimeout,
   });
 
   const startInteraction = useCallback(async () => {
@@ -78,11 +95,14 @@ export const useVoiceState = () => {
       console.log('Requesting microphone permission...');
       await navigator.mediaDevices.getUserMedia({ audio: true });
       
-      if (unmountingRef.current) return;
+      if (unmountingRef.current) {
+        clearConnectionTimeout();
+        return;
+      }
       
       connectTimeoutRef.current = setTimeout(() => {
         if (!unmountingRef.current && isConnectingRef.current) {
-          isConnectingRef.current = false;
+          clearConnectionTimeout();
           dispatch({ type: 'CONNECTION_FAILED' });
           toast({
             variant: "destructive",
@@ -92,7 +112,7 @@ export const useVoiceState = () => {
         }
       }, CONNECT_TIMEOUT);
       
-      await conversation.startSession({
+      const response = await conversation.startSession({
         agentId: PUBLIC_AGENT_ID,
         dynamicVariables: {
           personality: personalityData?.finalPersonality || 'default',
@@ -102,9 +122,17 @@ export const useVoiceState = () => {
         }
       });
 
+      if (unmountingRef.current) {
+        clearConnectionTimeout();
+        await conversation.endSession();
+        return;
+      }
+
+      console.log('Session started successfully:', response);
+
     } catch (error) {
       if (!unmountingRef.current) {
-        isConnectingRef.current = false;
+        clearConnectionTimeout();
         dispatch({ type: 'CONNECTION_FAILED', error: error as Error });
         
         if (error instanceof Error && error.name === 'NotAllowedError') {
@@ -123,7 +151,7 @@ export const useVoiceState = () => {
       }
       throw error;
     }
-  }, [conversation, personalityData]);
+  }, [conversation, personalityData, clearConnectionTimeout]);
 
   return {
     state,
