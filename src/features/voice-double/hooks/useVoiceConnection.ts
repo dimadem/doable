@@ -18,7 +18,6 @@ export const useVoiceConnection = () => {
   const { personalityData, sessionId, struggleType } = useSession();
   const [currentTask, setCurrentTask] = useState<string>();
   
-  // Load saved context if exists
   const loadSavedContext = (): SessionContext | null => {
     const saved = localStorage.getItem(SESSION_CONTEXT_KEY);
     if (saved) {
@@ -35,7 +34,6 @@ export const useVoiceConnection = () => {
     return null;
   };
 
-  // Save context to localStorage
   const saveContext = (taskDescription: string) => {
     sessionLogger.info('Updating task context', {
       previousTask: currentTask,
@@ -61,7 +59,6 @@ export const useVoiceConnection = () => {
     });
   };
 
-  // Create conversation instance with basic handlers and tools
   const conversation = useConversation({
     clientTools: {
       set_task: async ({ end_conversation, task_description }) => {
@@ -123,10 +120,7 @@ export const useVoiceConnection = () => {
         throw new Error('No struggle type selected');
       }
 
-      // Request microphone access
       await navigator.mediaDevices.getUserMedia({ audio: true });
-
-      // Load saved context if exists
       const savedContext = loadSavedContext();
       
       sessionLogger.info('Starting voice session', { 
@@ -135,7 +129,6 @@ export const useVoiceConnection = () => {
         struggleType
       });
 
-      // Start session with dynamic variables
       const conversationId = await conversation.startSession({
         agentId: PUBLIC_AGENT_ID,
         dynamicVariables: {
