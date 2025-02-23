@@ -1,21 +1,19 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { VoiceStatus } from '../components/VoiceStatus';
 import { VoiceMicButton } from '../components/VoiceMicButton';
-import { VoiceProvider } from '../components/VoiceControl/Context';
-import { TimerDisplay } from '../components/TimerDisplay';
-import { useVoiceState } from '../hooks/useVoiceState';
+import { useVoiceAgent } from '../hooks/useVoiceAgent';
 
-const VoiceControls = () => {
-  const { state, actions } = useVoiceState();
+export const VoiceDouble = () => {
+  const { status, isSpeaking, connect, disconnect } = useVoiceAgent();
 
   const handleToggleVoice = async () => {
     try {
-      if (state.status === 'connected') {
-        await actions.stopInteraction();
-      } else if (state.status === 'idle' || state.status === 'error') {
-        await actions.startInteraction();
+      if (status === 'connected') {
+        await disconnect();
+      } else if (status === 'idle' || status === 'error') {
+        await connect();
       }
     } catch (error) {
       console.error('Voice control error:', error);
@@ -23,31 +21,20 @@ const VoiceControls = () => {
   };
 
   return (
-    <div className="flex flex-col items-center gap-8">
-      <TimerDisplay />
-      <VoiceMicButton 
-        isActive={state.status === 'connected'}
-        isConnecting={state.status === 'connecting'}
-        onClick={handleToggleVoice}
-      />
-      <VoiceStatus 
-        status={state.status}
-        isSpeaking={false}
-      />
+    <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white font-mono">
+      <Card className="w-full max-w-md p-8 bg-black border border-white">
+        <div className="flex flex-col items-center gap-8">
+          <VoiceMicButton 
+            isActive={status === 'connected'}
+            isConnecting={status === 'connecting'}
+            onClick={handleToggleVoice}
+          />
+          <VoiceStatus 
+            status={status === 'connected' ? 'connected' : 'idle'}
+            isSpeaking={isSpeaking}
+          />
+        </div>
+      </Card>
     </div>
-  );
-};
-
-export const VoiceDouble = () => {
-  const voiceState = useVoiceState();
-
-  return (
-    <VoiceProvider value={voiceState}>
-      <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white font-mono">
-        <Card className="w-full max-w-md p-8 bg-black border border-white">
-          <VoiceControls />
-        </Card>
-      </div>
-    </VoiceProvider>
   );
 };
