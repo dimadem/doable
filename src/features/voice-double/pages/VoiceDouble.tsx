@@ -32,9 +32,11 @@ const VoiceDouble: React.FC = () => {
 
   const conversation = useConversation({
     onConnect: () => {
-      setStatus('connected' as any);
+      console.log('Voice connection established');
+      setStatus('connected');
     },
     onMessage: (msg) => {
+      console.log('Received message:', msg);
       if (msg.type === 'audio') {
         setStatus('responding');
       }
@@ -49,6 +51,7 @@ const VoiceDouble: React.FC = () => {
       setStatus('idle');
     },
     onDisconnect: () => {
+      console.log('Voice connection disconnected');
       setStatus('idle');
     }
   });
@@ -67,6 +70,10 @@ const VoiceDouble: React.FC = () => {
   const handleInteractionToggle = async () => {
     if (status === 'idle') {
       if (!voiceConfig?.api_key || !voiceConfig?.agent_id) {
+        console.error('Missing configuration:', { 
+          hasApiKey: !!voiceConfig?.api_key, 
+          hasAgentId: !!voiceConfig?.agent_id 
+        });
         toast({
           variant: "destructive",
           title: "Configuration Error",
@@ -77,6 +84,11 @@ const VoiceDouble: React.FC = () => {
 
       try {
         setStatus('connecting');
+        console.log('Starting voice session with config:', {
+          agentId: voiceConfig.agent_id,
+          voiceId: voiceConfig.voice_name
+        });
+        
         await conversation.startSession({
           agentId: voiceConfig.agent_id,
           overrides: {
@@ -95,6 +107,7 @@ const VoiceDouble: React.FC = () => {
         setStatus('idle');
       }
     } else {
+      console.log('Ending voice session');
       await conversation.endSession();
       setStatus('idle');
     }
