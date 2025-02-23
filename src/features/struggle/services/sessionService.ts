@@ -1,7 +1,7 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { SessionResponse, PersonalityAnalysis } from '../types';
 import { sessionLogger } from '@/utils/sessionLogger';
+import { Json } from '@/integrations/supabase/types';
 
 export const fetchLatestSession = async (): Promise<SessionResponse> => {
   const { data: sessionData, error: sessionError } = await supabase
@@ -45,6 +45,19 @@ const getVoiceForPersonality = async (personalityName: string) => {
   return data;
 };
 
+const convertToJson = (data: PersonalityAnalysis): Json => {
+  return {
+    type: data.type,
+    traits: data.traits,
+    patterns: data.patterns,
+    selections: data.selections.map(selection => ({
+      step: selection.step,
+      personalityName: selection.personalityName
+    })),
+    updatedAt: new Date().toISOString()
+  };
+};
+
 export const updateSessionStruggleType = async (
   sessionId: string,
   struggleType: StruggleType,
@@ -66,10 +79,7 @@ export const updateSessionStruggleType = async (
     relevant_agent: matchingVoice?.voice_name || null,
     started_at: new Date().toISOString(),
     personality_key: personalityName,
-    session_data: personalityData ? {
-      ...personalityData,
-      updatedAt: new Date().toISOString()
-    } : undefined
+    session_data: personalityData ? convertToJson(personalityData) : undefined
   };
 
   const { error } = await supabase

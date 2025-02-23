@@ -23,6 +23,10 @@ const formatTraits = (traits: Record<string, any> | null) => {
   }, {} as Record<string, number>);
 };
 
+const isStoredPersonalityData = (data: any): data is StoredPersonalityData => {
+  return data && 'personalityKey' in data && 'selections' in data;
+};
+
 const Struggle: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -75,21 +79,22 @@ const Struggle: React.FC = () => {
 
     try {
       const personality: PersonalityAnalysis = {
-        type: typeof personalityData === 'string' ? personalityData : personalityData.finalPersonality,
+        type: isStoredPersonalityData(personalityData) ? personalityData.finalPersonality : personalityData,
         traits: formatTraits(
-          typeof personalityData === 'object' && 'core_traits' in personalityData 
+          isStoredPersonalityData(personalityData) && 'core_traits' in personalityData 
             ? personalityData.core_traits 
             : null
         ),
         patterns: {},
-        selections: sessionResponse?.session_data.selections || 
-                   ('selections' in personalityData ? personalityData.selections : [])
+        selections: isStoredPersonalityData(personalityData) 
+          ? personalityData.selections 
+          : sessionResponse?.session_data?.selections || []
       };
 
       await updateSessionStruggleType(
         sessionData.sessionId,
         struggleType,
-        typeof personalityData === 'string' ? personalityData : personalityData.finalPersonality,
+        isStoredPersonalityData(personalityData) ? personalityData.finalPersonality : personalityData,
         personality
       );
       
@@ -134,16 +139,20 @@ const Struggle: React.FC = () => {
 
   const personalityInfo = sessionData?.personalityData || sessionResponse?.personalities;
   const personality: PersonalityAnalysis | null = personalityInfo ? {
-    type: typeof personalityInfo === 'string' ? personalityInfo : 
-          'personalityKey' in personalityInfo ? personalityInfo.personalityKey : personalityInfo.name,
+    type: isStoredPersonalityData(personalityInfo) 
+      ? personalityInfo.finalPersonality 
+      : typeof personalityInfo === 'string' 
+        ? personalityInfo 
+        : personalityInfo.name,
     traits: formatTraits(
-      typeof personalityInfo === 'object' && 'core_traits' in personalityInfo 
+      isStoredPersonalityData(personalityInfo) && 'core_traits' in personalityInfo 
         ? personalityInfo.core_traits 
         : null
     ),
     patterns: {},
-    selections: sessionResponse?.session_data.selections || 
-               ('selections' in personalityInfo ? personalityInfo.selections : [])
+    selections: isStoredPersonalityData(personalityInfo)
+      ? personalityInfo.selections
+      : sessionResponse?.session_data?.selections || []
   } : null;
 
   return (
