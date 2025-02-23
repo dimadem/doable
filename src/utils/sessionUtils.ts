@@ -1,6 +1,15 @@
 
 const SESSION_EXPIRY_HOURS = 24;
 
+export interface StoredPersonalityData {
+  personalityKey: string;
+  selections: Array<{
+    step: number;
+    personalityName: string;
+  }>;
+  finalPersonality: string;
+}
+
 export const isSessionExpired = (startTime: string): boolean => {
   const sessionStart = new Date(startTime).getTime();
   const currentTime = new Date().getTime();

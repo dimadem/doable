@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
@@ -6,14 +5,16 @@ import { useNavigate } from 'react-router-dom';
 import { pageVariants } from '@/animations/pageTransitions';
 import { useSession } from '@/contexts/SessionContext';
 import { AppHeader } from '../layouts/AppHeader';
+import { getSessionData } from '@/utils/sessionUtils';
 
 const Hero = () => {
   const navigate = useNavigate();
   const { sessionId, loading, startSession } = useSession();
+  const storedData = getSessionData();
 
   const handleStart = async () => {
-    if (sessionId) {
-      navigate('/vibe-matching');
+    if (storedData.sessionId && storedData.personalityData) {
+      navigate('/struggle');
       return;
     }
 
@@ -57,7 +58,7 @@ const Hero = () => {
                    border-2 border-white font-bold text-lg transition-all duration-300 
                    hover:bg-white hover:text-black disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? 'Loading...' : 'Start Journey'}
+          {loading ? 'Loading...' : (storedData.sessionId ? 'Continue Journey' : 'Start Journey')}
           <ArrowRight className="transition-transform group-hover:translate-x-1" />
         </motion.button>
       </motion.div>

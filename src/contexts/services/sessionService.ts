@@ -22,7 +22,7 @@ export const validateSessionInDb = async (sessionId: string) => {
     .from('user_sessions')
     .select('started_at')
     .eq('session_id', sessionId)
-    .single();
+    .maybeSingle();
 
   if (error) throw error;
   return data?.started_at;

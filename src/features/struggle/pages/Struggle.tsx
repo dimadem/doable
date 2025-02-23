@@ -10,6 +10,7 @@ import { pageVariants } from '@/animations/pageTransitions';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { AppHeader } from '@/components/layouts/AppHeader';
+import { getSessionData } from '@/utils/sessionUtils';
 
 const formatTraits = (traits: Record<string, any> | null) => {
   if (!traits) return {};
@@ -24,10 +25,12 @@ const formatTraits = (traits: Record<string, any> | null) => {
 const Struggle: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { sessionId, personalityData } = getSessionData();
 
   const { data: sessionData } = useQuery<SessionResponse>({
     queryKey: ['latestSession'],
     queryFn: fetchLatestSession,
+    enabled: !personalityData, // Only fetch if we don't have local data
     meta: {
       onSettled: (data, error) => {
         if (error) {
@@ -42,7 +45,7 @@ const Struggle: React.FC = () => {
   });
 
   const handleStruggleTypeSelect = async (struggleType: StruggleType) => {
-    if (!sessionData?.id) {
+    if (!sessionId) {
       toast({
         title: "Error",
         description: "No active session found",
@@ -51,7 +54,9 @@ const Struggle: React.FC = () => {
       return;
     }
 
-    if (!sessionData.personalities?.name) {
+    const currentPersonalityData = personalityData || sessionData?.personalities?.name;
+
+    if (!currentPersonalityData) {
       toast({
         title: "Error",
         description: "No personality type found for this session",
@@ -62,9 +67,9 @@ const Struggle: React.FC = () => {
 
     try {
       await updateSessionStruggleType(
-        sessionData.id, 
+        sessionId, 
         struggleType,
-        sessionData.personalities.name
+        typeof currentPersonalityData === 'string' ? currentPersonalityData : currentPersonalityData.finalPersonality
       );
       
       toast({
@@ -72,7 +77,7 @@ const Struggle: React.FC = () => {
         description: `${struggleType.replace('_', ' ')} mode activated`,
       });
       
-      navigate(`/voice-double?personality=${sessionData.personalities.name}`);
+      navigate('/voice-double');
     } catch (error) {
       toast({
         title: "Error",
@@ -82,7 +87,7 @@ const Struggle: React.FC = () => {
     }
   };
 
-  if (!sessionData) {
+  if (!personalityData && !sessionData) {
     return (
       <motion.div
         className="min-h-[100svh] bg-black text-white flex flex-col"
@@ -99,12 +104,12 @@ const Struggle: React.FC = () => {
     );
   }
 
-  const personalityData = sessionData.personalities;
-  const personality: PersonalityAnalysis | null = personalityData ? {
-    type: personalityData.name,
-    traits: formatTraits(personalityData.core_traits),
+  const personalityInfo = personalityData || sessionData?.personalities;
+  const personality: PersonalityAnalysis | null = personalityInfo ? {
+    type: typeof personalityInfo === 'string' ? personalityInfo : personalityInfo.name,
+    traits: formatTraits(typeof personalityInfo === 'object' ? personalityInfo.core_traits : null),
     patterns: {},
-    selections: sessionData.session_data.selections
+    selections: sessionData?.session_data.selections || []
   } : null;
 
   return (
