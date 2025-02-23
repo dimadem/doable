@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useConversation } from '@11labs/react';
 import { useToast } from '@/hooks/use-toast';
@@ -6,20 +5,24 @@ import type { StatusIndicatorProps, VoiceConfig } from '../types';
 
 const RETRY_DELAY = 1000; // 1 second delay between retries
 const MAX_RETRIES = 3;
+const MIN_CONNECTION_DURATION = 2000; // Minimum 2 seconds before allowing disconnect
 
 export const useVoiceInteraction = (voiceConfig: VoiceConfig | undefined) => {
   const { toast } = useToast();
   const [status, setStatus] = React.useState<StatusIndicatorProps['status']>('idle');
   const [retryCount, setRetryCount] = React.useState(0);
+  const connectionStartTime = React.useRef<number | null>(null);
 
   const conversation = useConversation({
     onConnect: () => {
       console.log('Voice connection established');
+      connectionStartTime.current = Date.now();
       setStatus('connected');
       setRetryCount(0);
     },
     onDisconnect: () => {
       console.log('Voice connection disconnected');
+      connectionStartTime.current = null;
       // Only set to idle if we explicitly ended the session
       if (status !== 'connecting') {
         setStatus('idle');
@@ -54,9 +57,15 @@ export const useVoiceInteraction = (voiceConfig: VoiceConfig | undefined) => {
 
   const checkMicrophonePermission = React.useCallback(async (): Promise<boolean> => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // Stop the stream immediately after getting permission
-      stream.getTracks().forEach(track => track.stop());
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          sampleRate: 16000, // Higher quality audio
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true
+        } 
+      });
+      // Keep the stream active for better voice quality
       return true;
     } catch (error) {
       console.error('Microphone permission error:', error);
@@ -90,11 +99,23 @@ export const useVoiceInteraction = (voiceConfig: VoiceConfig | undefined) => {
         voiceId: voiceConfig.agent_settings.tts.voice_id
       });
 
+      // Enhanced configuration for better voice interaction
       await conversation.startSession({
         agentId: voiceConfig.agent_id,
         overrides: {
           tts: {
-            voiceId: voiceConfig.agent_settings.tts.voice_id
+            voiceId: voiceConfig.agent_settings.tts.voice_id,
+            optimize_streaming_latency: 0 // Disable latency optimization for better quality
+          },
+          asr: {
+            provider: "elevenlabs",
+            quality: "high",
+            user_input_audio_format: "pcm_16000" // Higher quality audio format
+          },
+          turn: {
+            mode: "manual", // Change to manual mode for better control
+            turn_timeout: 15, // Longer timeout (15 seconds)
+            min_duration: 2 // Minimum 2 seconds before processing input
           }
         }
       });
@@ -115,6 +136,14 @@ export const useVoiceInteraction = (voiceConfig: VoiceConfig | undefined) => {
       startVoiceSession();
     } else {
       console.log('Ending voice session');
+      // Check if minimum connection duration has elapsed
+      if (connectionStartTime.current && 
+          Date.now() - connectionStartTime.current < MIN_CONNECTION_DURATION) {
+        console.log('Connection too short, waiting...');
+        await new Promise(resolve => 
+          setTimeout(resolve, MIN_CONNECTION_DURATION - (Date.now() - connectionStartTime.current!))
+        );
+      }
       await conversation.endSession();
       setStatus('idle');
       setRetryCount(0);
