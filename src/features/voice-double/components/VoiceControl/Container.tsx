@@ -1,5 +1,5 @@
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { VoiceProvider } from './Context';
 import { useVoiceState } from '../../hooks/useVoiceState';
 import { motion } from 'framer-motion';
@@ -11,28 +11,6 @@ interface VoiceControlContainerProps {
 export const VoiceControlContainer: React.FC<VoiceControlContainerProps> = ({ children }) => {
   const voiceState = useVoiceState();
   
-  const contextValue = useMemo(() => ({
-    connection: {
-      status: voiceState.status,
-      conversationId: voiceState.conversationId
-    },
-    speech: {
-      isSpeaking: voiceState.isSpeaking
-    },
-    timer: voiceState.timerState,
-    actions: {
-      startInteraction: voiceState.startInteraction,
-      stopInteraction: voiceState.stopInteraction
-    }
-  }), [
-    voiceState.status,
-    voiceState.conversationId,
-    voiceState.isSpeaking,
-    voiceState.timerState,
-    voiceState.startInteraction,
-    voiceState.stopInteraction
-  ]);
-
   return (
     <VoiceProvider value={voiceState}>
       <motion.div 

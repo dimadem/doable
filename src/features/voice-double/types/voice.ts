@@ -2,18 +2,21 @@
 export type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'disconnecting' | 'error';
 
 export type VoiceAction = 
-  | { type: 'START_CONNECTING' }
-  | { type: 'CONNECTION_ESTABLISHED'; conversationId: string }
-  | { type: 'START_DISCONNECTING' }
-  | { type: 'CONNECTION_CLOSED' }
-  | { type: 'CONNECTION_ERROR' }
-  | { type: 'SET_SPEAKING'; isSpeaking: boolean }
-  | { type: 'UPDATE_TIMER'; timerState: TimerState };
+  | { type: 'INIT_CONNECTION' }
+  | { type: 'CONNECTION_SUCCESS'; conversationId: string }
+  | { type: 'CONNECTION_FAILED'; error?: Error }
+  | { type: 'BEGIN_DISCONNECT' }
+  | { type: 'DISCONNECTED' }
+  | { type: 'UPDATE_SPEAKING'; isSpeaking: boolean }
+  | { type: 'SET_TIMER'; timerState: TimerState }
+  | { type: 'ALLOW_END_CONVERSATION' };
 
 export interface VoiceState {
   status: ConnectionStatus;
   isSpeaking: boolean;
   conversationId: string | null;
+  canEndConversation: boolean;
+  error?: Error;
 }
 
 export interface TimerState {
@@ -23,22 +26,10 @@ export interface TimerState {
 }
 
 export interface VoiceContextValue {
-  connection: {
-    status: ConnectionStatus;
-    conversationId: string | null;
-  };
-  speech: {
-    isSpeaking: boolean;
-  };
-  timer: TimerState;
+  state: VoiceState;
+  timerState: TimerState;
   actions: {
     startInteraction: () => Promise<void>;
     stopInteraction: () => Promise<void>;
   };
-}
-
-export interface VoiceContextType extends VoiceState {
-  startInteraction: () => Promise<void>;
-  stopInteraction: () => Promise<void>;
-  timerState: TimerState;
 }

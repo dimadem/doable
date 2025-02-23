@@ -8,48 +8,35 @@ import { VoiceStatus } from '../components/VoiceStatus';
 import { TimerDisplay } from '../components/TimerDisplay';
 import { VoiceControlContainer } from '../components/VoiceControl/Container';
 import { useVoiceContext } from '../components/VoiceControl/Context';
-import { toast } from '@/components/ui/use-toast';
 
 const VoiceControls = () => {
-  const { status, isSpeaking, startInteraction, stopInteraction } = useVoiceContext();
+  const { state, actions } = useVoiceContext();
 
   const handleToggleVoice = async () => {
     try {
-      if (status === 'connected') {
-        await stopInteraction();
-      } else {
-        await startInteraction();
+      if (state.status === 'connected') {
+        await actions.stopInteraction();
+      } else if (state.status === 'idle' || state.status === 'error') {
+        await actions.startInteraction();
       }
     } catch (error) {
-      if (error instanceof Error && error.name === 'NotAllowedError') {
-        toast({
-          variant: "destructive",
-          title: "Microphone Access Required",
-          description: "Please allow microphone access to use voice features."
-        });
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Connection Error",
-          description: "Failed to connect to voice service. Please try again."
-        });
-      }
+      console.error('Voice control error:', error);
     }
   };
 
   return (
     <>
       <VoiceMicButton
-        isActive={status === 'connected'}
-        isConnecting={status === 'connecting'}
+        isActive={state.status === 'connected'}
+        isConnecting={state.status === 'connecting'}
         onClick={handleToggleVoice}
       />
       
       <TimerDisplay />
       
       <VoiceStatus 
-        status={status === 'connected' ? 'connected' : 'idle'}
-        isSpeaking={isSpeaking}
+        status={state.status === 'connected' ? 'connected' : 'idle'}
+        isSpeaking={state.isSpeaking}
       />
     </>
   );

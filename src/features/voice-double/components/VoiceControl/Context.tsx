@@ -1,8 +1,8 @@
 
 import React, { createContext, useContext } from 'react';
-import { VoiceContextType } from '../../types/voice';
+import { VoiceContextValue } from '../../types/voice';
 
-const VoiceContext = createContext<VoiceContextType | null>(null);
+const VoiceContext = createContext<VoiceContextValue | null>(null);
 
 export const useVoiceContext = () => {
   const context = useContext(VoiceContext);

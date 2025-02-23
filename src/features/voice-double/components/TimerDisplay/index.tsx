@@ -13,8 +13,7 @@ const formatTime = (seconds: number): string => {
 export const TimerDisplay: React.FC = () => {
   const { timerState } = useVoiceContext();
   
-  // Show timer if we have a remainingTime value (including 0)
-  if (timerState?.remainingTime === undefined) return null;
+  if (timerState.remainingTime === undefined) return null;
 
   const isComplete = timerState.remainingTime <= 0;
 
