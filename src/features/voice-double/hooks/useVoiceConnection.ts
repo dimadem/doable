@@ -110,6 +110,44 @@ export const useVoiceConnection = () => {
     cleanupTimer
   });
 
+  const connect = useCallback(async () => {
+    try {
+      updateConnectionStatus('connecting');
+      
+      await conversation.startSession({
+        agentId: PUBLIC_AGENT_ID,
+        dynamicVariables: {
+          personality: personalityData?.finalPersonality || 'default',
+          end_conversation: false,
+          timer_active: false,
+          timer_duration: 0
+        }
+      });
+      
+    } catch (error) {
+      updateConnectionStatus('error');
+      sessionLogger.error('Failed to connect to voice service', error);
+      throw error;
+    }
+  }, [conversation, personalityData, updateConnectionStatus]);
+
+  const disconnect = useCallback(async () => {
+    if (isDisconnectingRef.current) return;
+    
+    try {
+      isDisconnectingRef.current = true;
+      updateConnectionStatus('disconnecting');
+      
+      cleanupTimer();
+      cleanupAudio();
+      
+      await conversation.endSession();
+    } catch (error) {
+      sessionLogger.error('Failed to disconnect from voice service', error);
+      throw error;
+    }
+  }, [conversation, cleanupTimer, cleanupAudio, updateConnectionStatus]);
+
   useEffect(() => {
     return () => {
       cleanupTimer();
