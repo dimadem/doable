@@ -60,7 +60,6 @@ const VoiceDouble = () => {
       } else {
         setIsConnecting(true);
 
-        // Just request basic microphone access
         await navigator.mediaDevices.getUserMedia({ 
           audio: true 
         });
@@ -71,7 +70,6 @@ const VoiceDouble = () => {
           throw new Error('Failed to get connection data');
         }
 
-        // Start the session with minimal configuration
         await conversation.startSession({
           agentId: data.agent_id,
           url: data.signed_url
