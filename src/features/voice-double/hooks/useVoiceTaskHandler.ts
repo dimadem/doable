@@ -3,7 +3,7 @@ import { useCallback } from 'react';
 import { sessionLogger } from '@/utils/sessionLogger';
 import { saveVoiceContext } from '../services/voiceStorageService';
 import { TimerState } from '../types/timer';
-import type { Conversation } from '@11labs/react';
+import type { Conversation } from '../types/elevenlabs';
 
 interface UseVoiceTaskHandlerProps {
   sessionId: string | null;
@@ -12,7 +12,7 @@ interface UseVoiceTaskHandlerProps {
   timerState: TimerState;
   updateConnectionStatus: (status: 'disconnecting') => void;
   wsReadyRef: React.RefObject<boolean>;
-  isProcessingRef: React.RefObject<boolean>;
+  isProcessingRef: React.MutableRefObject<boolean>;
   conversation: Conversation;
   cleanupAudio: () => void;
   cleanupTimer: () => void;

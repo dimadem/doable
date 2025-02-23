@@ -1,3 +1,4 @@
+
 import { useCallback, useRef, useEffect } from 'react';
 import { useConversation } from '@11labs/react';
 import { sessionLogger } from '@/utils/sessionLogger';
@@ -18,6 +19,9 @@ export const useVoiceConnection = () => {
   const isDisconnectingRef = useRef(false);
   const isProcessingRef = useRef(false);
   const wsReadyRef = useRef(false);
+
+  // Initialize client tools first
+  const { clientTools, registerTimerTools } = useVoiceClientTools(wsReadyRef);
 
   const {
     timerState,
@@ -50,7 +54,16 @@ export const useVoiceConnection = () => {
       updateConnectionStatus('connected');
       
       // Register timer tools
-      registerTimerTools(setTimerRunning, setTimerDurationMinutes);
+      registerTimerTools(
+        async (isRunning) => {
+          await setTimerRunning(isRunning);
+          return;
+        },
+        async (duration) => {
+          setTimerDurationMinutes(duration);
+          return;
+        }
+      );
       
       toast({
         title: "Connected",
@@ -89,7 +102,6 @@ export const useVoiceConnection = () => {
     }
   });
 
-  const { clientTools, registerTimerTools } = useVoiceClientTools(wsReadyRef);
   const { handleTask } = useVoiceTaskHandler({
     sessionId,
     struggleType,
