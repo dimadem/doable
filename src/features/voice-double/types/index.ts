@@ -13,3 +13,13 @@ export interface VoiceContextType extends VoiceState {
   stopInteraction: () => Promise<void>;
   setVolume: (volume: number) => Promise<void>;
 }
+
+export interface SessionContext {
+  taskDescription?: string;
+  struggleType?: string;
+  lastUpdate: string;
+  timer?: {
+    duration: number;
+    state: TimerState;
+  };
+}
