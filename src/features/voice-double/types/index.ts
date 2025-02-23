@@ -10,12 +10,14 @@ export interface VoiceState {
   conversationId: string | null;
   volume: number;
   permissionState?: AudioPermissionState;
+  timerState?: TimerState;
 }
 
 export interface VoiceContextType extends VoiceState {
   startInteraction: () => Promise<void>;
   stopInteraction: () => Promise<void>;
   setVolume: (volume: number) => Promise<void>;
+  timerState: TimerState;
 }
 
 export interface SessionContext {

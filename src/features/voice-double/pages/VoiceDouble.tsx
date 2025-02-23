@@ -5,6 +5,7 @@ import { pageVariants } from '@/animations/pageTransitions';
 import { AppHeader } from '@/components/layouts/AppHeader';
 import { VoiceMicButton } from '../components/VoiceMicButton';
 import { VoiceStatus } from '../components/VoiceStatus';
+import { TimerDisplay } from '../components/TimerDisplay';
 import { VoiceControlContainer } from '../components/VoiceControl/Container';
 import { useVoiceContext } from '../components/VoiceControl/Context';
 import { toast } from '@/components/ui/use-toast';
@@ -43,6 +44,8 @@ const VoiceControls = () => {
         isConnecting={status === 'connecting'}
         onClick={handleToggleVoice}
       />
+      
+      <TimerDisplay />
       
       <VoiceStatus 
         status={status === 'connected' ? 'connected' : 'idle'}
