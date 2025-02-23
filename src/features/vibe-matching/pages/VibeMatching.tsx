@@ -1,3 +1,4 @@
+
 import React, { useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -7,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { determinePersonality, saveUserSession } from '../services/personalityService';
 import { usePersonalities } from '../hooks/usePersonalities';
 import { useVibeState } from '../hooks/useVibeState';
+import { useSession } from '@/contexts/SessionContext';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import ProgressBar from '../components/ProgressBar';
@@ -18,6 +20,7 @@ const ALLOWED_PERSONALITIES = ['emotive', 'hyperthymic', 'persistent_paranoid'];
 const VibeMatching: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { setPersonalityData } = useSession();
   const { personalities, loading, error: loadError } = usePersonalities();
   const { step, selections, error, selectVibe, setError, reset } = useVibeState();
 
@@ -78,15 +81,18 @@ const VibeMatching: React.FC = () => {
       selectVibe(selectedPersonality.name);
 
       if (step + 1 >= MAX_STEPS) {
-        const dominantPersonality = determinePersonality([...selections, { 
+        const updatedSelections = [...selections, { 
           step, 
           personalityName: selectedPersonality.name 
-        }]);
+        }];
+        
+        const dominantPersonality = determinePersonality(updatedSelections);
         
         await saveUserSession(
           dominantPersonality, 
-          [...selections, { step, personalityName: selectedPersonality.name }],
-          personalities
+          updatedSelections,
+          personalities,
+          setPersonalityData // Pass the setPersonalityData function
         );
         
         navigate('/struggle', { state: { direction: 1 } });
@@ -100,7 +106,7 @@ const VibeMatching: React.FC = () => {
         variant: "destructive"
       });
     }
-  }, [personalities, step, selections, selectVibe, setError, toast, navigate]);
+  }, [personalities, step, selections, selectVibe, setError, toast, navigate, setPersonalityData]);
 
   if (loading) return <LoadingState />;
   if (loadError || error) return <ErrorState error={error || loadError} onRetry={reset} />;

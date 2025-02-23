@@ -1,9 +1,8 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { SessionSelection, Personality, SessionData } from '../types';
+import { SessionSelection, Personality } from '../types';
 import { Json } from '@/integrations/supabase/types';
 import { toast } from '@/hooks/use-toast';
-import { useSession } from '@/contexts/SessionContext';
 
 const ALLOWED_PERSONALITIES = ['emotive', 'hyperthymic', 'persistent_paranoid'];
 
@@ -43,7 +42,8 @@ export const determinePersonality = (selections: SessionSelection[]): string => 
 export const saveUserSession = async (
   dominantPersonality: string,
   selections: SessionSelection[],
-  personalities: Personality[]
+  personalities: Personality[],
+  setPersonalityData: (personalityKey: string, selections: SessionSelection[]) => void
 ): Promise<void> => {
   try {
     console.log('Saving session with personality:', dominantPersonality);
@@ -75,8 +75,7 @@ export const saveUserSession = async (
       throw error;
     }
 
-    // Store personality data in localStorage using SessionContext
-    const { setPersonalityData } = useSession();
+    // Use the passed setPersonalityData function instead of the hook
     setPersonalityData(dominantPersonality, selections);
 
     console.log('Session saved successfully:', data);
