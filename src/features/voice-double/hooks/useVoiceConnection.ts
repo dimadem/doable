@@ -10,6 +10,7 @@ const SESSION_CONTEXT_KEY = 'voice_session_context';
 
 interface SessionContext {
   taskDescription?: string;
+  struggleType?: string;
   lastUpdate: string;
 }
 
@@ -20,48 +21,87 @@ export const useVoiceConnection = () => {
   // Load saved context if exists
   const loadSavedContext = (): SessionContext | null => {
     const saved = localStorage.getItem(SESSION_CONTEXT_KEY);
-    return saved ? JSON.parse(saved) : null;
+    if (saved) {
+      const context = JSON.parse(saved);
+      sessionLogger.info('Loading saved task context', {
+        savedTask: context.taskDescription,
+        sessionId,
+        struggleType,
+        timestamp: new Date().toISOString()
+      });
+      return context;
+    }
+    sessionLogger.info('No saved task context found', { sessionId });
+    return null;
   };
 
   // Save context to localStorage
   const saveContext = (taskDescription: string) => {
+    sessionLogger.info('Updating task context', {
+      previousTask: currentTask,
+      newTask: taskDescription,
+      sessionId,
+      struggleType,
+      timestamp: new Date().toISOString()
+    });
+
     const context: SessionContext = {
       taskDescription,
+      struggleType,
       lastUpdate: new Date().toISOString()
     };
+    
     localStorage.setItem(SESSION_CONTEXT_KEY, JSON.stringify(context));
     setCurrentTask(taskDescription);
+    
+    sessionLogger.info('Task context saved successfully', {
+      taskDescription,
+      sessionId,
+      struggleType
+    });
   };
 
   // Create conversation instance with basic handlers and tools
   const conversation = useConversation({
     clientTools: {
-      set_session_context: async ({ end_conversation, task_description }) => {
-        sessionLogger.info('Setting session context', { task_description });
+      set_task: async ({ end_conversation, task_description }) => {
+        sessionLogger.info('Task identified by agent', { 
+          task_description,
+          sessionId,
+          struggleType,
+          timestamp: new Date().toISOString()
+        });
+
         saveContext(task_description);
         
         if (end_conversation) {
+          sessionLogger.info('Agent requesting session end', {
+            task_description,
+            sessionId,
+            timestamp: new Date().toISOString()
+          });
           await conversation.endSession();
         }
-        return "Context stored successfully";
+
+        return "Task context stored successfully";
       }
     },
     onConnect: () => {
-      sessionLogger.info('Voice connection established');
+      sessionLogger.info('Voice connection established', { sessionId });
       toast({
         title: "Connected",
         description: "Voice connection established"
       });
     },
     onDisconnect: () => {
-      sessionLogger.info('Voice connection closed');
+      sessionLogger.info('Voice connection closed', { sessionId });
       toast({
         title: "Disconnected",
         description: "Voice connection closed"
       });
     },
     onError: (error) => {
-      sessionLogger.error('Voice connection error', error);
+      sessionLogger.error('Voice connection error', { error, sessionId });
       toast({
         variant: "destructive",
         title: "Connection Error",
@@ -69,7 +109,7 @@ export const useVoiceConnection = () => {
       });
     },
     onMessage: (message) => {
-      sessionLogger.info('Voice message received', message);
+      sessionLogger.info('Voice message received', { message, sessionId });
     }
   });
 
@@ -88,6 +128,12 @@ export const useVoiceConnection = () => {
 
       // Load saved context if exists
       const savedContext = loadSavedContext();
+      
+      sessionLogger.info('Starting voice session', { 
+        sessionId,
+        hasTaskDescription: !!savedContext?.taskDescription,
+        struggleType
+      });
 
       // Start session with dynamic variables
       const conversationId = await conversation.startSession({
@@ -115,12 +161,12 @@ export const useVoiceConnection = () => {
   const disconnect = useCallback(async () => {
     try {
       await conversation.endSession();
-      sessionLogger.info('Voice session ended');
+      sessionLogger.info('Voice session ended', { sessionId });
     } catch (error) {
       sessionLogger.error('Failed to end voice session', error);
       throw error;
     }
-  }, [conversation]);
+  }, [conversation, sessionId]);
 
   return {
     connect,
