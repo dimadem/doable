@@ -2,15 +2,22 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import { SessionSelection } from '@/features/vibe-matching/types';
 
 interface SessionState {
   sessionId: string | null;
   loading: boolean;
+  personalityKey?: string;
+  sessionData?: {
+    selections: SessionSelection[];
+    finalPersonality: string;
+  };
 }
 
 interface SessionContextType extends SessionState {
   startSession: () => Promise<void>;
   endSession: () => void;
+  setPersonalityData: (personalityKey: string, selections: SessionSelection[]) => void;
 }
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
@@ -28,7 +35,14 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
 
   useEffect(() => {
     const savedSessionId = localStorage.getItem('sessionId');
-    setState(prev => ({ ...prev, sessionId: savedSessionId, loading: false }));
+    const savedPersonalityData = localStorage.getItem('personalityData');
+    
+    setState(prev => ({
+      ...prev,
+      sessionId: savedSessionId,
+      ...(savedPersonalityData ? JSON.parse(savedPersonalityData) : {}),
+      loading: false
+    }));
   }, []);
 
   const startSession = async () => {
@@ -39,11 +53,11 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
       const { error } = await supabase
         .from('user_sessions')
         .insert({
-          id: sessionId, // Using the session ID as the primary key
-          personality_key: DEFAULT_PERSONALITY, // Required field
+          id: sessionId,
+          personality_key: DEFAULT_PERSONALITY,
           started_at: new Date().toISOString(),
-          session_data: {}, // Initialize empty session data
-          device_info: {} // Initialize empty device info
+          session_data: {},
+          device_info: {}
         });
 
       if (error) throw error;
@@ -64,8 +78,22 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
     }
   };
 
+  const setPersonalityData = (personalityKey: string, selections: SessionSelection[]) => {
+    const personalityData = {
+      personalityKey,
+      sessionData: {
+        selections,
+        finalPersonality: personalityKey
+      }
+    };
+    
+    localStorage.setItem('personalityData', JSON.stringify(personalityData));
+    setState(prev => ({ ...prev, ...personalityData }));
+  };
+
   const endSession = () => {
     localStorage.removeItem('sessionId');
+    localStorage.removeItem('personalityData');
     setState({ sessionId: null, loading: false });
   };
 
@@ -73,7 +101,8 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
     <SessionContext.Provider value={{
       ...state,
       startSession,
-      endSession
+      endSession,
+      setPersonalityData
     }}>
       {children}
     </SessionContext.Provider>

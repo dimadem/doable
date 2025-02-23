@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { SessionSelection, Personality, SessionData } from '../types';
 import { Json } from '@/integrations/supabase/types';
 import { toast } from '@/hooks/use-toast';
+import { useSession } from '@/contexts/SessionContext';
 
 const ALLOWED_PERSONALITIES = ['emotive', 'hyperthymic', 'persistent_paranoid'];
 
@@ -47,7 +48,6 @@ export const saveUserSession = async (
   try {
     console.log('Saving session with personality:', dominantPersonality);
     
-    // Verify the personality is one of our allowed types
     if (!ALLOWED_PERSONALITIES.includes(dominantPersonality)) {
       throw new Error('Invalid personality type');
     }
@@ -75,6 +75,10 @@ export const saveUserSession = async (
       throw error;
     }
 
+    // Store personality data in localStorage using SessionContext
+    const { setPersonalityData } = useSession();
+    setPersonalityData(dominantPersonality, selections);
+
     console.log('Session saved successfully:', data);
 
     toast({
@@ -91,4 +95,3 @@ export const saveUserSession = async (
     throw error;
   }
 };
-
