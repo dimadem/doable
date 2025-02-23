@@ -2,7 +2,9 @@
 import { useState, useCallback } from 'react';
 import { useConversation } from '@11labs/react';
 import { sessionLogger } from '@/utils/sessionLogger';
-import { supabase } from '@/integrations/supabase/client';
+
+// Public agent ID - no auth needed
+const PUBLIC_AGENT_ID = 'TGp0ve1q0XQurppvTzrO';
 
 export const useVoiceInteraction = () => {
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -29,19 +31,9 @@ export const useVoiceInteraction = () => {
       // Request microphone access first
       await navigator.mediaDevices.getUserMedia({ audio: true });
       
-      // Get the agent ID from the voices table
-      const { data: voiceData, error: voiceError } = await supabase
-        .from('voices')
-        .select('agent_id')
-        .maybeSingle();
-
-      if (voiceError || !voiceData?.agent_id) {
-        throw new Error('Failed to retrieve agent ID');
-      }
-
-      // Start the conversation session with the agent ID
+      // Start the conversation session with the public agent ID
       const newConversationId = await conversation.startSession({
-        agentId: voiceData.agent_id
+        agentId: PUBLIC_AGENT_ID
       });
       
       setConversationId(newConversationId);
