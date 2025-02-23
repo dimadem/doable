@@ -65,7 +65,7 @@ export type Database = {
           device_info: Json | null
           ended_at: string | null
           id: string
-          personality_key: string
+          personality_key: string | null
           relevant_agent: string | null
           session_data: Json | null
           session_feedback: Json | null
@@ -78,7 +78,7 @@ export type Database = {
           device_info?: Json | null
           ended_at?: string | null
           id?: string
-          personality_key: string
+          personality_key?: string | null
           relevant_agent?: string | null
           session_data?: Json | null
           session_feedback?: Json | null
@@ -91,7 +91,7 @@ export type Database = {
           device_info?: Json | null
           ended_at?: string | null
           id?: string
-          personality_key?: string
+          personality_key?: string | null
           relevant_agent?: string | null
           session_data?: Json | null
           session_feedback?: Json | null

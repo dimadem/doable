@@ -47,7 +47,6 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
       if (error) throw error;
       if (!data?.started_at) return false;
 
-      // Check if session is expired
       if (isSessionExpired(data.started_at)) {
         endSession();
         toast({
@@ -107,7 +106,7 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
       const { error } = await supabase
         .from('user_sessions')
         .insert({
-          id: sessionId,
+          session_id: sessionId,
           started_at: new Date().toISOString(),
           session_data: {},
           device_info: {}
@@ -152,11 +151,14 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
           .update({
             personality_key: personalityKey,
             session_data: {
-              selections,
+              selections: selections.map(s => ({
+                step: s.step,
+                personalityName: s.personalityName
+              })),
               finalPersonality: personalityKey
             }
           })
-          .eq('id', state.sessionId);
+          .eq('session_id', state.sessionId);
 
         if (error) throw error;
       }
