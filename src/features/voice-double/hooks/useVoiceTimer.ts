@@ -1,4 +1,3 @@
-
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { sessionLogger } from '@/utils/sessionLogger';
 import { TimerState } from '../types/timer';
@@ -23,7 +22,7 @@ export const useVoiceTimer = (currentTask: string | undefined, sessionId: string
     setTimerState(prev => ({ ...prev, isRunning: false, remainingTime: 0 }));
     toast({
       title: "Timer Completed",
-      description: `Task "${currentTask}" timer has ended`
+      description: currentTask ? `Task "${currentTask}" timer has ended` : "Timer has ended"
     });
 
     if (timerInterval.current) {
@@ -33,22 +32,19 @@ export const useVoiceTimer = (currentTask: string | undefined, sessionId: string
   }, [currentTask, sessionId]);
 
   useEffect(() => {
-    if (timerState.isRunning && timerState.remainingTime && timerState.remainingTime > 0) {
-      // Clear any existing interval
+    if (timerState.isRunning && timerState.remainingTime !== undefined && timerState.remainingTime > 0) {
       if (timerInterval.current) {
         clearInterval(timerInterval.current);
       }
 
       timerInterval.current = setInterval(() => {
         setTimerState(prev => {
-          const newRemainingTime = (prev.remainingTime || 0) - 1;
-          
-          if (newRemainingTime <= 0) {
+          if (!prev.remainingTime || prev.remainingTime <= 0) {
             handleTimerEnd();
             return { ...prev, isRunning: false, remainingTime: 0 };
           }
           
-          return { ...prev, remainingTime: newRemainingTime };
+          return { ...prev, remainingTime: prev.remainingTime - 1 };
         });
       }, 1000);
 
@@ -78,7 +74,7 @@ export const useVoiceTimer = (currentTask: string | undefined, sessionId: string
       ...prev,
       isRunning,
       startedAt: isRunning ? new Date().toISOString() : undefined,
-      remainingTime: isRunning ? prev.remainingTime : prev.remainingTime
+      remainingTime: prev.remainingTime
     }));
 
     return true;
@@ -93,7 +89,6 @@ export const useVoiceTimer = (currentTask: string | undefined, sessionId: string
     isCleaningUp.current = false;
   }, []);
 
-  // Cleanup on unmount only
   useEffect(() => {
     return () => {
       if (timerInterval.current) {

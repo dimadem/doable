@@ -13,6 +13,7 @@ export const useVoiceConnection = () => {
   const { personalityData, sessionId, struggleType } = useSession();
   const [currentTask, setCurrentTask] = useState<string>();
   const isClosing = useRef<boolean>(false);
+  const isSettingUpTimer = useRef<boolean>(false);
   const { permissionState, requestPermission, cleanup: cleanupAudio } = useVoiceAudioPermission();
   
   const {
@@ -22,6 +23,29 @@ export const useVoiceConnection = () => {
     setTimerRunning,
     cleanup: cleanupTimer
   } = useVoiceTimer(currentTask, sessionId);
+
+  const handleEndConversation = async (conversation: any, task_description: string) => {
+    if (isClosing.current || timerState.isRunning || isSettingUpTimer.current) {
+      return;
+    }
+
+    isClosing.current = true;
+    sessionLogger.info('Agent requesting session end', {
+      task_description,
+      sessionId,
+      timestamp: new Date().toISOString()
+    });
+
+    try {
+      await conversation.endSession();
+    } catch (error) {
+      if (error.message?.includes('CLOSING') || error.message?.includes('CLOSED')) {
+        sessionLogger.info('WebSocket already closing or closed');
+      } else {
+        throw error;
+      }
+    }
+  };
 
   const conversation = useConversation({
     clientTools: {
@@ -43,30 +67,14 @@ export const useVoiceConnection = () => {
         
         setCurrentTask(task_description);
         
-        // Prevent ending conversation during active timer or if already closing
-        if (end_conversation && !isClosing.current && !timerState.isRunning) {
-          isClosing.current = true;
-          sessionLogger.info('Agent requesting session end', {
-            task_description,
-            sessionId,
-            timestamp: new Date().toISOString()
-          });
-          
-          try {
-            await conversation.endSession();
-          } catch (error) {
-            if (error.message?.includes('CLOSING') || error.message?.includes('CLOSED')) {
-              // WebSocket already closing/closed, ignore the error
-              sessionLogger.info('WebSocket already closing or closed');
-            } else {
-              throw error;
-            }
-          }
+        if (end_conversation) {
+          await handleEndConversation(conversation, task_description);
         }
 
         return "Task context stored successfully";
       },
       set_timer_duration: async ({ timer_duration }) => {
+        isSettingUpTimer.current = true;
         sessionLogger.info('Timer duration update requested', {
           timer_duration,
           sessionId,
@@ -74,9 +82,11 @@ export const useVoiceConnection = () => {
         });
 
         setTimerDurationMinutes(timer_duration);
+        isSettingUpTimer.current = false;
         return "Timer duration set successfully";
       },
       set_timer_state: async ({ timer_on }) => {
+        isSettingUpTimer.current = true;
         sessionLogger.info('Timer state update requested', {
           timer_on,
           sessionId,
@@ -84,6 +94,8 @@ export const useVoiceConnection = () => {
         });
 
         const success = setTimerRunning(timer_on);
+        isSettingUpTimer.current = false;
+        
         if (!success) {
           return "Cannot start timer without duration";
         }
@@ -93,6 +105,7 @@ export const useVoiceConnection = () => {
     },
     onConnect: () => {
       isClosing.current = false;
+      isSettingUpTimer.current = false;
       sessionLogger.info('Voice connection established', { sessionId });
       toast({
         title: "Connected",
@@ -100,6 +113,8 @@ export const useVoiceConnection = () => {
       });
     },
     onDisconnect: () => {
+      isClosing.current = false;
+      isSettingUpTimer.current = false;
       sessionLogger.info('Voice connection closed', { sessionId });
       toast({
         title: "Disconnected",

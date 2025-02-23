@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { useVoiceContext } from '../VoiceControl/Context';
 
 const formatTime = (seconds: number): string => {
-  if (!seconds) return '00:00';
+  if (seconds === undefined || seconds === null) return '00:00';
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
   return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
@@ -13,7 +13,8 @@ const formatTime = (seconds: number): string => {
 export const TimerDisplay: React.FC = () => {
   const { timerState } = useVoiceContext();
   
-  if (!timerState?.remainingTime) return null;
+  // Show timer if we have a remainingTime value (including 0)
+  if (timerState?.remainingTime === undefined) return null;
 
   const isComplete = timerState.remainingTime <= 0;
 
@@ -22,7 +23,7 @@ export const TimerDisplay: React.FC = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="font-mono text-2xl transition-colors duration-300"
+      className="font-mono text-2xl transition-colors duration-300 mb-4"
       style={{ color: isComplete ? '#ea384c' : '#FFFFFF' }}
     >
       {formatTime(timerState.remainingTime)}
