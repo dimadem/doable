@@ -1,13 +1,10 @@
 
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Pause, Mic } from 'lucide-react';
-import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useConversation } from '@11labs/react';
 import { AppHeader } from '@/components/layouts/AppHeader';
-import { pageVariants, pulseVariants } from '@/animations/pageTransitions';
-import { StatusIndicator } from '../components/StatusIndicator';
-import { WaveformVisualization } from '../components/WaveformVisualization';
 import { useVoiceAgent } from '../hooks/useVoiceAgent';
 import { useToast } from '@/hooks/use-toast';
 import type { StatusIndicatorProps } from '../types';
@@ -16,15 +13,12 @@ const ALLOWED_PERSONALITIES = ['emotive', 'hyperthymic', 'persistent_paranoid'];
 const DEFAULT_PERSONALITY = 'persistent_paranoid';
 
 const VoiceDouble: React.FC = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
   const [searchParams] = useSearchParams();
   const personalityParam = searchParams.get('personality');
   const personalityKey = ALLOWED_PERSONALITIES.includes(personalityParam || '') 
     ? personalityParam 
     : DEFAULT_PERSONALITY;
 
-  const direction = (location.state as { direction?: number })?.direction || 1;
   const { toast } = useToast();
   const [status, setStatus] = React.useState<StatusIndicatorProps['status']>('idle');
 
@@ -35,11 +29,9 @@ const VoiceDouble: React.FC = () => {
       console.log('Voice connection established');
       setStatus('connected');
     },
-    onMessage: (msg) => {
-      console.log('Received message:', msg);
-      if (msg.type === 'audio') {
-        setStatus('responding');
-      }
+    onDisconnect: () => {
+      console.log('Voice connection disconnected');
+      setStatus('idle');
     },
     onError: (error) => {
       console.error('Conversation error:', error);
@@ -49,68 +41,32 @@ const VoiceDouble: React.FC = () => {
         description: error.message || "Failed to connect to voice service",
       });
       setStatus('idle');
-    },
-    onDisconnect: () => {
-      console.log('Voice connection disconnected');
-      setStatus('idle');
     }
   });
 
-  React.useEffect(() => {
-    if (error) {
-      console.error('Error loading voice configuration:', error);
-      toast({
-        variant: "destructive",
-        title: "Configuration Error",
-        description: "Failed to load voice settings. Please try again.",
-      });
-    }
-  }, [error, toast]);
-
-  const requestMicrophonePermission = async (): Promise<boolean> => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach(track => track.stop());
-      return true;
-    } catch (err) {
-      console.error('Microphone permission error:', err);
-      toast({
-        variant: "destructive",
-        title: "Microphone Access Required",
-        description: "Please allow microphone access to use voice features.",
-      });
-      return false;
-    }
-  };
-
   const handleInteractionToggle = async () => {
     if (status === 'idle') {
-      // Check voice configuration
       if (!voiceConfig?.api_key || !voiceConfig?.agent_id || !voiceConfig?.agent_settings?.tts?.voice_id) {
-        console.error('Missing configuration:', { 
-          hasApiKey: !!voiceConfig?.api_key, 
+        console.error('Missing voice configuration:', {
+          hasApiKey: !!voiceConfig?.api_key,
           hasAgentId: !!voiceConfig?.agent_id,
           hasVoiceId: !!voiceConfig?.agent_settings?.tts?.voice_id
         });
         toast({
           variant: "destructive",
           title: "Configuration Error",
-          description: "Voice service not configured properly. Please check your settings.",
+          description: "Voice service not configured properly",
         });
         return;
       }
 
-      // Request microphone permission
-      const hasMicPermission = await requestMicrophonePermission();
-      if (!hasMicPermission) return;
-
       try {
         setStatus('connecting');
-        console.log('Starting voice session with config:', {
+        console.log('Starting voice session with:', {
           agentId: voiceConfig.agent_id,
           voiceId: voiceConfig.agent_settings.tts.voice_id
         });
-        
+
         await conversation.startSession({
           agentId: voiceConfig.agent_id,
           overrides: {
@@ -124,7 +80,7 @@ const VoiceDouble: React.FC = () => {
         toast({
           variant: "destructive",
           title: "Connection Error",
-          description: "Failed to start voice interaction. Please try again.",
+          description: "Failed to start voice interaction",
         });
         setStatus('idle');
       }
@@ -136,76 +92,42 @@ const VoiceDouble: React.FC = () => {
   };
 
   return (
-    <motion.div 
-      className="min-h-[100svh] bg-black text-white flex flex-col overflow-hidden"
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      variants={pageVariants}
-      custom={direction}
-    >
+    <div className="min-h-[100svh] bg-black text-white flex flex-col overflow-hidden">
       <AppHeader title="voice double" />
 
       <main className="flex-1 flex flex-col items-center justify-center px-8">
-        <AnimatePresence mode="wait">
-          {isLoading ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="text-white/60 font-mono"
+        {isLoading ? (
+          <div className="text-white/60 font-mono">Loading voice configuration...</div>
+        ) : (
+          <div className="flex flex-col items-center gap-8">
+            <motion.button
+              onClick={handleInteractionToggle}
+              disabled={isLoading || !voiceConfig}
+              className="w-32 h-32 rounded-full bg-white/5 backdrop-blur-sm flex items-center justify-center 
+                       hover:bg-white/10 transition-colors border border-white/20
+                       disabled:opacity-50 disabled:cursor-not-allowed"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
-              Loading voice configuration...
-            </motion.div>
-          ) : (
-            <div className="relative">
-              <motion.div
-                className="relative w-64 h-64 rounded-full flex items-center justify-center"
-                variants={pulseVariants}
-                animate={status === 'idle' ? 'idle' : 'active'}
-              >
-                <div className="absolute inset-0 rounded-full border-4 border-white/10 animate-[pulse_4s_ease-in-out_infinite]" />
-                <div className="absolute inset-2 rounded-full border-2 border-white/20 animate-[pulse_4s_ease-in-out_infinite_1000ms]" />
-                <div className="absolute inset-4 rounded-full border border-white/30 animate-[pulse_4s_ease-in-out_infinite_2000ms]" />
-                
-                <WaveformVisualization isActive={status === 'responding'} />
+              {status === 'idle' ? (
+                <Mic className="w-8 h-8" />
+              ) : (
+                <Pause className="w-8 h-8" />
+              )}
+            </motion.button>
 
-                <motion.button
-                  onClick={handleInteractionToggle}
-                  disabled={isLoading || !voiceConfig}
-                  className="w-32 h-32 rounded-full bg-white/5 backdrop-blur-sm flex items-center justify-center 
-                           hover:bg-white/10 transition-colors border border-white/20 z-10
-                           disabled:opacity-50 disabled:cursor-not-allowed"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  {status === 'idle' ? (
-                    <Mic className="w-8 h-8" />
-                  ) : (
-                    <Pause className="w-8 h-8" />
-                  )}
-                </motion.button>
-              </motion.div>
-
-              <StatusIndicator status={status} />
+            <div className="flex flex-col items-center gap-2">
+              <p className="font-mono text-sm text-white/60">
+                {voiceConfig?.voice_name || 'Default Voice'}
+              </p>
+              <p className="font-mono text-xs text-white/40">
+                Status: {status}
+              </p>
             </div>
-          )}
-        </AnimatePresence>
-
-        <motion.div 
-          className="mt-8 flex flex-col items-center gap-2"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <p className="font-mono text-sm text-white/60">
-            {voiceConfig?.voice_name || 'Default Voice'}
-          </p>
-          <p className="font-mono text-xs text-white/40">
-            Status: {status}
-          </p>
-        </motion.div>
+          </div>
+        )}
       </main>
-    </motion.div>
+    </div>
   );
 };
 
