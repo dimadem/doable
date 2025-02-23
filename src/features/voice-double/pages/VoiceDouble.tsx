@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { pageVariants } from '@/animations/pageTransitions';
 import { AppHeader } from '@/components/layouts/AppHeader';
@@ -13,7 +13,8 @@ import { sessionLogger } from '@/utils/sessionLogger';
 const VoiceDouble = () => {
   const [isActive, setIsActive] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   const conversation = useConversation({
     onConnect: () => {
@@ -25,16 +26,13 @@ const VoiceDouble = () => {
       sessionLogger.info('Voice connection closed');
       setIsActive(false);
       setIsConnecting(false);
-      // Clean up media stream
-      if (mediaStream) {
-        mediaStream.getTracks().forEach(track => track.stop());
-        setMediaStream(null);
-      }
+      cleanupAudioResources();
     },
     onError: (error) => {
       sessionLogger.error('Voice connection error', error);
       setIsActive(false);
       setIsConnecting(false);
+      cleanupAudioResources();
       
       toast({
         variant: "destructive",
@@ -45,13 +43,32 @@ const VoiceDouble = () => {
     onMessage: (message) => {
       sessionLogger.info('Voice message received', message);
     },
-    // Add audio configuration
+    // Add comprehensive audio configuration
     overrides: {
       agent: {
         language: "en"
+      },
+      voice: {
+        stability: 0.5,
+        similarity_boost: 0.8
+      },
+      connection: {
+        reconnectAttempts: 3,
+        reconnectDelay: 1000
       }
     }
   });
+
+  const cleanupAudioResources = useCallback(() => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(track => track.stop());
+      mediaStreamRef.current = null;
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch(console.error);
+      audioContextRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -60,12 +77,9 @@ const VoiceDouble = () => {
           sessionLogger.error('Error cleaning up session', error);
         });
       }
-      // Clean up media stream on unmount
-      if (mediaStream) {
-        mediaStream.getTracks().forEach(track => track.stop());
-      }
+      cleanupAudioResources();
     };
-  }, [conversation, isActive, mediaStream]);
+  }, [conversation, isActive, cleanupAudioResources]);
 
   const getSessionData = async () => {
     const { data, error } = await supabase.functions.invoke('get-eleven-labs-key');
@@ -84,8 +98,14 @@ const VoiceDouble = () => {
     };
   };
 
-  const setupMediaStream = async () => {
+  const setupAudioStream = async () => {
     try {
+      // Create AudioContext first
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({
+        sampleRate: 16000,
+        latencyHint: 'interactive'
+      });
+
       // Request microphone with specific constraints
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
@@ -97,11 +117,22 @@ const VoiceDouble = () => {
         }
       });
       
-      sessionLogger.info('Microphone access granted');
+      // Connect stream to audio context
+      const source = audioContextRef.current.createMediaStreamSource(stream);
+      const processor = audioContextRef.current.createScriptProcessor(4096, 1, 1);
+      
+      source.connect(processor);
+      processor.connect(audioContextRef.current.destination);
+      
+      // Store the stream
+      mediaStreamRef.current = stream;
+      
+      sessionLogger.info('Audio stream initialized');
       return stream;
     } catch (error) {
-      sessionLogger.error('Microphone access denied', error);
-      throw new Error('Please grant microphone access to use voice features');
+      sessionLogger.error('Audio setup failed', error);
+      cleanupAudioResources();
+      throw new Error('Failed to initialize audio system');
     }
   };
 
@@ -114,31 +145,31 @@ const VoiceDouble = () => {
       } else {
         setIsConnecting(true);
 
-        // Setup media stream first
-        const stream = await setupMediaStream();
-        setMediaStream(stream);
+        // Initialize audio system first
+        await setupAudioStream();
 
-        // Get session data
+        // Only proceed with connection after audio is ready
         const data = await getSessionData();
         
         // Start the session with the signed URL
         await conversation.startSession({
           agentId: data.agentId,
-          url: data.signedUrl
+          url: data.signedUrl,
+          audio: {
+            input: {
+              deviceId: mediaStreamRef.current?.getAudioTracks()[0]?.getSettings()?.deviceId,
+              stream: mediaStreamRef.current
+            }
+          }
         });
         
-        sessionLogger.info('Started conversation');
+        sessionLogger.info('Started conversation with audio stream');
       }
     } catch (error) {
       console.error('Error toggling voice:', error);
       setIsActive(false);
       setIsConnecting(false);
-      
-      // Clean up media stream on error
-      if (mediaStream) {
-        mediaStream.getTracks().forEach(track => track.stop());
-        setMediaStream(null);
-      }
+      cleanupAudioResources();
       
       toast({
         variant: "destructive",
@@ -146,7 +177,7 @@ const VoiceDouble = () => {
         description: error instanceof Error ? error.message : "Failed to connect to voice service"
       });
     }
-  }, [conversation, isActive, mediaStream]);
+  }, [conversation, isActive, cleanupAudioResources]);
 
   return (
     <motion.div
