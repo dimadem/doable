@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Mic, MicOff, Loader2 } from 'lucide-react';
 
 interface VoiceMicButtonProps {
-  status: 'idle' | 'connecting' | 'connected' | 'error';
+  status: 'connected' | 'disconnected' | 'connecting';
   disabled?: boolean;
   onClick: () => void;
 }
@@ -18,7 +18,7 @@ export const VoiceMicButton: React.FC<VoiceMicButtonProps> = ({
     <Button
       variant="outline"
       size="icon"
-      disabled={disabled || status === 'error'}
+      disabled={disabled}
       onClick={onClick}
       className="w-24 h-24 rounded-full border-2 border-white hover:bg-white/10 transition-colors disabled:opacity-50"
     >

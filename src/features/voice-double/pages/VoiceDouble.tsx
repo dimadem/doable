@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { AppHeader } from '@/components/layouts/AppHeader';
 import { useVoiceInteraction } from '../hooks/useVoiceInteraction';
 import { VoiceMicButton } from '../components/VoiceMicButton';
@@ -11,8 +11,13 @@ const VoiceDouble: React.FC = () => {
     isSpeaking,
     hasMicPermission,
     start,
-    stop
+    stop,
+    requestMicPermission
   } = useVoiceInteraction();
+
+  useEffect(() => {
+    requestMicPermission();
+  }, [requestMicPermission]);
 
   const handleInteractionToggle = () => {
     if (status === 'connected') {
@@ -29,13 +34,13 @@ const VoiceDouble: React.FC = () => {
       <main className="flex-1 flex flex-col items-center justify-center px-8">
         <div className="flex flex-col items-center gap-8">
           <VoiceMicButton
-            status={status === 'connected' ? 'connected' : status === 'disconnected' ? 'idle' : 'connecting'}
+            status={status}
             disabled={!hasMicPermission}
             onClick={handleInteractionToggle}
           />
           <VoiceStatus
             voiceName={isSpeaking ? "Speaking..." : "Voice Double"}
-            status={status === 'connected' ? 'connected' : status === 'disconnected' ? 'idle' : 'connecting'}
+            status={status}
           />
         </div>
       </main>
