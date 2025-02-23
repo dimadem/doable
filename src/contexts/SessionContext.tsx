@@ -27,9 +27,6 @@ const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
 const generateSessionId = () => crypto.randomUUID();
 
-// Default personality for initial session
-const DEFAULT_PERSONALITY = 'neutral';
-
 export const SessionProvider = ({ children }: { children: React.ReactNode }) => {
   const [state, setState] = useState<SessionState>({
     sessionId: null,
@@ -111,7 +108,6 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
         .from('user_sessions')
         .insert({
           id: sessionId,
-          personality_key: DEFAULT_PERSONALITY,
           started_at: new Date().toISOString(),
           session_data: {},
           device_info: {}
@@ -140,7 +136,7 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
     }
   };
 
-  const setPersonalityData = (personalityKey: string, selections: SessionSelection[]) => {
+  const setPersonalityData = async (personalityKey: string, selections: SessionSelection[]) => {
     try {
       const personalityData = {
         personalityKey,
@@ -150,6 +146,21 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
         }
       };
       
+      if (state.sessionId) {
+        const { error } = await supabase
+          .from('user_sessions')
+          .update({
+            personality_key: personalityKey,
+            session_data: {
+              selections,
+              finalPersonality: personalityKey
+            }
+          })
+          .eq('id', state.sessionId);
+
+        if (error) throw error;
+      }
+      
       localStorage.setItem('personalityData', JSON.stringify(personalityData));
       setState(prev => ({ ...prev, ...personalityData, error: null }));
     } catch (error) {
@@ -158,6 +169,11 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
         ...prev, 
         error: error instanceof Error ? error : new Error('Failed to set personality data') 
       }));
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to save personality data. Please try again."
+      });
     }
   };
 
