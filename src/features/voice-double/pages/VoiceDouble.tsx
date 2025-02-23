@@ -15,6 +15,11 @@ const VoiceDouble = () => {
   const [isConnecting, setIsConnecting] = useState(false);
 
   const conversation = useConversation({
+    overrides: {
+      agent: {
+        firstMessage: "Hello! I'm your AI voice assistant. How can I help you today?",
+      }
+    },
     onConnect: () => {
       sessionLogger.info('Voice connection established');
       setIsConnecting(false);
@@ -41,44 +46,28 @@ const VoiceDouble = () => {
     }
   });
 
-  useEffect(() => {
-    return () => {
-      if (isActive) {
-        conversation.endSession().catch(error => {
-          sessionLogger.error('Error cleaning up session', error);
-        });
-      }
-    };
-  }, [conversation, isActive]);
-
-  const handleToggleVoice = useCallback(async () => {
+  const startConnection = useCallback(async () => {
     try {
-      if (isActive) {
-        setIsConnecting(true);
-        await conversation.endSession();
-        sessionLogger.info('Ended conversation');
-      } else {
-        setIsConnecting(true);
+      setIsConnecting(true);
 
-        await navigator.mediaDevices.getUserMedia({ 
-          audio: true 
-        });
+      await navigator.mediaDevices.getUserMedia({ 
+        audio: true 
+      });
 
-        const { data, error } = await supabase.functions.invoke('get-eleven-labs-key');
-        
-        if (error || !data?.signed_url || !data?.agent_id) {
-          throw new Error('Failed to get connection data');
-        }
-
-        await conversation.startSession({
-          agentId: data.agent_id,
-          url: data.signed_url
-        });
-        
-        sessionLogger.info('Started conversation');
+      const { data, error } = await supabase.functions.invoke('get-eleven-labs-key');
+      
+      if (error || !data?.signed_url || !data?.agent_id) {
+        throw new Error('Failed to get connection data');
       }
+
+      await conversation.startSession({
+        agentId: data.agent_id,
+        url: data.signed_url
+      });
+      
+      sessionLogger.info('Started conversation');
     } catch (error) {
-      console.error('Error toggling voice:', error);
+      console.error('Error starting connection:', error);
       setIsActive(false);
       setIsConnecting(false);
       
@@ -88,7 +77,31 @@ const VoiceDouble = () => {
         description: error instanceof Error ? error.message : "Failed to connect to voice service"
       });
     }
-  }, [conversation, isActive]);
+  }, [conversation]);
+
+  // Auto-start connection when component mounts
+  useEffect(() => {
+    startConnection();
+
+    // Cleanup on unmount
+    return () => {
+      if (isActive) {
+        conversation.endSession().catch(error => {
+          sessionLogger.error('Error cleaning up session', error);
+        });
+      }
+    };
+  }, [conversation, isActive, startConnection]);
+
+  const handleToggleVoice = useCallback(async () => {
+    if (isActive) {
+      setIsConnecting(true);
+      await conversation.endSession();
+      sessionLogger.info('Ended conversation');
+    } else {
+      startConnection();
+    }
+  }, [conversation, isActive, startConnection]);
 
   return (
     <motion.div
