@@ -17,8 +17,12 @@ serve(async (req) => {
     const apiKey = Deno.env.get('ELEVENLABS_API_KEY');
     
     if (!apiKey) {
-      console.error('ElevenLabs API key not found');
-      throw new Error('ElevenLabs API key not configured');
+      const error = new Error('ElevenLabs API key not configured');
+      console.error('ElevenLabs API key not found', {
+        error: error.message,
+        stack: error.stack
+      });
+      throw error;
     }
 
     // Initialize Supabase client
@@ -53,9 +57,37 @@ serve(async (req) => {
     );
 
     if (!response.ok) {
-      const error = await response.json();
-      console.error('ElevenLabs API error:', error);
-      throw new Error(error.detail || 'Failed to get signed URL');
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch (e) {
+        errorData = await response.text();
+      }
+      
+      const errorDetails = {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers),
+        error: errorData,
+        url: response.url,
+        method: 'GET'
+      };
+      
+      console.error('ElevenLabs API error:', JSON.stringify(errorDetails, null, 2));
+      
+      return new Response(
+        JSON.stringify({
+          error: 'ElevenLabs API Error',
+          details: errorDetails
+        }),
+        { 
+          status: response.status,
+          headers: { 
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
     }
 
     const data = await response.json();
@@ -82,15 +114,31 @@ serve(async (req) => {
       },
     );
   } catch (error) {
-    console.error('Error in get-eleven-labs-key:', error);
+    console.error('Error in get-eleven-labs-key:', {
+      error: error.message,
+      stack: error.stack,
+      type: error.constructor.name
+    });
+    const errorResponse = {
+      error: error.message,
+      details: 'Failed to get ElevenLabs signed URL',
+      timestamp: new Date().toISOString(),
+      requestId: crypto.randomUUID(),
+      type: error.constructor.name,
+      stack: error.stack
+    };
+
+    console.error('Function error:', JSON.stringify(errorResponse, null, 2));
+
     return new Response(
-      JSON.stringify({ 
-        error: error.message,
-        details: 'Failed to get ElevenLabs signed URL'
-      }),
+      JSON.stringify(errorResponse),
       { 
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json',
+          'X-Error-Id': errorResponse.requestId
+        },
       },
     );
   }
