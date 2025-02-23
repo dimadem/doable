@@ -82,7 +82,14 @@ export const VoiceDouble = () => {
           throw new Error('Failed to get signed URL');
         }
 
+        if (!signedUrlData?.signed_url) {
+          throw new Error('No signed URL received');
+        }
+
+        console.log('Starting session with signed URL:', signedUrlData.signed_url);
+        
         await conversation.startSession({
+          agentId: process.env.ELEVENLABS_AGENT_ID || Deno.env.get('ELEVENLABS_AGENT_ID'),
           url: signedUrlData.signed_url
         });
         
@@ -115,3 +122,4 @@ export const VoiceDouble = () => {
     </div>
   );
 };
+
