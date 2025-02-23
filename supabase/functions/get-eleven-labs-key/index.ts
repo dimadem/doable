@@ -1,5 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,14 +21,28 @@ serve(async (req) => {
       throw new Error('ElevenLabs API key not configured');
     }
 
-    // Using a default public agent if none is specified
-    const agentId = 'TGp0ve1q0XQurppvTzrO';
+    // Initialize Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
-    console.log('Fetching signed URL for agent:', agentId);
+    // Get the voice configuration from the database
+    const { data: voiceData, error: voiceError } = await supabaseClient
+      .from('voices')
+      .select('agent_id')
+      .single();
+
+    if (voiceError || !voiceData) {
+      console.error('Error fetching voice data:', voiceError);
+      throw new Error('Failed to get voice configuration');
+    }
+
+    console.log('Fetching signed URL for agent:', voiceData.agent_id);
 
     // Get signed URL from ElevenLabs API
     const response = await fetch(
-      `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agentId}`,
+      `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${voiceData.agent_id}`,
       {
         method: 'GET',
         headers: {
@@ -54,11 +69,9 @@ serve(async (req) => {
     
     const responseData = {
       signed_url: data.signed_url,
-      agent_id: agentId
+      agent_id: voiceData.agent_id
     };
 
-    console.log('Sending response:', responseData);
-    
     return new Response(
       JSON.stringify(responseData),
       { 
