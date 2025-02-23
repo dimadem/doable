@@ -22,7 +22,7 @@ const VoiceDouble: React.FC = () => {
   const handleInteractionToggle = () => {
     if (status === 'connected') {
       stop();
-    } else {
+    } else if (status === 'disconnected') {
       start();
     }
   };

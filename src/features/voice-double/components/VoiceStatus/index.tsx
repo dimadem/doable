@@ -3,7 +3,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 
 interface VoiceStatusProps {
-  status: 'connected' | 'disconnected' | 'connecting';
+  status: 'connected' | 'disconnected' | 'connecting' | 'disconnecting';
   voiceName?: string;
 }
 
@@ -14,7 +14,8 @@ export const VoiceStatus: React.FC<VoiceStatusProps> = ({
   const statusText = {
     disconnected: 'Click to start',
     connecting: 'Connecting...',
-    connected: 'Listening...'
+    connected: 'Listening...',
+    disconnecting: 'Disconnecting...'
   }[status];
 
   return (
