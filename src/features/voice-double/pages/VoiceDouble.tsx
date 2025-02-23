@@ -13,6 +13,7 @@ import { sessionLogger } from '@/utils/sessionLogger';
 const VoiceDouble = () => {
   const [isActive, setIsActive] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
 
   const conversation = useConversation({
     onConnect: () => {
@@ -24,6 +25,11 @@ const VoiceDouble = () => {
       sessionLogger.info('Voice connection closed');
       setIsActive(false);
       setIsConnecting(false);
+      // Clean up media stream
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        setMediaStream(null);
+      }
     },
     onError: (error) => {
       sessionLogger.error('Voice connection error', error);
@@ -38,6 +44,12 @@ const VoiceDouble = () => {
     },
     onMessage: (message) => {
       sessionLogger.info('Voice message received', message);
+    },
+    // Add audio configuration
+    overrides: {
+      agent: {
+        language: "en"
+      }
     }
   });
 
@@ -48,8 +60,12 @@ const VoiceDouble = () => {
           sessionLogger.error('Error cleaning up session', error);
         });
       }
+      // Clean up media stream on unmount
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+      }
     };
-  }, [conversation, isActive]);
+  }, [conversation, isActive, mediaStream]);
 
   const getSessionData = async () => {
     const { data, error } = await supabase.functions.invoke('get-eleven-labs-key');
@@ -68,6 +84,27 @@ const VoiceDouble = () => {
     };
   };
 
+  const setupMediaStream = async () => {
+    try {
+      // Request microphone with specific constraints
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1,
+          sampleRate: 16000
+        }
+      });
+      
+      sessionLogger.info('Microphone access granted');
+      return stream;
+    } catch (error) {
+      sessionLogger.error('Microphone access denied', error);
+      throw new Error('Please grant microphone access to use voice features');
+    }
+  };
+
   const handleToggleVoice = useCallback(async () => {
     try {
       if (isActive) {
@@ -77,19 +114,9 @@ const VoiceDouble = () => {
       } else {
         setIsConnecting(true);
 
-        // First, request microphone permission
-        try {
-          await navigator.mediaDevices.getUserMedia({ 
-            audio: {
-              echoCancellation: true,
-              noiseSuppression: true
-            }
-          });
-          sessionLogger.info('Microphone access granted');
-        } catch (error) {
-          sessionLogger.error('Microphone access denied', error);
-          throw new Error('Please grant microphone access to use voice features');
-        }
+        // Setup media stream first
+        const stream = await setupMediaStream();
+        setMediaStream(stream);
 
         // Get session data
         const data = await getSessionData();
@@ -107,13 +134,19 @@ const VoiceDouble = () => {
       setIsActive(false);
       setIsConnecting(false);
       
+      // Clean up media stream on error
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        setMediaStream(null);
+      }
+      
       toast({
         variant: "destructive",
         title: "Connection Error",
         description: error instanceof Error ? error.message : "Failed to connect to voice service"
       });
     }
-  }, [conversation, isActive]);
+  }, [conversation, isActive, mediaStream]);
 
   return (
     <motion.div
