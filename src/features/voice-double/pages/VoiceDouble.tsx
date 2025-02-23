@@ -15,11 +15,6 @@ const VoiceDouble = () => {
   const [isConnecting, setIsConnecting] = useState(false);
 
   const conversation = useConversation({
-    overrides: {
-      agent: {
-        firstMessage: "Hello! I'm your AI voice assistant. How can I help you today?",
-      }
-    },
     onConnect: () => {
       sessionLogger.info('Voice connection established');
       setIsConnecting(false);
