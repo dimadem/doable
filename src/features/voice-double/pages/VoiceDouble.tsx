@@ -15,6 +15,7 @@ const VoiceDouble = () => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [sessionData, setSessionData] = useState<{ agentId: string; signedUrl: string } | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   const conversation = useConversation({
     onConnect: () => {
@@ -24,22 +25,14 @@ const VoiceDouble = () => {
     },
     onDisconnect: () => {
       sessionLogger.info('Voice connection closed');
-      // Stop and cleanup microphone stream
-      if (micStreamRef.current) {
-        micStreamRef.current.getTracks().forEach(track => track.stop());
-        micStreamRef.current = null;
-      }
+      cleanupAudioResources();
       setIsActive(false);
       setIsConnecting(false);
       setSessionData(null);
     },
     onError: (error) => {
       sessionLogger.error('Voice connection error', error);
-      // Stop and cleanup microphone stream on error
-      if (micStreamRef.current) {
-        micStreamRef.current.getTracks().forEach(track => track.stop());
-        micStreamRef.current = null;
-      }
+      cleanupAudioResources();
       setIsActive(false);
       setIsConnecting(false);
       setSessionData(null);
@@ -54,21 +47,66 @@ const VoiceDouble = () => {
     }
   });
 
+  const cleanupAudioResources = useCallback(() => {
+    if (micStreamRef.current) {
+      micStreamRef.current.getTracks().forEach(track => {
+        track.stop();
+        sessionLogger.info('Audio track stopped', { trackId: track.id });
+      });
+      micStreamRef.current = null;
+    }
+
+    if (audioContextRef.current?.state !== 'closed') {
+      audioContextRef.current?.close().catch(error => {
+        sessionLogger.error('Error closing AudioContext', error);
+      });
+      audioContextRef.current = null;
+    }
+  }, []);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      // Clean up microphone and session when component unmounts
-      if (micStreamRef.current) {
-        micStreamRef.current.getTracks().forEach(track => track.stop());
-        micStreamRef.current = null;
-      }
       if (isActive) {
         conversation.endSession().catch(error => {
           sessionLogger.error('Error cleaning up session', error);
         });
       }
+      cleanupAudioResources();
     };
-  }, [conversation, isActive]);
+  }, [conversation, isActive, cleanupAudioResources]);
+
+  const initializeAudioStream = async () => {
+    try {
+      // Create AudioContext with specific sample rate for ElevenLabs
+      audioContextRef.current = new AudioContext({
+        sampleRate: 24000,
+        latencyHint: 'interactive'
+      });
+
+      // Request microphone access with specific constraints
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1,
+          sampleRate: 24000
+        }
+      });
+
+      micStreamRef.current = stream;
+      sessionLogger.info('Audio stream initialized', {
+        sampleRate: audioContextRef.current.sampleRate,
+        tracks: stream.getAudioTracks().length
+      });
+
+      return stream;
+    } catch (error) {
+      sessionLogger.error('Error initializing audio stream', error);
+      throw new Error('Microphone access is required. Please allow microphone access and try again.');
+    }
+  };
 
   const getSessionData = async () => {
     const { data, error } = await supabase.functions.invoke('get-eleven-labs-key');
@@ -91,31 +129,23 @@ const VoiceDouble = () => {
     try {
       if (isActive) {
         setIsConnecting(true);
-        // Stop microphone stream before ending session
-        if (micStreamRef.current) {
-          micStreamRef.current.getTracks().forEach(track => track.stop());
-          micStreamRef.current = null;
-        }
         await conversation.endSession();
+        cleanupAudioResources();
         sessionLogger.info('Ended conversation');
       } else {
         setIsConnecting(true);
 
-        // Request and store microphone stream
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          micStreamRef.current = stream;
-          sessionLogger.info('Microphone access granted');
-        } catch (micError) {
-          throw new Error('Microphone access is required. Please allow microphone access and try again.');
-        }
+        // Initialize audio stream before starting session
+        await initializeAudioStream();
         
         // Get fresh session data
         const data = await getSessionData();
         setSessionData(data);
 
         sessionLogger.info('Starting session', {
-          agentId: data.agentId
+          agentId: data.agentId,
+          audioContextState: audioContextRef.current?.state,
+          micStreamActive: micStreamRef.current?.active
         });
         
         // Start the session with the signed URL
@@ -128,11 +158,7 @@ const VoiceDouble = () => {
       }
     } catch (error) {
       console.error('Error toggling voice:', error);
-      // Clean up microphone stream on error
-      if (micStreamRef.current) {
-        micStreamRef.current.getTracks().forEach(track => track.stop());
-        micStreamRef.current = null;
-      }
+      cleanupAudioResources();
       setIsActive(false);
       setIsConnecting(false);
       setSessionData(null);
@@ -143,7 +169,7 @@ const VoiceDouble = () => {
         description: error instanceof Error ? error.message : "Failed to connect to voice service"
       });
     }
-  }, [conversation, isActive]);
+  }, [conversation, isActive, cleanupAudioResources]);
 
   return (
     <motion.div
