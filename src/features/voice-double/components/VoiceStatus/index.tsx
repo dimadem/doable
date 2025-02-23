@@ -1,31 +1,36 @@
 
 import React from 'react';
-import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
 
 interface VoiceStatusProps {
-  status: 'connected' | 'disconnected' | 'connecting' | 'disconnecting';
-  voiceName?: string;
+  status: 'idle' | 'connecting' | 'connected' | 'error';
+  isSpeaking: boolean;
 }
 
-export const VoiceStatus: React.FC<VoiceStatusProps> = ({
-  status,
-  voiceName = 'Voice Assistant'
-}) => {
-  const statusText = {
-    disconnected: 'Click to start',
-    connecting: 'Connecting...',
-    connected: 'Listening...',
-    disconnecting: 'Disconnecting...'
-  }[status];
+export const VoiceStatus: React.FC<VoiceStatusProps> = ({ status, isSpeaking }) => {
+  const getStatusText = () => {
+    if (status === 'connecting') return 'Connecting...';
+    if (status === 'connected' && isSpeaking) return 'Agent is speaking...';
+    if (status === 'connected') return 'Agent is listening...';
+    if (status === 'error') return 'Connection error';
+    return 'Ready to start';
+  };
+
+  const getStatusColor = () => {
+    if (status === 'connecting') return 'text-yellow-400';
+    if (status === 'connected') return 'text-green-400';
+    if (status === 'error') return 'text-red-400';
+    return 'text-gray-400';
+  };
 
   return (
-    <div className="flex flex-col items-center gap-2 font-mono">
-      <div className="text-lg text-white">
-        {voiceName}
-      </div>
-      <div className="text-sm text-white/60">
-        {statusText}
-      </div>
-    </div>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className={`font-mono text-sm ${getStatusColor()}`}
+    >
+      {getStatusText()}
+    </motion.div>
   );
 };

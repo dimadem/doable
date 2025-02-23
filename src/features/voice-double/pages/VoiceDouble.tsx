@@ -1,51 +1,56 @@
 
 import React, { useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { pageVariants } from '@/animations/pageTransitions';
 import { AppHeader } from '@/components/layouts/AppHeader';
-import { useVoiceInteraction } from '../hooks/useVoiceInteraction';
 import { VoiceMicButton } from '../components/VoiceMicButton';
 import { VoiceStatus } from '../components/VoiceStatus';
+import { useVoiceInteraction } from '../hooks/useVoiceInteraction';
+import { toast } from '@/components/ui/use-toast';
 
-const VoiceDouble: React.FC = () => {
-  const { 
-    status,
-    isSpeaking,
-    hasMicPermission,
-    start,
-    stop,
-    requestMicPermission
-  } = useVoiceInteraction();
+export const VoiceDouble = () => {
+  const { status, isSpeaking, startInteraction, stopInteraction } = useVoiceInteraction();
 
   useEffect(() => {
-    requestMicPermission();
-  }, [requestMicPermission]);
+    if (status === 'error') {
+      toast({
+        variant: "destructive",
+        title: "Connection Error",
+        description: "Failed to connect to voice service. Please try again."
+      });
+    }
+  }, [status]);
 
-  const handleInteractionToggle = () => {
+  const handleToggleVoice = () => {
     if (status === 'connected') {
-      stop();
-    } else if (status === 'disconnected') {
-      start();
+      stopInteraction();
+    } else if (status === 'idle') {
+      startInteraction();
     }
   };
 
   return (
-    <div className="min-h-[100svh] bg-black text-white flex flex-col overflow-hidden">
-      <AppHeader title="voice double" />
+    <motion.div
+      className="min-h-[100svh] bg-black text-white flex flex-col"
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      variants={pageVariants}
+    >
+      <AppHeader title="Voice Double" />
       
-      <main className="flex-1 flex flex-col items-center justify-center px-8">
-        <div className="flex flex-col items-center gap-8">
-          <VoiceMicButton
-            status={status}
-            disabled={!hasMicPermission}
-            onClick={handleInteractionToggle}
-          />
-          <VoiceStatus
-            voiceName={isSpeaking ? "Speaking..." : "Voice Double"}
-            status={status}
-          />
-        </div>
-      </main>
-    </div>
+      <div className="flex-1 flex flex-col items-center justify-center gap-8">
+        <VoiceMicButton
+          isActive={status === 'connected'}
+          isConnecting={status === 'connecting'}
+          onClick={handleToggleVoice}
+        />
+        
+        <VoiceStatus 
+          status={status}
+          isSpeaking={isSpeaking}
+        />
+      </div>
+    </motion.div>
   );
 };
-
-export default VoiceDouble;
