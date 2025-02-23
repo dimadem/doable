@@ -6,7 +6,21 @@ import { VoiceMicButton } from '../components/VoiceMicButton';
 import { VoiceStatus } from '../components/VoiceStatus';
 
 const VoiceDouble: React.FC = () => {
-  const { status, handleInteractionToggle } = useVoiceInteraction();
+  const { 
+    status,
+    isSpeaking,
+    hasMicPermission,
+    start,
+    stop
+  } = useVoiceInteraction();
+
+  const handleInteractionToggle = () => {
+    if (status === 'connected') {
+      stop();
+    } else {
+      start();
+    }
+  };
 
   return (
     <div className="min-h-[100svh] bg-black text-white flex flex-col overflow-hidden">
@@ -15,12 +29,13 @@ const VoiceDouble: React.FC = () => {
       <main className="flex-1 flex flex-col items-center justify-center px-8">
         <div className="flex flex-col items-center gap-8">
           <VoiceMicButton
-            status={status}
+            status={status === 'connected' ? 'connected' : status === 'disconnected' ? 'idle' : 'connecting'}
+            disabled={!hasMicPermission}
             onClick={handleInteractionToggle}
           />
           <VoiceStatus
-            voiceName="Voice Double"
-            status={status}
+            voiceName={isSpeaking ? "Speaking..." : "Voice Double"}
+            status={status === 'connected' ? 'connected' : status === 'disconnected' ? 'idle' : 'connecting'}
           />
         </div>
       </main>
