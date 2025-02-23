@@ -1,5 +1,5 @@
 
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { useConversation } from '@11labs/react';
 import { sessionLogger } from '@/utils/sessionLogger';
 import { useSession } from '@/contexts/SessionContext';
@@ -7,7 +7,7 @@ import { useSession } from '@/contexts/SessionContext';
 const PUBLIC_AGENT_ID = 'TGp0ve1q0XQurppvTzrO';
 
 export const useVoiceConnection = () => {
-  const { sessionData } = useSession();
+  const { personalityData, sessionId } = useSession();
   
   // Create conversation instance with basic handlers
   const conversation = useConversation({
@@ -26,8 +26,8 @@ export const useVoiceConnection = () => {
   });
 
   const connect = useCallback(async () => {
-    if (!sessionData) {
-      throw new Error('No session data available');
+    if (!sessionId) {
+      throw new Error('No active session');
     }
 
     // Request microphone access
@@ -37,11 +37,12 @@ export const useVoiceConnection = () => {
     return await conversation.startSession({
       agentId: PUBLIC_AGENT_ID,
       dynamicVariables: {
-        personality: sessionData.personalityData?.finalPersonality || 'default',
-        struggle: sessionData.struggleMode || 'default'
+        personality: personalityData?.finalPersonality || 'default',
+        // We don't have struggleMode in the session context, so removing it
+        struggle: 'default'
       }
     });
-  }, [conversation, sessionData]);
+  }, [conversation, sessionId, personalityData]);
 
   const disconnect = useCallback(async () => {
     await conversation.endSession();
