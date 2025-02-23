@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { pageVariants } from '@/animations/pageTransitions';
 import { AppHeader } from '@/components/layouts/AppHeader';
@@ -13,6 +13,7 @@ import { sessionLogger } from '@/utils/sessionLogger';
 const VoiceDouble = () => {
   const [isActive, setIsActive] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [sessionData, setSessionData] = useState<{ agentId: string; signedUrl: string } | null>(null);
 
   const conversation = useConversation({
     onConnect: () => {
@@ -24,21 +25,51 @@ const VoiceDouble = () => {
       sessionLogger.info('Voice connection closed');
       setIsActive(false);
       setIsConnecting(false);
+      setSessionData(null); // Clear session data on disconnect
     },
     onError: (error) => {
       sessionLogger.error('Voice connection error', error);
       setIsActive(false);
       setIsConnecting(false);
+      setSessionData(null); // Clear session data on error
       toast({
         variant: "destructive",
         title: "Connection Error",
-        description: "Failed to connect to voice service. Please try again."
+        description: error instanceof Error ? error.message : "Failed to connect to voice service"
       });
     },
     onMessage: (message) => {
       sessionLogger.info('Voice message received', message);
     }
   });
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (isActive) {
+        conversation.endSession().catch(error => {
+          sessionLogger.error('Error cleaning up session', error);
+        });
+      }
+    };
+  }, [conversation, isActive]);
+
+  const getSessionData = async () => {
+    const { data, error } = await supabase.functions.invoke('get-eleven-labs-key');
+    
+    if (error) {
+      throw new Error('Failed to get signed URL');
+    }
+
+    if (!data?.signed_url || !data?.agent_id) {
+      throw new Error('Missing required connection data');
+    }
+
+    return {
+      agentId: data.agent_id,
+      signedUrl: data.signed_url
+    };
+  };
 
   const handleToggleVoice = useCallback(async () => {
     try {
@@ -56,24 +87,18 @@ const VoiceDouble = () => {
           throw new Error('Microphone access is required. Please allow microphone access and try again.');
         }
         
-        const { data, error: signedUrlError } = await supabase.functions.invoke('get-eleven-labs-key');
-        
-        if (signedUrlError) {
-          throw new Error('Failed to get signed URL');
-        }
-
-        if (!data?.signed_url || !data?.agent_id) {
-          throw new Error('Missing required connection data');
-        }
+        // Get fresh session data
+        const data = await getSessionData();
+        setSessionData(data);
 
         sessionLogger.info('Starting session', {
-          agentId: data.agent_id
+          agentId: data.agentId
         });
         
         // Start the session with the signed URL
         await conversation.startSession({
-          agentId: data.agent_id,
-          url: data.signed_url
+          agentId: data.agentId,
+          url: data.signedUrl
         });
         
         sessionLogger.info('Started conversation');
@@ -82,6 +107,7 @@ const VoiceDouble = () => {
       console.error('Error toggling voice:', error);
       setIsActive(false);
       setIsConnecting(false);
+      setSessionData(null);
       
       toast({
         variant: "destructive",
