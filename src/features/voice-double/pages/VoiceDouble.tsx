@@ -1,22 +1,21 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Card } from '@/components/ui/card';
-import { VoiceStatus } from '../components/VoiceStatus';
-import { VoiceMicButton } from '../components/VoiceMicButton';
-import { useVoiceAgent } from '../hooks/useVoiceAgent';
+import { Button } from '@/components/ui/button';
+import { Mic, MicOff } from 'lucide-react';
+import { useConversation } from '@11labs/react';
 
 export const VoiceDouble = () => {
-  const { status, isSpeaking, connect, disconnect } = useVoiceAgent();
+  const conversation = useConversation();
 
-  const handleToggleVoice = async () => {
+  const handleClick = async () => {
     try {
-      if (status === 'connected') {
-        await disconnect();
-      } else if (status === 'idle' || status === 'error') {
-        await connect();
-      }
+      await conversation.startSession({
+        agentId: 'your_agent_id_here' // Replace with your actual agent ID
+      });
+      console.log('Started conversation');
     } catch (error) {
-      console.error('Voice control error:', error);
+      console.error('Error:', error);
     }
   };
 
@@ -24,15 +23,12 @@ export const VoiceDouble = () => {
     <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white font-mono">
       <Card className="w-full max-w-md p-8 bg-black border border-white">
         <div className="flex flex-col items-center gap-8">
-          <VoiceMicButton 
-            isActive={status === 'connected'}
-            isConnecting={status === 'connecting'}
-            onClick={handleToggleVoice}
-          />
-          <VoiceStatus 
-            status={status === 'connected' ? 'connected' : 'idle'}
-            isSpeaking={isSpeaking}
-          />
+          <Button
+            onClick={handleClick}
+            className="w-32 h-32 rounded-full bg-black border-2 border-white hover:bg-white hover:text-black"
+          >
+            <Mic className="w-8 h-8" />
+          </Button>
         </div>
       </Card>
     </div>
