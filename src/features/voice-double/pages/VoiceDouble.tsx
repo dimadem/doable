@@ -35,11 +35,20 @@ const VoiceDouble = () => {
       setIsActive(false);
       setIsConnecting(false);
       
-      toast({
-        variant: "destructive",
-        title: "Connection Error",
-        description: error instanceof Error ? error.message : "Failed to connect to voice service"
-      });
+      // Check for specific error types
+      if (error instanceof CloseEvent && error.code === 3000) {
+        toast({
+          variant: "destructive",
+          title: "Authorization Error",
+          description: "Failed to authorize the voice connection. Please try again."
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Connection Error",
+          description: error instanceof Error ? error.message : "Failed to connect to voice service"
+        });
+      }
     },
     onMessage: (message) => {
       sessionLogger.info('Voice message received', message);
@@ -50,32 +59,49 @@ const VoiceDouble = () => {
     try {
       setIsConnecting(true);
 
+      // First, ensure we have microphone access
       await navigator.mediaDevices.getUserMedia({ 
         audio: true 
       });
 
       const { data, error } = await supabase.functions.invoke('get-eleven-labs-key');
       
-      if (error || !data?.signed_url || !data?.agent_id) {
+      if (error) {
+        console.error('Supabase function error:', error);
         throw new Error('Failed to get connection data');
       }
 
+      if (!data?.signed_url || !data?.agent_id) {
+        console.error('Invalid response data:', data);
+        throw new Error('Invalid connection data received');
+      }
+
+      sessionLogger.info('Starting session with agent', { agentId: data.agent_id });
+      
       await conversation.startSession({
         agentId: data.agent_id,
         url: data.signed_url
       });
       
-      sessionLogger.info('Started conversation');
+      sessionLogger.info('Started conversation successfully');
     } catch (error) {
       console.error('Error starting connection:', error);
       setIsActive(false);
       setIsConnecting(false);
       
-      toast({
-        variant: "destructive",
-        title: "Connection Error",
-        description: error instanceof Error ? error.message : "Failed to connect to voice service"
-      });
+      if (error instanceof Error && error.name === 'NotAllowedError') {
+        toast({
+          variant: "destructive",
+          title: "Microphone Access Denied",
+          description: "Please allow microphone access to use the voice feature"
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Connection Error",
+          description: error instanceof Error ? error.message : "Failed to connect to voice service"
+        });
+      }
     }
   }, [conversation]);
 
