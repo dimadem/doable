@@ -5,49 +5,23 @@ import { ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { pageVariants } from '@/animations/pageTransitions';
 import { AppHeader } from '../layouts/AppHeader';
-import { createLocalSession, getSessionData } from '@/features/session/utils/sessionStorage';
+import { useSession } from '@/contexts/SessionContext';
 import { useToast } from '@/hooks/use-toast';
 
 const Hero = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const sessionData = getSessionData();
+  const { startSession } = useSession();
 
-  const handleStart = () => {
+  const handleStart = async () => {
     try {
-      // If we have personality data, go to struggle
-      if (sessionData?.personalityData) {
-        navigate('/struggle');
-        return;
-      }
+      const success = await startSession();
       
-      // Clear any existing session if we're starting fresh
-      if (!sessionData) {
-        const newSession = createLocalSession();
-        if (!newSession) {
-          toast({
-            title: "Error",
-            description: "Failed to create session. Please try again.",
-            variant: "destructive"
-          });
-          return;
-        }
-        
-        // Verify session was created successfully
-        const verifiedSession = getSessionData();
-        if (!verifiedSession) {
-          toast({
-            title: "Error",
-            description: "Session verification failed. Please try again.",
-            variant: "destructive"
-          });
-          return;
-        }
+      if (success) {
+        navigate('/vibe-matching');
       }
-      
-      navigate('/vibe-matching');
     } catch (error) {
-      console.error('Error starting session:', error);
+      console.error('Error starting journey:', error);
       toast({
         title: "Error",
         description: "Failed to start journey. Please try again.",
@@ -89,7 +63,7 @@ const Hero = () => {
                    border-2 border-white font-bold text-lg transition-all duration-300 
                    hover:bg-white hover:text-black"
         >
-          {sessionData?.personalityData ? 'Continue Journey' : 'Start Journey'}
+          Start Journey
           <ArrowRight className="transition-transform group-hover:translate-x-1" />
         </motion.button>
       </motion.div>
