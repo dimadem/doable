@@ -1,4 +1,3 @@
-
 import React, { useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -14,7 +13,6 @@ import ErrorState from '../components/ErrorState';
 import ProgressBar from '../components/ProgressBar';
 import VibeMedia from '../components/VibeMedia';
 import { MAX_STEPS } from '../constants';
-import { CoreTraits, BehaviorPatterns } from '../types';
 
 const ALLOWED_PERSONALITIES = ['emotive', 'hyperthymic', 'persistent_paranoid'];
 
@@ -88,31 +86,25 @@ const VibeMatching: React.FC = () => {
         
         const dominantPersonality = determinePersonality(updatedSelections);
         
-        // Convert and validate personality data
-        const coreTraits = selectedPersonality.core_traits as CoreTraits;
-        const behaviorPatterns = selectedPersonality.behavior_patterns as BehaviorPatterns;
-        
         const personalityData = {
           personalityKey: dominantPersonality,
           selections: updatedSelections,
           finalPersonality: dominantPersonality,
-          core_traits: coreTraits || {},
-          behavior_patterns: behaviorPatterns || {}
+          ...(selectedPersonality.core_traits && { 
+            core_traits: selectedPersonality.core_traits as Record<string, number> 
+          }),
+          ...(selectedPersonality.behavior_patterns && { 
+            behavior_patterns: selectedPersonality.behavior_patterns as Record<string, string> 
+          })
         };
 
         const success = updateSessionPersonalityData(personalityData);
         
         if (!success) {
-          throw new Error('Failed to store personality data - invalid data format');
+          throw new Error('Failed to store personality data');
         }
 
-        // Double-check storage success
-        const sessionData = getSessionData();
-        if (!sessionData?.personalityData) {
-          throw new Error('Failed to verify stored personality data');
-        }
-
-        console.log('Successfully stored personality data:', sessionData.personalityData);
+        console.log('Successfully stored personality data:', personalityData);
         
         navigate('/struggle', { state: { direction: 1 } });
       }

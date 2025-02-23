@@ -1,6 +1,5 @@
 
 import { LocalSessionData, StoredPersonalityData } from '../types/session.types';
-import { isValidCoreTraits, isValidBehaviorPatterns } from './typeValidation';
 
 const SESSION_KEY = 'sessionData';
 const SESSION_EXPIRY_HOURS = 24;
@@ -41,14 +40,9 @@ export const isSessionExpired = (startTime: string): boolean => {
 
 export const updateSessionPersonalityData = (personalityData: StoredPersonalityData): boolean => {
   try {
-    // Validate core traits and behavior patterns
-    if (personalityData.core_traits && !isValidCoreTraits(personalityData.core_traits)) {
-      console.error('Invalid core traits format');
-      return false;
-    }
-
-    if (personalityData.behavior_patterns && !isValidBehaviorPatterns(personalityData.behavior_patterns)) {
-      console.error('Invalid behavior patterns format');
+    // Basic validation of required fields
+    if (!personalityData.personalityKey || !personalityData.selections || !personalityData.finalPersonality) {
+      console.error('Missing required personality data fields');
       return false;
     }
 
@@ -62,7 +56,7 @@ export const updateSessionPersonalityData = (personalityData: StoredPersonalityD
       ...currentData,
       personalityData: {
         ...personalityData,
-        // Ensure we have valid default objects even if null/undefined
+        // Ensure optional fields are objects if present
         core_traits: personalityData.core_traits || {},
         behavior_patterns: personalityData.behavior_patterns || {}
       }

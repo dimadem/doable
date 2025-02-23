@@ -1,12 +1,12 @@
 
-import { CoreTraits, BehaviorPatterns, SessionSelection } from '@/features/vibe-matching/types';
+import { SessionSelection } from '@/features/vibe-matching/types';
 
 export interface StoredPersonalityData {
   personalityKey: string;
   selections: SessionSelection[];
   finalPersonality: string;
-  core_traits?: CoreTraits;
-  behavior_patterns?: BehaviorPatterns;
+  core_traits?: Record<string, number>;
+  behavior_patterns?: Record<string, string>;
 }
 
 export interface LocalSessionData {
