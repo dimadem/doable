@@ -1,9 +1,15 @@
 
-export interface StatusIndicatorProps {
-  status: 'idle' | 'connecting' | 'connected' | 'error';
+export type VoiceStatus = 'idle' | 'connecting' | 'connected' | 'error';
+
+export interface VoiceState {
+  status: VoiceStatus;
+  isSpeaking: boolean;
+  conversationId: string | null;
+  volume: number;
 }
 
-export interface VoiceConfig {
-  voice_name: string;
-  agent_id: string;
+export interface VoiceContextType extends VoiceState {
+  startInteraction: () => Promise<void>;
+  stopInteraction: () => Promise<void>;
+  setVolume: (volume: number) => Promise<void>;
 }

@@ -5,16 +5,12 @@ import { pageVariants } from '@/animations/pageTransitions';
 import { AppHeader } from '@/components/layouts/AppHeader';
 import { VoiceMicButton } from '../components/VoiceMicButton';
 import { VoiceStatus } from '../components/VoiceStatus';
-import { useVoiceInteraction } from '../hooks/useVoiceInteraction';
+import { VoiceControlContainer } from '../components/VoiceControl/Container';
+import { useVoiceContext } from '../components/VoiceControl/Context';
 import { toast } from '@/components/ui/use-toast';
 
-const VoiceDouble = () => {
-  const { 
-    status, 
-    isSpeaking, 
-    startInteraction, 
-    stopInteraction 
-  } = useVoiceInteraction();
+const VoiceControls = () => {
+  const { status, isSpeaking, startInteraction, stopInteraction } = useVoiceContext();
 
   const handleToggleVoice = async () => {
     try {
@@ -41,6 +37,23 @@ const VoiceDouble = () => {
   };
 
   return (
+    <>
+      <VoiceMicButton
+        isActive={status === 'connected'}
+        isConnecting={status === 'connecting'}
+        onClick={handleToggleVoice}
+      />
+      
+      <VoiceStatus 
+        status={status === 'connected' ? 'connected' : 'idle'}
+        isSpeaking={isSpeaking}
+      />
+    </>
+  );
+};
+
+const VoiceDouble = () => {
+  return (
     <motion.div
       className="min-h-[100svh] bg-black text-white flex flex-col"
       initial="initial"
@@ -50,17 +63,10 @@ const VoiceDouble = () => {
     >
       <AppHeader title="Voice Double" />
       
-      <div className="flex-1 flex flex-col items-center justify-center gap-8">
-        <VoiceMicButton
-          isActive={status === 'connected'}
-          isConnecting={status === 'connecting'}
-          onClick={handleToggleVoice}
-        />
-        
-        <VoiceStatus 
-          status={status === 'connected' ? 'connected' : 'idle'}
-          isSpeaking={isSpeaking}
-        />
+      <div className="flex-1 flex flex-col items-center justify-center">
+        <VoiceControlContainer>
+          <VoiceControls />
+        </VoiceControlContainer>
       </div>
     </motion.div>
   );
