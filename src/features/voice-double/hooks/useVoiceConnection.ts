@@ -23,13 +23,32 @@ export const useVoiceConnection = () => {
   const [state, setState] = useState<VoiceConnectionState>(initialState);
   const { permissionState, requestPermission, cleanup: cleanupAudio } = useVoiceAudioPermission();
   
+  // Refs for managing client tools
+  const clientToolsRef = useRef<{
+    setTimerState?: (isRunning: boolean) => Promise<void>;
+    setTimerDuration?: (duration: number) => Promise<void>;
+  }>({});
+
+  // Timer handling with completion callback
   const {
     timerState,
     timerDuration,
     setTimerDurationMinutes,
     setTimerRunning,
     cleanup: cleanupTimer
-  } = useVoiceTimer(state.taskState.currentTask || undefined, sessionId);
+  } = useVoiceTimer({
+    currentTask: state.taskState.currentTask || undefined,
+    sessionId,
+    onTimerComplete: async () => {
+      // When timer completes, notify agent tools
+      if (clientToolsRef.current.setTimerState) {
+        await clientToolsRef.current.setTimerState(false);
+      }
+      if (clientToolsRef.current.setTimerDuration) {
+        await clientToolsRef.current.setTimerDuration(0);
+      }
+    }
+  });
 
   // Refs for managing async operations
   const isProcessingRef = useRef(false);
@@ -106,6 +125,12 @@ export const useVoiceConnection = () => {
         
         sessionLogger.info('Timer duration update requested', { timer_duration });
         setTimerDurationMinutes(timer_duration);
+
+        // Store reference to this function
+        clientToolsRef.current.setTimerDuration = async (duration: number) => {
+          setTimerDurationMinutes(duration);
+        };
+
         return "Timer duration set successfully";
       },
       set_timer_state: async ({ timer_on }) => {
@@ -114,6 +139,12 @@ export const useVoiceConnection = () => {
         }
 
         const success = setTimerRunning(timer_on);
+
+        // Store reference to this function
+        clientToolsRef.current.setTimerState = async (isRunning: boolean) => {
+          setTimerRunning(isRunning);
+        };
+
         return success ? "Timer state updated successfully" : "Cannot start timer without duration";
       }
     },

@@ -4,7 +4,17 @@ import { sessionLogger } from '@/utils/sessionLogger';
 import { TimerState } from '../types/timer';
 import { toast } from '@/components/ui/use-toast';
 
-export const useVoiceTimer = (currentTask: string | undefined, sessionId: string | null) => {
+interface UseVoiceTimerProps {
+  currentTask: string | undefined;
+  sessionId: string | null;
+  onTimerComplete?: () => void;
+}
+
+export const useVoiceTimer = ({ 
+  currentTask, 
+  sessionId,
+  onTimerComplete 
+}: UseVoiceTimerProps) => {
   const [timerState, setTimerState] = useState<TimerState>({
     isRunning: false,
     remainingTime: 0
@@ -20,18 +30,23 @@ export const useVoiceTimer = (currentTask: string | undefined, sessionId: string
       timestamp: new Date().toISOString()
     });
 
+    // Reset timer state and duration
     setTimerState(prev => ({ ...prev, isRunning: false, remainingTime: 0 }));
+    setTimerDuration(0);
     
     if (timerInterval.current) {
       clearInterval(timerInterval.current);
       timerInterval.current = undefined;
     }
 
+    // Notify agent of completion
+    onTimerComplete?.();
+
     toast({
       title: "Timer Completed",
       description: currentTask ? `Task "${currentTask}" timer has ended` : "Timer has ended"
     });
-  }, [currentTask, sessionId]);
+  }, [currentTask, sessionId, onTimerComplete]);
 
   useEffect(() => {
     if (timerState.isRunning && timerState.remainingTime !== undefined && timerState.remainingTime > 0) {
@@ -65,7 +80,8 @@ export const useVoiceTimer = (currentTask: string | undefined, sessionId: string
     setTimerDuration(minutes);
     setTimerState(prev => ({
       ...prev,
-      remainingTime: seconds
+      remainingTime: seconds,
+      isRunning: false // Reset running state when duration changes
     }));
     
     sessionLogger.info('Timer duration set', { 
@@ -76,6 +92,7 @@ export const useVoiceTimer = (currentTask: string | undefined, sessionId: string
   }, [sessionId]);
 
   const setTimerRunning = useCallback((isRunning: boolean) => {
+    // Can't start timer without duration
     if (isRunning && timerDuration <= 0) {
       sessionLogger.warn('Cannot start timer without duration', { 
         timerDuration,
@@ -84,10 +101,13 @@ export const useVoiceTimer = (currentTask: string | undefined, sessionId: string
       return false;
     }
 
+    // Update timer state
     setTimerState(prev => ({
       ...prev,
       isRunning,
-      startedAt: isRunning ? new Date().toISOString() : undefined
+      startedAt: isRunning ? new Date().toISOString() : undefined,
+      // If starting timer, ensure remainingTime is set from duration
+      remainingTime: isRunning && prev.remainingTime === 0 ? timerDuration * 60 : prev.remainingTime
     }));
 
     sessionLogger.info('Timer state updated', { 
