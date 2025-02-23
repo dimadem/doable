@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { SessionSelection } from '@/features/vibe-matching/types';
 import { isSessionExpired, getSessionData, clearSessionData } from '@/utils/sessionUtils';
+import { retryWithBackoff } from '@/utils/retryUtils';
 
 interface SessionState {
   sessionId: string | null;
@@ -99,22 +100,30 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
     initializeSession();
   }, []);
 
+  const createSession = async (sessionId: string) => {
+    const { error } = await supabase
+      .from('user_sessions')
+      .insert({
+        session_id: sessionId,
+        started_at: new Date().toISOString(),
+        session_data: {},
+        device_info: {}
+      });
+
+    if (error) throw error;
+    return true;
+  };
+
   const startSession = async () => {
     try {
       const sessionId = generateSessionId();
       
-      const { error } = await supabase
-        .from('user_sessions')
-        .insert({
-          session_id: sessionId,
-          started_at: new Date().toISOString(),
-          session_data: {},
-          device_info: {}
-        });
-
-      if (error) {
-        throw error;
-      }
+      // Use retry mechanism for session creation
+      await retryWithBackoff(
+        () => createSession(sessionId),
+        3, // max 3 retries
+        200 // start with 200ms delay
+      );
       
       localStorage.setItem('sessionId', sessionId);
       setState(prev => ({ ...prev, sessionId, error: null }));
