@@ -6,16 +6,11 @@ export type VoiceAction =
   | { type: 'CONNECTION_SUCCESS'; conversationId: string }
   | { type: 'CONNECTION_FAILED'; error?: Error }
   | { type: 'BEGIN_DISCONNECT' }
-  | { type: 'DISCONNECTED' }
-  | { type: 'UPDATE_SPEAKING'; isSpeaking: boolean }
-  | { type: 'SET_TIMER'; timerState: TimerState }
-  | { type: 'ALLOW_END_CONVERSATION' };
+  | { type: 'DISCONNECTED' };
 
 export interface VoiceState {
   status: ConnectionStatus;
-  isSpeaking: boolean;
   conversationId: string | null;
-  canEndConversation: boolean;
   error?: Error;
 }
 
@@ -33,3 +28,4 @@ export interface VoiceContextValue {
     stopInteraction: () => Promise<void>;
   };
 }
+

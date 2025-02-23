@@ -1,5 +1,5 @@
 
-import { useReducer, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useReducer, useRef, useCallback, useEffect, useMemo, useState } from 'react';
 import { useConversation } from '@11labs/react';
 import { sessionLogger } from '@/utils/sessionLogger';
 import { toast } from '@/components/ui/use-toast';
@@ -12,9 +12,7 @@ const DEBOUNCE_DELAY = 300;
 
 const initialState: VoiceState = {
   status: 'idle',
-  isSpeaking: false,
   conversationId: null,
-  canEndConversation: false,
 };
 
 const initialTimerState: TimerState = {
@@ -44,10 +42,6 @@ function voiceReducer(state: VoiceState, action: VoiceAction): VoiceState {
       return { ...state, status: 'disconnecting' };
     case 'DISCONNECTED':
       return initialState;
-    case 'UPDATE_SPEAKING':
-      return { ...state, isSpeaking: action.isSpeaking };
-    case 'ALLOW_END_CONVERSATION':
-      return { ...state, canEndConversation: true };
     default:
       return state;
   }
@@ -91,7 +85,7 @@ export const useVoiceState = () => {
         if (unmountingRef.current) return;
         
         if (end_conversation && timerState.isRunning) {
-          dispatch({ type: 'ALLOW_END_CONVERSATION' });
+          setTimerState(prev => ({ ...prev, isRunning: false }));
           await stopInteraction();
           return "Task completed and conversation ended";
         }
@@ -106,7 +100,7 @@ export const useVoiceState = () => {
       clearTimeout(connectTimeoutRef.current);
       isConnectingRef.current = false;
       
-      dispatch({ type: 'CONNECTION_SUCCESS', conversationId: state.conversationId || '' });
+      dispatch({ type: 'CONNECTION_SUCCESS', conversationId: '' });
       
       toast({
         title: "Connected",
@@ -140,11 +134,11 @@ export const useVoiceState = () => {
       unmountingRef.current = true;
       clearTimeout(connectTimeoutRef.current);
       
-      if (conversationRef.current && state.status !== 'idle') {
+      if (conversationRef.current) {
         conversationRef.current.endSession().catch(console.error);
       }
     };
-  }, []);
+  }, [conversation]);
 
   const startInteraction = useCallback(async () => {
     if (unmountingRef.current || isConnectingRef.current) {
@@ -181,7 +175,7 @@ export const useVoiceState = () => {
         }
       }, CONNECT_TIMEOUT);
       
-      const conversationId = await conversation.startSession({
+      await conversation.startSession({
         agentId: PUBLIC_AGENT_ID,
         dynamicVariables: {
           personality: personalityData?.finalPersonality || 'default',
@@ -191,9 +185,6 @@ export const useVoiceState = () => {
         }
       });
 
-      if (!unmountingRef.current) {
-        dispatch({ type: 'CONNECTION_SUCCESS', conversationId });
-      }
     } catch (error) {
       if (!unmountingRef.current) {
         isConnectingRef.current = false;
@@ -249,3 +240,4 @@ export const useVoiceState = () => {
 
   return contextValue;
 };
+
