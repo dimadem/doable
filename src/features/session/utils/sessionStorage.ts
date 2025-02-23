@@ -1,5 +1,6 @@
 
 import { LocalSessionData, StoredPersonalityData } from '../types/session.types';
+import { StruggleType } from '@/features/struggle/services/sessionService';
 
 const SESSION_KEY = 'lb_session';
 const SESSION_EXPIRY_HOURS = 24;
@@ -41,6 +42,15 @@ export const getSessionData = (): LocalSessionData | null => {
     if (!parsed.sessionId || !parsed.startedAt) {
       console.error('Invalid session data format');
       return null;
+    }
+
+    // Get struggle type from session context
+    const contextData = localStorage.getItem('voice_session_context');
+    if (contextData) {
+      const context = JSON.parse(contextData);
+      if (context.struggleType) {
+        parsed.struggleType = context.struggleType;
+      }
     }
     
     return parsed;
@@ -86,6 +96,7 @@ export const updateSessionPersonalityData = (personalityData: StoredPersonalityD
 export const clearSessionData = () => {
   try {
     localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem('voice_session_context');
   } catch (error) {
     console.error('Failed to clear session data:', error);
   }

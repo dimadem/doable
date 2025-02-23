@@ -1,5 +1,6 @@
 
 import { SessionSelection } from '@/features/vibe-matching/types';
+import { StruggleType } from '@/features/struggle/services/sessionService';
 
 export interface StoredPersonalityData {
   personalityKey: string;
@@ -13,12 +14,14 @@ export interface LocalSessionData {
   sessionId: string;
   startedAt: string;
   personalityData?: StoredPersonalityData;
+  struggleType?: StruggleType;
 }
 
 export interface SessionState {
   sessionId: string | null;
   loading: boolean;
   personalityData?: StoredPersonalityData;
+  struggleType?: StruggleType;
   error: Error | null;
 }
 

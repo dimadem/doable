@@ -58,7 +58,11 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
           return;
         }
 
-        sessionLogger.info('Found session data', { sessionId: sessionData.sessionId });
+        sessionLogger.info('Found session data', { 
+          sessionId: sessionData.sessionId,
+          struggleType: sessionData.struggleType 
+        });
+        
         const isValid = await validateSessionInDb(sessionData.sessionId);
         
         if (!isValid) {
@@ -70,12 +74,14 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
 
         sessionLogger.info('Session validated, updating state', { 
           sessionId: sessionData.sessionId,
-          hasPersonalityData: !!sessionData.personalityData
+          hasPersonalityData: !!sessionData.personalityData,
+          struggleType: sessionData.struggleType
         });
         
         setState({
           sessionId: sessionData.sessionId,
           personalityData: sessionData.personalityData,
+          struggleType: sessionData.struggleType,
           loading: false,
           error: null
         });
