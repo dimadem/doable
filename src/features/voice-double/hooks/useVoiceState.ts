@@ -39,8 +39,10 @@ export const useVoiceState = (): VoiceContextType => {
         }));
         return "Timer duration set";
       },
-      set_task: async ({ task_description, end_conversation }) => {
-        if (end_conversation && timerState.isRunning) {
+      set_task: async ({ task_description, end_conversation = false }) => {
+        sessionLogger.info('Task update received', { task_description, end_conversation });
+        // Only end conversation if explicitly requested AND no timer is running
+        if (end_conversation && !timerState.isRunning) {
           await stopInteraction();
         }
         return "Task handled";
@@ -79,7 +81,10 @@ export const useVoiceState = (): VoiceContextType => {
       const conversationId = await conversation.startSession({
         agentId: PUBLIC_AGENT_ID,
         dynamicVariables: {
-          personality: personalityData?.finalPersonality || 'default'
+          personality: personalityData?.finalPersonality || 'default',
+          end_conversation: false, // Prevent immediate disconnection
+          timer_active: false, // Start with timer inactive
+          timer_duration: 0 // No initial timer duration
         }
       });
 
@@ -97,6 +102,9 @@ export const useVoiceState = (): VoiceContextType => {
 
   const stopInteraction = useCallback(async () => {
     try {
+      if (timerState.isRunning) {
+        setTimerState(prev => ({ ...prev, isRunning: false }));
+      }
       setState(prev => ({ ...prev, status: 'disconnecting' }));
       await conversation.endSession();
       setState(initialState);
@@ -106,7 +114,7 @@ export const useVoiceState = (): VoiceContextType => {
       setState(prev => ({ ...prev, status: 'error' }));
       throw error;
     }
-  }, [conversation]);
+  }, [conversation, timerState.isRunning]);
 
   return {
     ...state,
