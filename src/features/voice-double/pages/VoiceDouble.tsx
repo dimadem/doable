@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { pageVariants } from '@/animations/pageTransitions';
 import { AppHeader } from '@/components/layouts/AppHeader';
@@ -13,9 +13,6 @@ import { sessionLogger } from '@/utils/sessionLogger';
 const VoiceDouble = () => {
   const [isActive, setIsActive] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [sessionData, setSessionData] = useState<{ agentId: string; signedUrl: string } | null>(null);
-  const micStreamRef = useRef<MediaStream | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
 
   const conversation = useConversation({
     onConnect: () => {
@@ -25,17 +22,14 @@ const VoiceDouble = () => {
     },
     onDisconnect: () => {
       sessionLogger.info('Voice connection closed');
-      cleanupAudioResources();
       setIsActive(false);
       setIsConnecting(false);
-      setSessionData(null);
     },
     onError: (error) => {
       sessionLogger.error('Voice connection error', error);
-      cleanupAudioResources();
       setIsActive(false);
       setIsConnecting(false);
-      setSessionData(null);
+      
       toast({
         variant: "destructive",
         title: "Connection Error",
@@ -47,23 +41,6 @@ const VoiceDouble = () => {
     }
   });
 
-  const cleanupAudioResources = useCallback(() => {
-    if (micStreamRef.current) {
-      micStreamRef.current.getTracks().forEach(track => {
-        track.stop();
-        sessionLogger.info('Audio track stopped', { trackId: track.id });
-      });
-      micStreamRef.current = null;
-    }
-
-    if (audioContextRef.current?.state !== 'closed') {
-      audioContextRef.current?.close().catch(error => {
-        sessionLogger.error('Error closing AudioContext', error);
-      });
-      audioContextRef.current = null;
-    }
-  }, []);
-
   useEffect(() => {
     return () => {
       if (isActive) {
@@ -71,74 +48,8 @@ const VoiceDouble = () => {
           sessionLogger.error('Error cleaning up session', error);
         });
       }
-      cleanupAudioResources();
     };
-  }, [conversation, isActive, cleanupAudioResources]);
-
-  const requestMicrophoneAccess = async () => {
-    try {
-      // First, request basic microphone access with minimal constraints
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true
-        }
-      });
-
-      sessionLogger.info('Basic microphone access granted');
-      
-      // Stop the initial stream as we'll create a new one with specific constraints
-      stream.getTracks().forEach(track => track.stop());
-      
-      return true;
-    } catch (error) {
-      sessionLogger.error('Error requesting microphone access', error);
-      throw new Error('Please grant microphone access to use voice features');
-    }
-  };
-
-  const initializeAudioStream = async () => {
-    try {
-      // First ensure we have microphone permission
-      await requestMicrophoneAccess();
-
-      // Then create AudioContext with specific sample rate
-      audioContextRef.current = new AudioContext({
-        sampleRate: 24000,
-        latencyHint: 'interactive'
-      });
-
-      // Now request stream with specific constraints for ElevenLabs
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          channelCount: 1,
-          sampleRate: 24000
-        }
-      });
-
-      micStreamRef.current = stream;
-      
-      // Create audio nodes to ensure audio is flowing
-      const source = audioContextRef.current.createMediaStreamSource(stream);
-      const destination = audioContextRef.current.createMediaStreamDestination();
-      source.connect(destination);
-
-      sessionLogger.info('Audio stream initialized', {
-        sampleRate: audioContextRef.current.sampleRate,
-        tracks: stream.getAudioTracks().length,
-        audioContextState: audioContextRef.current.state
-      });
-
-      return stream;
-    } catch (error) {
-      sessionLogger.error('Error initializing audio stream', error);
-      cleanupAudioResources();
-      throw new Error('Failed to initialize audio. Please ensure microphone access is granted and try again.');
-    }
-  };
+  }, [conversation, isActive]);
 
   const getSessionData = async () => {
     const { data, error } = await supabase.functions.invoke('get-eleven-labs-key');
@@ -162,23 +73,26 @@ const VoiceDouble = () => {
       if (isActive) {
         setIsConnecting(true);
         await conversation.endSession();
-        cleanupAudioResources();
         sessionLogger.info('Ended conversation');
       } else {
         setIsConnecting(true);
-        
-        // Get fresh session data first
+
+        // First, request microphone permission
+        try {
+          await navigator.mediaDevices.getUserMedia({ 
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true
+            }
+          });
+          sessionLogger.info('Microphone access granted');
+        } catch (error) {
+          sessionLogger.error('Microphone access denied', error);
+          throw new Error('Please grant microphone access to use voice features');
+        }
+
+        // Get session data
         const data = await getSessionData();
-        setSessionData(data);
-
-        // Then initialize audio stream
-        await initializeAudioStream();
-
-        sessionLogger.info('Starting session', {
-          agentId: data.agentId,
-          audioContextState: audioContextRef.current?.state,
-          micStreamActive: micStreamRef.current?.active
-        });
         
         // Start the session with the signed URL
         await conversation.startSession({
@@ -190,10 +104,8 @@ const VoiceDouble = () => {
       }
     } catch (error) {
       console.error('Error toggling voice:', error);
-      cleanupAudioResources();
       setIsActive(false);
       setIsConnecting(false);
-      setSessionData(null);
       
       toast({
         variant: "destructive",
@@ -201,7 +113,7 @@ const VoiceDouble = () => {
         description: error instanceof Error ? error.message : "Failed to connect to voice service"
       });
     }
-  }, [conversation, isActive, cleanupAudioResources]);
+  }, [conversation, isActive]);
 
   return (
     <motion.div
