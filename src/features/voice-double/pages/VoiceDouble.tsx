@@ -47,6 +47,14 @@ const VoiceDouble = () => {
         console.log('Ended conversation');
       } else {
         setIsConnecting(true);
+
+        // First request microphone access
+        try {
+          await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (micError) {
+          throw new Error('Microphone access is required. Please allow microphone access and try again.');
+        }
+
         const { data, error: signedUrlError } = await supabase.functions.invoke('get-eleven-labs-key');
         
         if (signedUrlError) {
@@ -75,13 +83,11 @@ const VoiceDouble = () => {
       setIsActive(false);
       setIsConnecting(false);
       
-      if (error instanceof Error) {
-        toast({
-          variant: "destructive",
-          title: "Connection Error",
-          description: error.message || "Failed to connect to voice service"
-        });
-      }
+      toast({
+        variant: "destructive",
+        title: "Connection Error",
+        description: error instanceof Error ? error.message : "Failed to connect to voice service"
+      });
     }
   }, [conversation, isActive]);
 
