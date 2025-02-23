@@ -53,7 +53,6 @@ export const useVoiceConnection = () => {
       isDisconnectingRef.current = false;
       updateConnectionStatus('connected');
       
-      // Register timer tools
       registerTimerTools(
         async (isRunning) => {
           await setTimerRunning(isRunning);
@@ -76,7 +75,6 @@ export const useVoiceConnection = () => {
       isDisconnectingRef.current = false;
       updateConnectionStatus('idle');
       
-      // Cleanup timer state
       setTimerRunning(false);
       setTimerDurationMinutes(0);
       
@@ -96,9 +94,6 @@ export const useVoiceConnection = () => {
         title: "Connection Error",
         description: "Failed to establish voice connection"
       });
-    },
-    onMessage: (message) => {
-      sessionLogger.info('Voice message received', { message });
     }
   });
 
@@ -114,89 +109,6 @@ export const useVoiceConnection = () => {
     cleanupAudio,
     cleanupTimer
   });
-
-  const connect = useCallback(async () => {
-    try {
-      if (!sessionId) {
-        throw new Error('No active session');
-      }
-
-      if (!struggleType) {
-        throw new Error('No struggle type selected');
-      }
-
-      if (isDisconnectingRef.current) {
-        throw new Error('Cannot connect while disconnecting');
-      }
-
-      updateConnectionStatus('connecting');
-      const hasPermission = await requestPermission();
-      if (!hasPermission) {
-        throw new Error('Audio permission denied');
-      }
-
-      const savedContext = loadVoiceContext(sessionId);
-      
-      sessionLogger.info('Starting voice session', { 
-        sessionId,
-        hasTaskDescription: !!savedContext?.taskDescription,
-        hasTimer: !!savedContext?.timer,
-        struggleType
-      });
-
-      const conversationId = await conversation.startSession({
-        agentId: PUBLIC_AGENT_ID,
-        dynamicVariables: {
-          personality: personalityData?.finalPersonality || 'default',
-          struggle_type: struggleType,
-          task_description: savedContext?.taskDescription || undefined,
-          timer_duration: savedContext?.timer?.duration,
-          timer_active: savedContext?.timer?.state.isRunning
-        }
-      });
-
-      return conversationId;
-    } catch (error) {
-      updateConnectionStatus('error');
-      sessionLogger.error('Failed to start voice session', error);
-      throw error;
-    }
-  }, [conversation, sessionId, struggleType, personalityData, requestPermission, updateConnectionStatus]);
-
-  const disconnect = useCallback(async () => {
-    if (isDisconnectingRef.current || !wsReadyRef.current) {
-      sessionLogger.info('Already disconnecting or not connected');
-      return;
-    }
-
-    try {
-      isDisconnectingRef.current = true;
-      updateConnectionStatus('disconnecting');
-      
-      // Cleanup in order
-      if (timerState.isRunning) {
-        setTimerRunning(false);
-      }
-      setTimerDurationMinutes(0);
-      cleanupAudio();
-      cleanupTimer();
-      
-      wsReadyRef.current = false;
-      await conversation.endSession();
-      
-      sessionLogger.info('Voice session ended', { sessionId });
-    } catch (error) {
-      if (error.message?.includes('CLOSING') || error.message?.includes('CLOSED')) {
-        sessionLogger.info('WebSocket already closing or closed');
-      } else {
-        sessionLogger.error('Failed to end voice session', error);
-        throw error;
-      }
-    } finally {
-      isDisconnectingRef.current = false;
-      updateConnectionStatus('idle');
-    }
-  }, [conversation, sessionId, timerState.isRunning, cleanupAudio, cleanupTimer, updateConnectionStatus, setTimerRunning, setTimerDurationMinutes]);
 
   useEffect(() => {
     return () => {
