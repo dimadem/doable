@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getSessionData } from '../utils/sessionStorage';
+import { useSession } from '@/contexts/SessionContext';
 import { useToast } from '@/hooks/use-toast';
 
 interface SessionGuardProps {
@@ -11,37 +11,12 @@ interface SessionGuardProps {
 export const SessionGuard = ({ children }: SessionGuardProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { sessionId, loading, error } = useSession();
   const [isValidating, setIsValidating] = useState(true);
-  const [hasSession, setHasSession] = useState(false);
 
   useEffect(() => {
-    let mounted = true;
-    let retryCount = 0;
-    const maxRetries = 5;
-    const retryDelay = 200; // 200ms between retries
-
-    const validateSession = async () => {
-      while (retryCount < maxRetries) {
-        const sessionData = getSessionData();
-        
-        if (!mounted) return;
-
-        if (sessionData?.sessionId) {
-          setHasSession(true);
-          setIsValidating(false);
-          return;
-        }
-
-        retryCount++;
-        if (retryCount < maxRetries) {
-          await new Promise(resolve => setTimeout(resolve, retryDelay));
-        }
-      }
-
-      // If we get here, we've exhausted retries and still no session
-      if (mounted) {
-        setHasSession(false);
-        setIsValidating(false);
+    if (!loading) {
+      if (!sessionId) {
         toast({
           title: "Session Error",
           description: "No valid session found. Redirecting to home.",
@@ -49,16 +24,11 @@ export const SessionGuard = ({ children }: SessionGuardProps) => {
         });
         navigate('/', { replace: true });
       }
-    };
+      setIsValidating(false);
+    }
+  }, [loading, sessionId, navigate, toast]);
 
-    validateSession();
-
-    return () => {
-      mounted = false;
-    };
-  }, [navigate, toast]);
-
-  if (isValidating) {
+  if (loading || isValidating) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-black">
         <div className="font-mono text-white">Validating session...</div>
@@ -66,5 +36,16 @@ export const SessionGuard = ({ children }: SessionGuardProps) => {
     );
   }
 
-  return hasSession ? <>{children}</> : null;
+  if (error) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-black">
+        <div className="font-mono text-white text-center">
+          <p>Session Error</p>
+          <p className="text-sm mt-2">{error.message}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return sessionId ? <>{children}</> : null;
 };

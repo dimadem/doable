@@ -2,13 +2,11 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { toast } from "@/components/ui/use-toast";
 import { SessionSelection } from '@/features/vibe-matching/types';
-import { isSessionExpired, getSessionData, clearSessionData } from '@/utils/sessionUtils';
 import { SessionState, SessionContextType } from './types/session.types';
-import { initializeSession, validateSessionInDb, updatePersonalityData } from './services/sessionService';
+import { createLocalSession, getSessionData, clearSessionData, updateSessionPersonalityData } from '@/features/session/utils/sessionStorage';
+import { validateSessionInDb, updatePersonalityData } from './services/sessionService';
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
-
-const generateSessionId = () => crypto.randomUUID();
 
 export const SessionProvider = ({ children }: { children: React.ReactNode }) => {
   const [state, setState] = useState<SessionState>({
@@ -21,14 +19,12 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
     try {
       if (!state.sessionId) return false;
 
-      const startedAt = await validateSessionInDb(state.sessionId);
-      if (!startedAt) return false;
-
-      if (isSessionExpired(startedAt)) {
+      const isValid = await validateSessionInDb(state.sessionId);
+      if (!isValid) {
         endSession();
         toast({
-          title: "Session Expired",
-          description: "Your session has expired. Please start a new session.",
+          title: "Session Error",
+          description: "Invalid session. Please start a new session.",
           variant: "destructive"
         });
         return false;
@@ -45,31 +41,34 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
   useEffect(() => {
     const initSession = async () => {
       try {
-        const { sessionId, personalityData } = getSessionData();
+        const sessionData = getSessionData();
         
-        if (sessionId) {
-          const isValid = await validateSession();
-          if (!isValid) {
-            clearSessionData();
-            setState({ sessionId: null, loading: false, error: null });
-            return;
-          }
+        if (!sessionData) {
+          setState({ sessionId: null, loading: false, error: null });
+          return;
         }
 
-        setState(prev => ({
-          ...prev,
-          sessionId,
-          ...(personalityData ? JSON.parse(personalityData) : {}),
+        // Validate the session
+        const isValid = await validateSessionInDb(sessionData.sessionId);
+        if (!isValid) {
+          clearSessionData();
+          setState({ sessionId: null, loading: false, error: null });
+          return;
+        }
+
+        setState({
+          sessionId: sessionData.sessionId,
+          personalityData: sessionData.personalityData,
           loading: false,
           error: null
-        }));
+        });
       } catch (error) {
         console.error('Session initialization error:', error);
-        setState(prev => ({ 
-          ...prev, 
+        setState({ 
+          sessionId: null, 
           loading: false, 
           error: error instanceof Error ? error : new Error('Session initialization failed') 
-        }));
+        });
       }
     };
 
@@ -78,60 +77,73 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
 
   const startSession = async () => {
     try {
-      const sessionId = generateSessionId();
-      await initializeSession(sessionId);
-      
-      localStorage.setItem('sessionId', sessionId);
-      setState(prev => ({ ...prev, sessionId, error: null }));
-      
+      const sessionData = createLocalSession();
+      if (!sessionData) {
+        throw new Error('Failed to create local session');
+      }
+
+      setState({ 
+        sessionId: sessionData.sessionId, 
+        loading: false, 
+        error: null 
+      });
+
       toast({
-        title: "Session started",
+        title: "Session Started",
         description: "Your journey has begun."
       });
 
       return true;
     } catch (error) {
-      console.error('Session start error:', error);
-      setState(prev => ({ 
-        ...prev, 
+      console.error('Failed to start session:', error);
+      setState({ 
+        sessionId: null, 
+        loading: false, 
         error: error instanceof Error ? error : new Error('Failed to start session') 
-      }));
+      });
+      
       toast({
         variant: "destructive",
         title: "Error",
         description: "Failed to start session. Please try again."
       });
+      
       return false;
     }
   };
 
   const setPersonalityData = async (personalityKey: string, selections: SessionSelection[]) => {
     try {
+      if (!state.sessionId) {
+        throw new Error('No active session');
+      }
+
       const personalityData = {
         personalityKey,
-        sessionData: {
-          selections,
-          finalPersonality: personalityKey
-        }
+        selections,
+        finalPersonality: personalityKey
       };
-      
-      if (state.sessionId) {
-        await updatePersonalityData(state.sessionId, personalityKey, selections);
+
+      const success = updateSessionPersonalityData(personalityData);
+      if (!success) {
+        throw new Error('Failed to store personality data');
       }
-      
-      localStorage.setItem('personalityData', JSON.stringify(personalityData));
-      setState(prev => ({ ...prev, ...personalityData, error: null }));
+
+      await updatePersonalityData(state.sessionId, personalityKey, selections);
+
+      setState(prev => ({
+        ...prev,
+        personalityData
+      }));
+
     } catch (error) {
       console.error('Error setting personality data:', error);
-      setState(prev => ({ 
-        ...prev, 
-        error: error instanceof Error ? error : new Error('Failed to set personality data') 
-      }));
       toast({
         variant: "destructive",
         title: "Error",
         description: "Failed to save personality data. Please try again."
       });
+      throw error;
     }
   };
 

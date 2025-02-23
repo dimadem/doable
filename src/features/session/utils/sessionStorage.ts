@@ -1,7 +1,7 @@
 
 import { LocalSessionData, StoredPersonalityData } from '../types/session.types';
 
-const SESSION_KEY = 'sessionData';
+const SESSION_KEY = 'lb_session';
 const SESSION_EXPIRY_HOURS = 24;
 
 export const generateSessionId = () => crypto.randomUUID();
@@ -13,7 +13,6 @@ export const createLocalSession = (): LocalSessionData | null => {
       startedAt: new Date().toISOString()
     };
     
-    // Ensure we can write to localStorage
     localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
     
     // Verify the data was written correctly
@@ -53,12 +52,6 @@ export const getSessionData = (): LocalSessionData | null => {
 
 export const updateSessionPersonalityData = (personalityData: StoredPersonalityData): boolean => {
   try {
-    // Basic validation of required fields
-    if (!personalityData.personalityKey || !personalityData.selections || !personalityData.finalPersonality) {
-      console.error('Missing required personality data fields');
-      return false;
-    }
-
     const currentData = getSessionData();
     if (!currentData) {
       console.error('No current session data found');

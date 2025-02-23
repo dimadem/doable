@@ -14,3 +14,17 @@ export interface LocalSessionData {
   startedAt: string;
   personalityData?: StoredPersonalityData;
 }
+
+export interface SessionState {
+  sessionId: string | null;
+  loading: boolean;
+  personalityData?: StoredPersonalityData;
+  error: Error | null;
+}
+
+export interface SessionContextType extends SessionState {
+  startSession: () => Promise<boolean>;
+  endSession: () => void;
+  setPersonalityData: (personalityKey: string, selections: SessionSelection[]) => Promise<void>;
+  validateSession: () => Promise<boolean>;
+}
