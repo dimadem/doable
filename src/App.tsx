@@ -18,7 +18,6 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
 
-// Loading fallback component
 const LoadingFallback = () => (
   <div className="h-[100svh] w-full flex items-center justify-center bg-black">
     <div className="text-white font-mono animate-pulse">Loading...</div>
