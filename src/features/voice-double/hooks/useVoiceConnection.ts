@@ -1,17 +1,51 @@
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useConversation } from '@11labs/react';
 import { sessionLogger } from '@/utils/sessionLogger';
 import { useSession } from '@/contexts/SessionContext';
 import { toast } from '@/components/ui/use-toast';
 
 const PUBLIC_AGENT_ID = 'TGp0ve1q0XQurppvTzrO';
+const SESSION_CONTEXT_KEY = 'voice_session_context';
+
+interface SessionContext {
+  taskDescription?: string;
+  lastUpdate: string;
+}
 
 export const useVoiceConnection = () => {
-  const { personalityData, sessionId } = useSession();
+  const { personalityData, sessionId, struggleType } = useSession();
+  const [currentTask, setCurrentTask] = useState<string>();
   
-  // Create conversation instance with basic handlers
+  // Load saved context if exists
+  const loadSavedContext = (): SessionContext | null => {
+    const saved = localStorage.getItem(SESSION_CONTEXT_KEY);
+    return saved ? JSON.parse(saved) : null;
+  };
+
+  // Save context to localStorage
+  const saveContext = (taskDescription: string) => {
+    const context: SessionContext = {
+      taskDescription,
+      lastUpdate: new Date().toISOString()
+    };
+    localStorage.setItem(SESSION_CONTEXT_KEY, JSON.stringify(context));
+    setCurrentTask(taskDescription);
+  };
+
+  // Create conversation instance with basic handlers and tools
   const conversation = useConversation({
+    clientTools: {
+      set_session_context: async ({ end_conversation, task_description }) => {
+        sessionLogger.info('Setting session context', { task_description });
+        saveContext(task_description);
+        
+        if (end_conversation) {
+          await conversation.endSession();
+        }
+        return "Context stored successfully";
+      }
+    },
     onConnect: () => {
       sessionLogger.info('Voice connection established');
       toast({
@@ -45,26 +79,38 @@ export const useVoiceConnection = () => {
         throw new Error('No active session');
       }
 
+      if (!struggleType) {
+        throw new Error('No struggle type selected');
+      }
+
       // Request microphone access
       await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      // Load saved context if exists
+      const savedContext = loadSavedContext();
 
       // Start session with dynamic variables
       const conversationId = await conversation.startSession({
         agentId: PUBLIC_AGENT_ID,
         dynamicVariables: {
           personality: personalityData?.finalPersonality || 'default',
-          // We don't have struggleMode in the session context, so removing it
-          struggle: 'default'
+          struggle_type: struggleType,
+          task_description: savedContext?.taskDescription || undefined
         }
       });
 
-      sessionLogger.info('Voice session started', { conversationId });
+      sessionLogger.info('Voice session started', { 
+        conversationId,
+        struggleType,
+        hasTaskDescription: !!savedContext?.taskDescription
+      });
+
       return conversationId;
     } catch (error) {
       sessionLogger.error('Failed to start voice session', error);
       throw error;
     }
-  }, [conversation, sessionId, personalityData]);
+  }, [conversation, sessionId, personalityData, struggleType]);
 
   const disconnect = useCallback(async () => {
     try {
@@ -80,6 +126,7 @@ export const useVoiceConnection = () => {
     connect,
     disconnect,
     status: conversation.status,
-    isSpeaking: conversation.isSpeaking
+    isSpeaking: conversation.isSpeaking,
+    currentTask
   };
 };

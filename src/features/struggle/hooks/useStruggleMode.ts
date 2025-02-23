@@ -75,6 +75,12 @@ export const useStruggleMode = () => {
           : sessionResponse?.session_data?.selections || []
       };
 
+      // Store struggle type in session
+      localStorage.setItem('voice_session_context', JSON.stringify({
+        struggleType,
+        lastUpdate: new Date().toISOString()
+      }));
+
       await updateSessionStruggleType(
         sessionData.sessionId,
         struggleType,
