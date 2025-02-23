@@ -1,4 +1,3 @@
-
 import { useCallback, useState, useEffect, useRef } from 'react';
 import { useConversation } from '@11labs/react';
 import { sessionLogger } from '@/utils/sessionLogger';
@@ -24,6 +23,7 @@ export const useVoiceConnection = () => {
   });
   const [timerDuration, setTimerDuration] = useState<number>(0);
   const timerInterval = useRef<NodeJS.Timeout>();
+  const isClosing = useRef<boolean>(false);
 
   const handleTimerEnd = useCallback(() => {
     sessionLogger.info('Timer completed', {
@@ -134,7 +134,8 @@ export const useVoiceConnection = () => {
 
         saveContext(task_description);
         
-        if (end_conversation) {
+        if (end_conversation && !isClosing.current) {
+          isClosing.current = true;
           sessionLogger.info('Agent requesting session end', {
             task_description,
             sessionId,
@@ -181,6 +182,7 @@ export const useVoiceConnection = () => {
       }
     },
     onConnect: () => {
+      isClosing.current = false;
       sessionLogger.info('Voice connection established', { sessionId });
       toast({
         title: "Connected",
@@ -254,7 +256,12 @@ export const useVoiceConnection = () => {
 
   const disconnect = useCallback(async () => {
     try {
-      await conversation.endSession();
+      // Only attempt to end session if not already closing
+      if (!isClosing.current) {
+        isClosing.current = true;
+        await conversation.endSession();
+      }
+      
       sessionLogger.info('Voice session ended', { sessionId });
       
       // Clear timer interval on disconnect

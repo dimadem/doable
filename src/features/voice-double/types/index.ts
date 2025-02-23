@@ -1,5 +1,5 @@
 
-export type VoiceStatus = 'idle' | 'connecting' | 'connected' | 'error';
+export type VoiceStatus = 'idle' | 'connecting' | 'connected' | 'closing' | 'error';
 
 export interface VoiceState {
   status: VoiceStatus;

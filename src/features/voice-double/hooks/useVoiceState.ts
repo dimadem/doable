@@ -40,6 +40,15 @@ export const useVoiceState = (): VoiceContextType => {
 
   const stopInteraction = useCallback(async () => {
     try {
+      // Set status to closing to prevent multiple close attempts
+      setState(prev => {
+        // Only proceed if not already closing
+        if (prev.status === 'closing') {
+          return prev;
+        }
+        return { ...prev, status: 'closing' };
+      });
+
       await disconnect();
       setState(prev => ({ 
         ...prev, 
@@ -49,6 +58,7 @@ export const useVoiceState = (): VoiceContextType => {
       }));
     } catch (error) {
       sessionLogger.error('Failed to stop voice interaction', error);
+      setState(prev => ({ ...prev, status: 'error' }));
       throw error;
     }
   }, [disconnect]);
