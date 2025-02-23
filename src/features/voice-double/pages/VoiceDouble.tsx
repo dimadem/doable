@@ -149,40 +149,26 @@ const VoiceDouble = () => {
   useEffect(() => {
     return () => {
       mountedRef.current = false;
-      // Only attempt cleanup if we're actually connected
-      if (isActive && !isConnecting) {
-        conversation.endSession().catch(error => {
-          if (error?.code !== 1000) {
-            sessionLogger.error('Error cleaning up session', error);
-          }
-        });
-      }
     };
-  }, [conversation, isActive, isConnecting]);
+  }, []);
 
   const handleToggleVoice = useCallback(async () => {
-    if (isConnecting) return; // Prevent multiple clicks while processing
-    
-    if (isActive) {
-      setIsConnecting(true);
-      try {
+    if (isConnecting) return;
+
+    try {
+      if (isActive) {
+        setIsConnecting(true);
         await conversation.endSession();
-      } catch (error) {
-        sessionLogger.error('Error ending conversation', error);
-      }
-      setIsActive(false);
-      setIsConnecting(false);
-    } else {
-      setIsConnecting(true);
-      setIsActive(false); // Reset active state before starting
-      try {
-        await startConnection();
-        // Don't set states here - they're handled by onConnect callback
-      } catch (error) {
-        sessionLogger.error('Failed to start connection', error);
         setIsActive(false);
         setIsConnecting(false);
+      } else {
+        setIsConnecting(true);
+        await startConnection();
       }
+    } catch (error) {
+      sessionLogger.error('Voice connection error:', error);
+      setIsActive(false);
+      setIsConnecting(false);
     }
   }, [conversation, isActive, isConnecting, startConnection]);
 

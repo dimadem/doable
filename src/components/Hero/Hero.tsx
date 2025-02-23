@@ -53,7 +53,8 @@ const Hero = () => {
           doable
         </h1>
         <p className="font-mono text-lg text-gray-400 max-w-md mx-auto mb-8">
-          Uncover your authentic personality archetype through our innovative discovery process.
+          your personal <br />
+          AI Voice Body Double
         </p>
         <motion.button
           whileHover={{ scale: 1.05 }}
