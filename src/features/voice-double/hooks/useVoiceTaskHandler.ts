@@ -3,6 +3,7 @@ import { useCallback } from 'react';
 import { sessionLogger } from '@/utils/sessionLogger';
 import { saveVoiceContext } from '../services/voiceStorageService';
 import { TimerState } from '../types/timer';
+import type { Conversation } from '@11labs/react';
 
 interface UseVoiceTaskHandlerProps {
   sessionId: string | null;
@@ -12,6 +13,9 @@ interface UseVoiceTaskHandlerProps {
   updateConnectionStatus: (status: 'disconnecting') => void;
   wsReadyRef: React.RefObject<boolean>;
   isProcessingRef: React.RefObject<boolean>;
+  conversation: Conversation;
+  cleanupAudio: () => void;
+  cleanupTimer: () => void;
 }
 
 export const useVoiceTaskHandler = ({
@@ -21,8 +25,33 @@ export const useVoiceTaskHandler = ({
   timerState,
   updateConnectionStatus,
   wsReadyRef,
-  isProcessingRef
+  isProcessingRef,
+  conversation,
+  cleanupAudio,
+  cleanupTimer
 }: UseVoiceTaskHandlerProps) => {
+  const handleEndConversation = useCallback(async () => {
+    try {
+      updateConnectionStatus('disconnecting');
+      
+      // Cleanup resources
+      cleanupAudio();
+      cleanupTimer();
+      
+      // End the conversation using ElevenLabs API
+      await conversation.endSession();
+      
+      sessionLogger.info('Voice session ended by task completion', { sessionId });
+    } catch (error) {
+      if (error.message?.includes('CLOSING') || error.message?.includes('CLOSED')) {
+        sessionLogger.info('WebSocket already closing or closed');
+      } else {
+        sessionLogger.error('Failed to end voice session after task completion', error);
+        throw error;
+      }
+    }
+  }, [sessionId, conversation, cleanupAudio, cleanupTimer, updateConnectionStatus]);
+
   const handleTask = useCallback(async (task_description: string, end_conversation: boolean) => {
     if (isProcessingRef.current || !wsReadyRef.current) {
       sessionLogger.warn('Task handling blocked - processing or WS not ready', { 
@@ -35,6 +64,7 @@ export const useVoiceTaskHandler = ({
     isProcessingRef.current = true;
 
     try {
+      // Save task context first
       saveVoiceContext(
         task_description,
         struggleType,
@@ -43,8 +73,9 @@ export const useVoiceTaskHandler = ({
         sessionId
       );
 
+      // Handle end conversation if requested and no timer is running
       if (end_conversation && !timerState.isRunning) {
-        updateConnectionStatus('disconnecting');
+        await handleEndConversation();
       }
 
       isProcessingRef.current = false;
@@ -53,7 +84,15 @@ export const useVoiceTaskHandler = ({
       isProcessingRef.current = false;
       throw error;
     }
-  }, [sessionId, struggleType, timerDuration, timerState, updateConnectionStatus, wsReadyRef, isProcessingRef]);
+  }, [
+    sessionId,
+    struggleType,
+    timerDuration,
+    timerState,
+    handleEndConversation,
+    wsReadyRef,
+    isProcessingRef
+  ]);
 
   return {
     handleTask

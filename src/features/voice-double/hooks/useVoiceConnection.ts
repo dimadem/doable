@@ -1,4 +1,3 @@
-
 import { useCallback, useRef, useEffect } from 'react';
 import { useConversation } from '@11labs/react';
 import { sessionLogger } from '@/utils/sessionLogger';
@@ -35,17 +34,6 @@ export const useVoiceConnection = () => {
       }
       setTimerDurationMinutes(0);
     }
-  });
-
-  const { clientTools, registerTimerTools } = useVoiceClientTools(wsReadyRef);
-  const { handleTask } = useVoiceTaskHandler({
-    sessionId,
-    struggleType,
-    timerDuration,
-    timerState,
-    updateConnectionStatus,
-    wsReadyRef,
-    isProcessingRef
   });
 
   const conversation = useConversation({
@@ -99,6 +87,20 @@ export const useVoiceConnection = () => {
     onMessage: (message) => {
       sessionLogger.info('Voice message received', { message });
     }
+  });
+
+  const { clientTools, registerTimerTools } = useVoiceClientTools(wsReadyRef);
+  const { handleTask } = useVoiceTaskHandler({
+    sessionId,
+    struggleType,
+    timerDuration,
+    timerState,
+    updateConnectionStatus,
+    wsReadyRef,
+    isProcessingRef,
+    conversation,
+    cleanupAudio,
+    cleanupTimer
   });
 
   const connect = useCallback(async () => {
