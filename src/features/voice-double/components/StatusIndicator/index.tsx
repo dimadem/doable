@@ -23,6 +23,11 @@ const statusConfig = {
     color: 'bg-green-500',
     text: 'Responding',
     pulseAnimation: true
+  },
+  connected: {
+    color: 'bg-blue-500',
+    text: 'Connected',
+    pulseAnimation: false
   }
 };
 
