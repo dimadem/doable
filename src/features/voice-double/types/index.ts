@@ -1,4 +1,6 @@
 
+import { TimerState } from './timer';
+
 export type VoiceStatus = 'idle' | 'connecting' | 'connected' | 'closing' | 'error';
 
 export interface VoiceState {
