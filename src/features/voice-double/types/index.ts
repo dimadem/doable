@@ -6,3 +6,16 @@ export interface StatusIndicatorProps {
 export interface WaveformVisualizationProps {
   isActive: boolean;
 }
+
+export interface VoiceAgentSettings {
+  tts?: {
+    voice_id?: string;
+  };
+}
+
+export interface VoiceConfig {
+  voice_name: string;
+  agent_id: string;
+  agent_settings: VoiceAgentSettings;
+  api_key?: string;
+}

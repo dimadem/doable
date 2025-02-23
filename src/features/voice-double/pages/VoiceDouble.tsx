@@ -67,33 +67,55 @@ const VoiceDouble: React.FC = () => {
     }
   }, [error, toast]);
 
+  const requestMicrophonePermission = async (): Promise<boolean> => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop());
+      return true;
+    } catch (err) {
+      console.error('Microphone permission error:', err);
+      toast({
+        variant: "destructive",
+        title: "Microphone Access Required",
+        description: "Please allow microphone access to use voice features.",
+      });
+      return false;
+    }
+  };
+
   const handleInteractionToggle = async () => {
     if (status === 'idle') {
-      if (!voiceConfig?.api_key || !voiceConfig?.agent_id) {
+      // Check voice configuration
+      if (!voiceConfig?.api_key || !voiceConfig?.agent_id || !voiceConfig?.agent_settings?.tts?.voice_id) {
         console.error('Missing configuration:', { 
           hasApiKey: !!voiceConfig?.api_key, 
-          hasAgentId: !!voiceConfig?.agent_id 
+          hasAgentId: !!voiceConfig?.agent_id,
+          hasVoiceId: !!voiceConfig?.agent_settings?.tts?.voice_id
         });
         toast({
           variant: "destructive",
           title: "Configuration Error",
-          description: "Voice service not configured. Please check your settings.",
+          description: "Voice service not configured properly. Please check your settings.",
         });
         return;
       }
+
+      // Request microphone permission
+      const hasMicPermission = await requestMicrophonePermission();
+      if (!hasMicPermission) return;
 
       try {
         setStatus('connecting');
         console.log('Starting voice session with config:', {
           agentId: voiceConfig.agent_id,
-          voiceId: voiceConfig.voice_name
+          voiceId: voiceConfig.agent_settings.tts.voice_id
         });
         
         await conversation.startSession({
           agentId: voiceConfig.agent_id,
           overrides: {
             tts: {
-              voiceId: voiceConfig.voice_name
+              voiceId: voiceConfig.agent_settings.tts.voice_id
             }
           }
         });

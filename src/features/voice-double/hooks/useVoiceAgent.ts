@@ -2,14 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import type { Json } from '@/integrations/supabase/types';
-
-interface VoiceConfig {
-  voice_name: string;
-  agent_id: string;
-  agent_settings: Json;
-  api_key?: string;
-}
+import type { VoiceConfig } from '../types';
 
 export const useVoiceAgent = (personalityKey: string) => {
   return useQuery({
@@ -29,6 +22,11 @@ export const useVoiceAgent = (personalityKey: string) => {
 
       if (!voiceConfig.data) {
         throw new Error(`No voice configuration found for personality: ${personalityKey}`);
+      }
+
+      // Validate voice configuration
+      if (!voiceConfig.data.agent_settings?.tts?.voice_id) {
+        throw new Error('Invalid voice configuration: missing voice ID');
       }
 
       // Get API key using edge function
