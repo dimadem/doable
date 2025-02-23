@@ -1,5 +1,5 @@
 
-import { useCallback, useState, useRef, useEffect } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import { useConversation } from '@11labs/react';
 import { sessionLogger } from '@/utils/sessionLogger';
 import { useSession } from '@/contexts/SessionContext';
@@ -7,30 +7,19 @@ import { toast } from '@/components/ui/use-toast';
 import { PUBLIC_AGENT_ID } from '../constants/voice';
 import { useVoiceTimer } from './useVoiceTimer';
 import { useVoiceAudioPermission } from './useVoiceAudioPermission';
-import { saveVoiceContext, loadVoiceContext } from '../services/voiceStorageService';
-import { ConnectionStatus, VoiceConnectionState } from '../types/connection';
-
-const initialState: VoiceConnectionState = {
-  connectionStatus: 'idle',
-  taskState: {
-    currentTask: null,
-    isProcessing: false
-  }
-};
+import { loadVoiceContext } from '../services/voiceStorageService';
+import { useVoiceClientTools } from './useVoiceClientTools';
+import { useVoiceTaskHandler } from './useVoiceTaskHandler';
+import { useVoiceConnectionState } from './useVoiceConnectionState';
 
 export const useVoiceConnection = () => {
   const { personalityData, sessionId, struggleType } = useSession();
-  const [state, setState] = useState<VoiceConnectionState>(initialState);
+  const { state, updateConnectionStatus } = useVoiceConnectionState(sessionId);
   const { permissionState, requestPermission, cleanup: cleanupAudio } = useVoiceAudioPermission();
   const isDisconnectingRef = useRef(false);
-  
-  // Refs for managing client tools
-  const clientToolsRef = useRef<{
-    setTimerState?: (isRunning: boolean) => Promise<void>;
-    setTimerDuration?: (duration: number) => Promise<void>;
-  }>({});
+  const isProcessingRef = useRef(false);
+  const wsReadyRef = useRef(false);
 
-  // Timer handling with completion callback
   const {
     timerState,
     timerDuration,
@@ -41,76 +30,23 @@ export const useVoiceConnection = () => {
     currentTask: state.taskState.currentTask || undefined,
     sessionId,
     onTimerComplete: async () => {
-      if (clientToolsRef.current.setTimerState) {
-        await clientToolsRef.current.setTimerState(false);
+      if (clientTools.set_timer_state) {
+        await clientTools.set_timer_state({ timer_on: false });
       }
-      if (clientToolsRef.current.setTimerDuration) {
-        await clientToolsRef.current.setTimerDuration(0);
-      }
+      setTimerDurationMinutes(0);
     }
   });
 
-  // Refs for managing async operations
-  const isProcessingRef = useRef(false);
-  const wsReadyRef = useRef(false);
-
-  const updateConnectionStatus = useCallback((status: ConnectionStatus) => {
-    setState(prev => ({ ...prev, connectionStatus: status }));
-    sessionLogger.info('Connection status updated', { status, sessionId });
-  }, [sessionId]);
-
-  const handleTask = useCallback(async (task_description: string, end_conversation: boolean) => {
-    if (isProcessingRef.current || !wsReadyRef.current) {
-      sessionLogger.warn('Task handling blocked - processing or WS not ready', { 
-        isProcessing: isProcessingRef.current, 
-        wsReady: wsReadyRef.current 
-      });
-      return;
-    }
-
-    isProcessingRef.current = true;
-    setState(prev => ({
-      ...prev,
-      taskState: {
-        ...prev.taskState,
-        isProcessing: true,
-        currentTask: task_description
-      }
-    }));
-
-    try {
-      saveVoiceContext(
-        task_description,
-        struggleType,
-        timerDuration,
-        timerState,
-        sessionId
-      );
-
-      if (end_conversation && !timerState.isRunning) {
-        updateConnectionStatus('disconnecting');
-      }
-
-      isProcessingRef.current = false;
-      setState(prev => ({
-        ...prev,
-        taskState: {
-          ...prev.taskState,
-          isProcessing: false,
-          currentTask: task_description
-        }
-      }));
-
-      return "Task handled successfully";
-    } catch (error) {
-      isProcessingRef.current = false;
-      setState(prev => ({
-        ...prev,
-        taskState: { ...prev.taskState, isProcessing: false }
-      }));
-      throw error;
-    }
-  }, [sessionId, struggleType, timerDuration, timerState, updateConnectionStatus]);
+  const { clientTools, registerTimerTools } = useVoiceClientTools(wsReadyRef);
+  const { handleTask } = useVoiceTaskHandler({
+    sessionId,
+    struggleType,
+    timerDuration,
+    timerState,
+    updateConnectionStatus,
+    wsReadyRef,
+    isProcessingRef
+  });
 
   const conversation = useConversation({
     clientTools: {
@@ -118,38 +54,16 @@ export const useVoiceConnection = () => {
         sessionLogger.info('Task request received', { task_description, end_conversation });
         return handleTask(task_description, end_conversation);
       },
-      set_timer_duration: async ({ timer_duration }) => {
-        if (!wsReadyRef.current) {
-          return "WebSocket not ready";
-        }
-        
-        sessionLogger.info('Timer duration update requested', { timer_duration });
-        setTimerDurationMinutes(timer_duration);
-
-        clientToolsRef.current.setTimerDuration = async (duration: number) => {
-          setTimerDurationMinutes(duration);
-        };
-
-        return "Timer duration set successfully";
-      },
-      set_timer_state: async ({ timer_on }) => {
-        if (!wsReadyRef.current) {
-          return "WebSocket not ready";
-        }
-
-        const success = setTimerRunning(timer_on);
-
-        clientToolsRef.current.setTimerState = async (isRunning: boolean) => {
-          setTimerRunning(isRunning);
-        };
-
-        return success ? "Timer state updated successfully" : "Cannot start timer without duration";
-      }
+      ...clientTools
     },
     onConnect: () => {
       wsReadyRef.current = true;
       isDisconnectingRef.current = false;
       updateConnectionStatus('connected');
+      
+      // Register timer tools
+      registerTimerTools(setTimerRunning, setTimerDurationMinutes);
+      
       toast({
         title: "Connected",
         description: "Voice connection established"
@@ -161,7 +75,7 @@ export const useVoiceConnection = () => {
       isDisconnectingRef.current = false;
       updateConnectionStatus('idle');
       
-      // Cleanup timer state on disconnect
+      // Cleanup timer state
       setTimerRunning(false);
       setTimerDurationMinutes(0);
       
@@ -245,21 +159,14 @@ export const useVoiceConnection = () => {
       isDisconnectingRef.current = true;
       updateConnectionStatus('disconnecting');
       
-      // Stop timer if running
+      // Cleanup in order
       if (timerState.isRunning) {
         setTimerRunning(false);
       }
-      
-      // Reset timer duration
       setTimerDurationMinutes(0);
-      
-      // Clean up audio first
       cleanupAudio();
-      
-      // Clean up timer
       cleanupTimer();
       
-      // End WebSocket session
       wsReadyRef.current = false;
       await conversation.endSession();
       
@@ -277,7 +184,6 @@ export const useVoiceConnection = () => {
     }
   }, [conversation, sessionId, timerState.isRunning, cleanupAudio, cleanupTimer, updateConnectionStatus, setTimerRunning, setTimerDurationMinutes]);
 
-  // Cleanup effect
   useEffect(() => {
     return () => {
       cleanupTimer();
