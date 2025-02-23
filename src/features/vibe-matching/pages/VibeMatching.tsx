@@ -14,6 +14,7 @@ import ErrorState from '../components/ErrorState';
 import ProgressBar from '../components/ProgressBar';
 import VibeMedia from '../components/VibeMedia';
 import { MAX_STEPS } from '../constants';
+import { CoreTraits, BehaviorPatterns } from '../types';
 
 const ALLOWED_PERSONALITIES = ['emotive', 'hyperthymic', 'persistent_paranoid'];
 
@@ -87,31 +88,37 @@ const VibeMatching: React.FC = () => {
         
         const dominantPersonality = determinePersonality(updatedSelections);
         
-        // Store personality data and verify storage
+        // Convert and validate personality data
+        const coreTraits = selectedPersonality.core_traits as CoreTraits;
+        const behaviorPatterns = selectedPersonality.behavior_patterns as BehaviorPatterns;
+        
         const personalityData = {
           personalityKey: dominantPersonality,
           selections: updatedSelections,
           finalPersonality: dominantPersonality,
-          core_traits: selectedPersonality.core_traits || {},
-          behavior_patterns: selectedPersonality.behavior_patterns || {}
+          core_traits: coreTraits || {},
+          behavior_patterns: behaviorPatterns || {}
         };
 
         const success = updateSessionPersonalityData(personalityData);
         
         if (!success) {
-          throw new Error('Failed to store personality data');
+          throw new Error('Failed to store personality data - invalid data format');
         }
 
-        // Verify session data exists before navigation
+        // Double-check storage success
         const sessionData = getSessionData();
         if (!sessionData?.personalityData) {
-          throw new Error('Session data verification failed');
+          throw new Error('Failed to verify stored personality data');
         }
 
+        console.log('Successfully stored personality data:', sessionData.personalityData);
+        
         navigate('/struggle', { state: { direction: 1 } });
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to process selection';
+      console.error('VibeMatching error:', error);
       setError(message);
       toast({
         title: "Error",
