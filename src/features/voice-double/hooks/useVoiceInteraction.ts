@@ -29,20 +29,19 @@ export const useVoiceInteraction = () => {
       // Request microphone access first
       await navigator.mediaDevices.getUserMedia({ audio: true });
       
-      // Get the agent ID from Supabase
-      const { data: secretData, error: secretError } = await supabase
-        .from('secrets')
-        .select('value')
-        .eq('name', 'ELEVENLABS_AGENT_ID')
-        .single();
+      // Get the agent ID from the voices table
+      const { data: voiceData, error: voiceError } = await supabase
+        .from('voices')
+        .select('agent_id')
+        .maybeSingle();
 
-      if (secretError || !secretData) {
+      if (voiceError || !voiceData?.agent_id) {
         throw new Error('Failed to retrieve agent ID');
       }
 
       // Start the conversation session with the agent ID
       const newConversationId = await conversation.startSession({
-        agentId: secretData.value
+        agentId: voiceData.agent_id
       });
       
       setConversationId(newConversationId);
