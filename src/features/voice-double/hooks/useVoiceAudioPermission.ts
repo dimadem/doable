@@ -11,6 +11,17 @@ export const useVoiceAudioPermission = () => {
     lastCheck: null
   });
 
+  const cleanup = useCallback(() => {
+    if (permissionState.mediaStream) {
+      permissionState.mediaStream.getTracks().forEach(track => track.stop());
+      setPermissionState(prev => ({
+        ...prev,
+        mediaStream: null
+      }));
+      sessionLogger.info('Audio stream cleaned up');
+    }
+  }, [permissionState.mediaStream]);
+
   const requestPermission = useCallback(async () => {
     try {
       sessionLogger.info('Requesting audio permission');
@@ -47,17 +58,6 @@ export const useVoiceAudioPermission = () => {
       return false;
     }
   }, []);
-
-  const cleanup = useCallback(() => {
-    if (permissionState.mediaStream) {
-      permissionState.mediaStream.getTracks().forEach(track => track.stop());
-      setPermissionState(prev => ({
-        ...prev,
-        mediaStream: null
-      }));
-      sessionLogger.info('Audio stream cleaned up');
-    }
-  }, [permissionState.mediaStream]);
 
   useEffect(() => {
     return () => {

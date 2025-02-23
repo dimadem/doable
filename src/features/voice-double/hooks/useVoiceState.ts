@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useVoiceConnection } from './useVoiceConnection';
 import { useVoiceVolume } from './useVoiceVolume';
 import { VoiceState, VoiceContextType } from '../types';
@@ -19,6 +19,8 @@ const initialState: VoiceState = {
 
 export const useVoiceState = (): VoiceContextType => {
   const [state, setState] = useState<VoiceState>(initialState);
+  
+  // Get connection state
   const { 
     connect, 
     disconnect, 
@@ -27,12 +29,14 @@ export const useVoiceState = (): VoiceContextType => {
     timerState,
     permissionState 
   } = useVoiceConnection();
+
+  // Get volume control
   const { setVoiceVolume } = useVoiceVolume();
 
   const startInteraction = useCallback(async () => {
-    setState(prev => ({ ...prev, status: 'connecting' }));
-    
     try {
+      setState(prev => ({ ...prev, status: 'connecting' }));
+      
       const conversationId = await retryWithBackoff(async () => {
         return await connect();
       });
@@ -52,16 +56,13 @@ export const useVoiceState = (): VoiceContextType => {
 
   const stopInteraction = useCallback(async () => {
     try {
-      // Set status to closing to prevent multiple close attempts
       setState(prev => {
-        // Only proceed if not already closing
-        if (prev.status === 'closing') {
-          return prev;
-        }
+        if (prev.status === 'closing') return prev;
         return { ...prev, status: 'closing' };
       });
 
       await disconnect();
+      
       setState(prev => ({ 
         ...prev, 
         status: 'idle',
@@ -85,11 +86,14 @@ export const useVoiceState = (): VoiceContextType => {
     }
   }, [setVoiceVolume]);
 
-  return {
+  // Memoize the return value to prevent unnecessary re-renders
+  const contextValue = useMemo(() => ({
     ...state,
     startInteraction,
     stopInteraction,
     setVolume,
     timerState: timerState || initialState.timerState
-  };
+  }), [state, startInteraction, stopInteraction, setVolume, timerState]);
+
+  return contextValue;
 };
