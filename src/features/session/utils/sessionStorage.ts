@@ -6,22 +6,27 @@ const SESSION_EXPIRY_HOURS = 24;
 
 export const generateSessionId = () => crypto.randomUUID();
 
-export const createLocalSession = () => {
-  const sessionData: LocalSessionData = {
-    sessionId: generateSessionId(),
-    startedAt: new Date().toISOString()
-  };
-  localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
-  return sessionData;
+export const createLocalSession = (): LocalSessionData | null => {
+  try {
+    const sessionData: LocalSessionData = {
+      sessionId: generateSessionId(),
+      startedAt: new Date().toISOString()
+    };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+    return sessionData;
+  } catch (error) {
+    console.error('Failed to create local session:', error);
+    return null;
+  }
 };
 
 export const getSessionData = (): LocalSessionData | null => {
-  const data = localStorage.getItem(SESSION_KEY);
-  if (!data) return null;
-  
   try {
+    const data = localStorage.getItem(SESSION_KEY);
+    if (!data) return null;
     return JSON.parse(data);
-  } catch {
+  } catch (error) {
+    console.error('Failed to get session data:', error);
     return null;
   }
 };
@@ -33,17 +38,27 @@ export const isSessionExpired = (startTime: string): boolean => {
   return currentTime > expiryTime;
 };
 
-export const updateSessionPersonalityData = (personalityData: StoredPersonalityData) => {
-  const currentData = getSessionData();
-  if (!currentData) return;
+export const updateSessionPersonalityData = (personalityData: StoredPersonalityData): boolean => {
+  try {
+    const currentData = getSessionData();
+    if (!currentData) return false;
 
-  const updatedData = {
-    ...currentData,
-    personalityData
-  };
-  localStorage.setItem(SESSION_KEY, JSON.stringify(updatedData));
+    const updatedData = {
+      ...currentData,
+      personalityData
+    };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(updatedData));
+    return true;
+  } catch (error) {
+    console.error('Failed to update personality data:', error);
+    return false;
+  }
 };
 
 export const clearSessionData = () => {
-  localStorage.removeItem(SESSION_KEY);
+  try {
+    localStorage.removeItem(SESSION_KEY);
+  } catch (error) {
+    console.error('Failed to clear session data:', error);
+  }
 };

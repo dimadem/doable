@@ -18,13 +18,22 @@ const Hero = () => {
       return;
     }
     
-    // If we don't have a session, create one
+    // Create a new session if needed and ensure it exists before navigation
     if (!sessionData) {
-      createLocalSession();
+      const newSession = createLocalSession();
+      if (!newSession) {
+        console.error('Failed to create session');
+        return;
+      }
     }
     
-    // Always navigate to vibe-matching after ensuring we have a session
-    navigate('/vibe-matching');
+    // Double check we have a valid session before navigating
+    const currentSession = getSessionData();
+    if (currentSession?.sessionId) {
+      navigate('/vibe-matching');
+    } else {
+      console.error('Session validation failed');
+    }
   };
 
   return (
