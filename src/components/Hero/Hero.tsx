@@ -1,27 +1,27 @@
+
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { pageVariants } from '@/animations/pageTransitions';
-import { useSession } from '@/contexts/SessionContext';
 import { AppHeader } from '../layouts/AppHeader';
-import { getSessionData } from '@/utils/sessionUtils';
+import { createLocalSession, getSessionData } from '@/utils/sessionUtils';
 
 const Hero = () => {
   const navigate = useNavigate();
-  const { sessionId, loading, startSession } = useSession();
-  const storedData = getSessionData();
+  const sessionData = getSessionData();
 
-  const handleStart = async () => {
-    if (storedData.sessionId && storedData.personalityData) {
+  const handleStart = () => {
+    if (sessionData?.personalityData) {
       navigate('/struggle');
       return;
     }
-
-    const success = await startSession();
-    if (success) {
-      navigate('/vibe-matching');
+    
+    if (!sessionData?.sessionId) {
+      createLocalSession();
     }
+    
+    navigate('/vibe-matching');
   };
 
   return (
@@ -53,12 +53,11 @@ const Hero = () => {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={handleStart}
-          disabled={loading}
           className="group inline-flex items-center gap-2 font-mono px-8 py-4 bg-black text-white 
                    border-2 border-white font-bold text-lg transition-all duration-300 
-                   hover:bg-white hover:text-black disabled:opacity-50 disabled:cursor-not-allowed"
+                   hover:bg-white hover:text-black"
         >
-          {loading ? 'Loading...' : (storedData.sessionId ? 'Continue Journey' : 'Start Journey')}
+          {sessionData?.personalityData ? 'Continue Journey' : 'Start Journey'}
           <ArrowRight className="transition-transform group-hover:translate-x-1" />
         </motion.button>
       </motion.div>

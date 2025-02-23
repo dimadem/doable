@@ -10,6 +10,23 @@ export interface StoredPersonalityData {
   finalPersonality: string;
 }
 
+interface LocalSessionData {
+  sessionId: string;
+  startedAt: string;
+  personalityData?: StoredPersonalityData;
+}
+
+export const generateSessionId = () => crypto.randomUUID();
+
+export const createLocalSession = () => {
+  const sessionData: LocalSessionData = {
+    sessionId: generateSessionId(),
+    startedAt: new Date().toISOString()
+  };
+  localStorage.setItem('sessionData', JSON.stringify(sessionData));
+  return sessionData;
+};
+
 export const isSessionExpired = (startTime: string): boolean => {
   const sessionStart = new Date(startTime).getTime();
   const currentTime = new Date().getTime();
@@ -17,17 +34,22 @@ export const isSessionExpired = (startTime: string): boolean => {
   return currentTime > expiryTime;
 };
 
-export const getSessionData = () => {
-  const sessionId = localStorage.getItem('sessionId');
-  const personalityData = localStorage.getItem('personalityData');
-  
-  return {
-    sessionId,
-    personalityData: personalityData ? JSON.parse(personalityData) : null
-  };
+export const getSessionData = (): LocalSessionData | null => {
+  const data = localStorage.getItem('sessionData');
+  return data ? JSON.parse(data) : null;
+};
+
+export const updateSessionPersonalityData = (personalityData: StoredPersonalityData) => {
+  const currentData = getSessionData();
+  if (currentData) {
+    const updatedData = {
+      ...currentData,
+      personalityData
+    };
+    localStorage.setItem('sessionData', JSON.stringify(updatedData));
+  }
 };
 
 export const clearSessionData = () => {
-  localStorage.removeItem('sessionId');
-  localStorage.removeItem('personalityData');
+  localStorage.removeItem('sessionData');
 };

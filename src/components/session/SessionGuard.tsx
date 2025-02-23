@@ -1,8 +1,7 @@
 
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSession } from '@/contexts/SessionContext';
-import { toast } from "@/components/ui/use-toast";
+import { getSessionData } from '@/utils/sessionUtils';
 
 interface SessionGuardProps {
   children: React.ReactNode;
@@ -10,26 +9,21 @@ interface SessionGuardProps {
 
 export const SessionGuard = ({ children }: SessionGuardProps) => {
   const navigate = useNavigate();
-  const { sessionId, loading } = useSession();
+  const sessionData = getSessionData();
 
   useEffect(() => {
-    if (!loading && !sessionId) {
-      toast({
-        variant: "destructive",
-        title: "Session Required",
-        description: "Please start your journey from the home page."
-      });
+    if (!sessionData?.sessionId) {
       navigate('/');
     }
-  }, [sessionId, loading, navigate]);
+  }, [navigate]);
 
-  if (loading) {
+  if (!sessionData?.sessionId) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-black">
-        <div className="font-mono text-white">Loading...</div>
+        <div className="font-mono text-white">Redirecting...</div>
       </div>
     );
   }
 
-  return sessionId ? <>{children}</> : null;
+  return <>{children}</>;
 };

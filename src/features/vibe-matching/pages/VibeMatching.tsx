@@ -5,22 +5,21 @@ import { useNavigate } from 'react-router-dom';
 import { AppHeader } from '@/components/layouts/AppHeader';
 import { pageVariants } from '@/animations/pageTransitions';
 import { useToast } from '@/hooks/use-toast';
-import { determinePersonality, saveUserSession } from '../services/personalityService';
+import { determinePersonality } from '../services/personalityService';
 import { usePersonalities } from '../hooks/usePersonalities';
 import { useVibeState } from '../hooks/useVibeState';
-import { useSession } from '@/contexts/SessionContext';
+import { updateSessionPersonalityData } from '@/utils/sessionUtils';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import ProgressBar from '../components/ProgressBar';
 import VibeMedia from '../components/VibeMedia';
-import { MAX_STEPS, MEDIA_PER_STEP } from '../constants';
+import { MAX_STEPS } from '../constants';
 
 const ALLOWED_PERSONALITIES = ['emotive', 'hyperthymic', 'persistent_paranoid'];
 
 const VibeMatching: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { setPersonalityData } = useSession();
   const { personalities, loading, error: loadError } = usePersonalities();
   const { step, selections, error, selectVibe, setError, reset } = useVibeState();
 
@@ -88,12 +87,12 @@ const VibeMatching: React.FC = () => {
         
         const dominantPersonality = determinePersonality(updatedSelections);
         
-        await saveUserSession(
-          dominantPersonality, 
-          updatedSelections,
-          personalities,
-          setPersonalityData // Pass the setPersonalityData function
-        );
+        // Store personality data locally
+        updateSessionPersonalityData({
+          personalityKey: dominantPersonality,
+          selections: updatedSelections,
+          finalPersonality: dominantPersonality
+        });
         
         navigate('/struggle', { state: { direction: 1 } });
       }
@@ -106,7 +105,7 @@ const VibeMatching: React.FC = () => {
         variant: "destructive"
       });
     }
-  }, [personalities, step, selections, selectVibe, setError, toast, navigate, setPersonalityData]);
+  }, [personalities, step, selections, selectVibe, setError, toast, navigate]);
 
   if (loading) return <LoadingState />;
   if (loadError || error) return <ErrorState error={error || loadError} onRetry={reset} />;
