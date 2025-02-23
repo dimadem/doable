@@ -1,7 +1,6 @@
 
 import { Suspense, lazy } from 'react';
 import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
@@ -18,7 +17,6 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
 
-// Loading fallback component
 const LoadingFallback = () => (
   <div className="h-[100svh] w-full flex items-center justify-center bg-black">
     <div className="text-white font-mono animate-pulse">Loading...</div>
@@ -67,14 +65,12 @@ const AnimatedRoutes = () => {
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <BrowserRouter>
-          <SessionProvider>
-            <Toaster />
-            <AnimatedRoutes />
-          </SessionProvider>
-        </BrowserRouter>
-      </TooltipProvider>
+      <BrowserRouter>
+        <SessionProvider>
+          <Toaster />
+          <AnimatedRoutes />
+        </SessionProvider>
+      </BrowserRouter>
     </QueryClientProvider>
   </ErrorBoundary>
 );
