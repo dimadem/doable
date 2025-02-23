@@ -12,6 +12,14 @@ import { Button } from '@/components/ui/button';
 import { AppHeader } from '@/components/layouts/AppHeader';
 import { getSessionData } from '@/features/session/utils/sessionStorage';
 import { sessionLogger } from '@/utils/sessionLogger';
+import { StoredPersonalityData } from '@/features/session/types/session.types';
+import { CoreTraits, BehaviorPatterns } from '@/features/vibe-matching/types';
+
+interface PersonalityInfo {
+  name: string;
+  core_traits: CoreTraits;
+  behavior_patterns: BehaviorPatterns;
+}
 
 const formatTraits = (traits: Record<string, any> | null) => {
   if (!traits) return {};
@@ -24,7 +32,11 @@ const formatTraits = (traits: Record<string, any> | null) => {
 };
 
 const isStoredPersonalityData = (data: any): data is StoredPersonalityData => {
-  return data && 'personalityKey' in data && 'selections' in data;
+  return data && typeof data === 'object' && 'personalityKey' in data && 'selections' in data;
+};
+
+const isPersonalityInfo = (data: any): data is PersonalityInfo => {
+  return data && typeof data === 'object' && 'name' in data && 'core_traits' in data;
 };
 
 const Struggle: React.FC = () => {
@@ -32,7 +44,6 @@ const Struggle: React.FC = () => {
   const { toast } = useToast();
   const sessionData = getSessionData();
 
-  // Only fetch if we don't have local data
   const { data: sessionResponse } = useQuery<SessionResponse>({
     queryKey: ['latestSession'],
     queryFn: fetchLatestSession,
@@ -79,11 +90,17 @@ const Struggle: React.FC = () => {
 
     try {
       const personality: PersonalityAnalysis = {
-        type: isStoredPersonalityData(personalityData) ? personalityData.finalPersonality : personalityData,
+        type: isStoredPersonalityData(personalityData) 
+          ? personalityData.finalPersonality 
+          : typeof personalityData === 'string' 
+            ? personalityData 
+            : personalityData.name,
         traits: formatTraits(
-          isStoredPersonalityData(personalityData) && 'core_traits' in personalityData 
+          isStoredPersonalityData(personalityData) && personalityData.core_traits
             ? personalityData.core_traits 
-            : null
+            : isPersonalityInfo(personalityData)
+              ? personalityData.core_traits
+              : null
         ),
         patterns: {},
         selections: isStoredPersonalityData(personalityData) 
@@ -91,10 +108,16 @@ const Struggle: React.FC = () => {
           : sessionResponse?.session_data?.selections || []
       };
 
+      const personalityKey = isStoredPersonalityData(personalityData)
+        ? personalityData.finalPersonality
+        : typeof personalityData === 'string'
+          ? personalityData
+          : personalityData.name;
+
       await updateSessionStruggleType(
         sessionData.sessionId,
         struggleType,
-        isStoredPersonalityData(personalityData) ? personalityData.finalPersonality : personalityData,
+        personalityKey,
         personality
       );
       
@@ -119,7 +142,6 @@ const Struggle: React.FC = () => {
     }
   };
 
-  // Show loading state while fetching data
   if (!sessionData?.personalityData && !sessionResponse) {
     return (
       <motion.div
@@ -141,13 +163,17 @@ const Struggle: React.FC = () => {
   const personality: PersonalityAnalysis | null = personalityInfo ? {
     type: isStoredPersonalityData(personalityInfo) 
       ? personalityInfo.finalPersonality 
-      : typeof personalityInfo === 'string' 
-        ? personalityInfo 
-        : personalityInfo.name,
+      : isPersonalityInfo(personalityInfo)
+        ? personalityInfo.name
+        : typeof personalityInfo === 'string'
+          ? personalityInfo
+          : '',
     traits: formatTraits(
-      isStoredPersonalityData(personalityInfo) && 'core_traits' in personalityInfo 
-        ? personalityInfo.core_traits 
-        : null
+      isStoredPersonalityData(personalityInfo) && personalityInfo.core_traits
+        ? personalityInfo.core_traits
+        : isPersonalityInfo(personalityInfo)
+          ? personalityInfo.core_traits
+          : null
     ),
     patterns: {},
     selections: isStoredPersonalityData(personalityInfo)
