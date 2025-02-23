@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { AppHeader } from '@/components/layouts/AppHeader';
 import { getSessionData } from '@/features/session/utils/sessionStorage';
+import { sessionLogger } from '@/utils/sessionLogger';
 
 const formatTraits = (traits: Record<string, any> | null) => {
   if (!traits) return {};
@@ -35,12 +36,13 @@ const Struggle: React.FC = () => {
     meta: {
       onSettled: (data, error) => {
         if (error) {
+          sessionLogger.error('Failed to load session data', error);
           toast({
             title: "Error",
             description: "Failed to load session data",
             variant: "destructive",
           });
-          navigate('/'); // Redirect to home on error
+          navigate('/');
         }
       }
     }
@@ -48,6 +50,7 @@ const Struggle: React.FC = () => {
 
   const handleStruggleTypeSelect = async (struggleType: StruggleType) => {
     if (!sessionData?.sessionId) {
+      sessionLogger.error('No active session found');
       toast({
         title: "Error",
         description: "No active session found",
@@ -60,6 +63,7 @@ const Struggle: React.FC = () => {
     const personalityData = sessionData.personalityData || sessionResponse?.personalities?.name;
 
     if (!personalityData) {
+      sessionLogger.error('No personality type found');
       toast({
         title: "Error",
         description: "No personality type found",
@@ -70,12 +74,30 @@ const Struggle: React.FC = () => {
     }
 
     try {
+      const personality: PersonalityAnalysis = {
+        type: typeof personalityData === 'string' ? personalityData : personalityData.finalPersonality,
+        traits: formatTraits(
+          typeof personalityData === 'object' && 'core_traits' in personalityData 
+            ? personalityData.core_traits 
+            : null
+        ),
+        patterns: {},
+        selections: sessionResponse?.session_data.selections || 
+                   ('selections' in personalityData ? personalityData.selections : [])
+      };
+
       await updateSessionStruggleType(
         sessionData.sessionId,
         struggleType,
-        typeof personalityData === 'string' ? personalityData : personalityData.finalPersonality
+        typeof personalityData === 'string' ? personalityData : personalityData.finalPersonality,
+        personality
       );
       
+      sessionLogger.info('Struggle type updated successfully', {
+        struggleType,
+        sessionId: sessionData.sessionId
+      });
+
       toast({
         title: "Success",
         description: `${struggleType.replace('_', ' ')} mode activated`,
@@ -83,6 +105,7 @@ const Struggle: React.FC = () => {
       
       navigate('/voice-double');
     } catch (error) {
+      sessionLogger.error('Failed to update struggle type', error);
       toast({
         title: "Error",
         description: "Failed to update struggle type",

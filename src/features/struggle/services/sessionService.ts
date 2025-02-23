@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { SessionResponse } from '../types';
+import { SessionResponse, PersonalityAnalysis } from '../types';
+import { sessionLogger } from '@/utils/sessionLogger';
 
 export const fetchLatestSession = async (): Promise<SessionResponse> => {
   const { data: sessionData, error: sessionError } = await supabase
@@ -20,22 +21,11 @@ export const fetchLatestSession = async (): Promise<SessionResponse> => {
     .single();
 
   if (sessionError) {
+    sessionLogger.error('Failed to fetch session data', sessionError);
     throw new Error('Failed to fetch session data');
   }
 
   return sessionData as unknown as SessionResponse;
-};
-
-export const updateSessionStartTime = async (sessionId: string): Promise<void> => {
-  const { error } = await supabase
-    .from('user_sessions')
-    .update({ started_at: new Date().toISOString() })
-    .eq('id', sessionId);
-
-  if (error) {
-    console.error('Supabase error:', error);
-    throw new Error(`Failed to update session start time: ${error.message}`);
-  }
 };
 
 export type StruggleType = 'pomodoro' | 'hard_task' | 'deep_focus';
@@ -48,7 +38,7 @@ const getVoiceForPersonality = async (personalityName: string) => {
     .maybeSingle();
 
   if (error) {
-    console.error('Error fetching voice:', error);
+    sessionLogger.error('Error fetching voice', error);
     throw new Error(`Failed to fetch voice for personality: ${error.message}`);
   }
 
@@ -58,23 +48,43 @@ const getVoiceForPersonality = async (personalityName: string) => {
 export const updateSessionStruggleType = async (
   sessionId: string,
   struggleType: StruggleType,
-  personalityName: string
+  personalityName: string,
+  personalityData?: PersonalityAnalysis
 ): Promise<void> => {
+  sessionLogger.info('Updating session struggle type', {
+    sessionId,
+    struggleType,
+    personalityName
+  });
+
   // First get the matching voice
   const matchingVoice = await getVoiceForPersonality(personalityName);
   
-  // Update struggle_type, relevant_agent, and started_at in one operation
+  // Prepare session data update
+  const updateData = {
+    struggle_type: struggleType,
+    relevant_agent: matchingVoice?.voice_name || null,
+    started_at: new Date().toISOString(),
+    personality_key: personalityName,
+    session_data: personalityData ? {
+      ...personalityData,
+      updatedAt: new Date().toISOString()
+    } : undefined
+  };
+
   const { error } = await supabase
     .from('user_sessions')
-    .update({ 
-      struggle_type: struggleType,
-      relevant_agent: matchingVoice?.voice_name || null,
-      started_at: new Date().toISOString() // Add the timestamp here
-    })
-    .eq('id', sessionId);
+    .update(updateData)
+    .eq('session_id', sessionId);
 
   if (error) {
-    console.error('Supabase error:', error);
+    sessionLogger.error('Supabase error updating session', error);
     throw new Error(`Failed to update session: ${error.message}`);
   }
+
+  sessionLogger.info('Session updated successfully', {
+    sessionId,
+    struggleType,
+    personalityName
+  });
 };
