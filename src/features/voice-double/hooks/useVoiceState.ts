@@ -45,16 +45,10 @@ export const useVoiceState = (): VoiceContextType => {
       set_task: async ({ task_description, end_conversation = false }) => {
         sessionLogger.info('Task update received', { task_description, end_conversation });
         
-        // Only allow ending conversation if explicitly requested by agent and no timer is running
+        // Only end the conversation if explicitly requested by agent and no timer is running
         if (end_conversation && !timerState.isRunning) {
-          await conversation.send({ 
-            type: 'message',
-            data: { 
-              end_conversation: true,
-              task_completed: true,
-            }
-          });
           await stopInteraction();
+          return "Task completed and conversation ended";
         }
         return "Task handled";
       }
@@ -113,7 +107,7 @@ export const useVoiceState = (): VoiceContextType => {
         agentId: PUBLIC_AGENT_ID,
         dynamicVariables: {
           personality: personalityData?.finalPersonality || 'default',
-          end_conversation: false,  // Always start with end_conversation false
+          end_conversation: false,
           timer_active: false,
           timer_duration: 0
         }
@@ -152,24 +146,12 @@ export const useVoiceState = (): VoiceContextType => {
       isDisconnectingRef.current = true;
       setState(prev => ({ ...prev, status: 'disconnecting' }));
       
+      // Reset timer state if it's running
       if (timerState.isRunning) {
         setTimerState(prev => ({ ...prev, isRunning: false }));
       }
 
-      // When manually stopping, inform agent that end_conversation is false
       if (conversationRef.current) {
-        try {
-          await conversationRef.current.send({ 
-            type: 'message',
-            data: { 
-              end_conversation: false,
-              manual_stop: true 
-            }
-          });
-        } catch (error) {
-          console.log('Error sending end conversation message:', error);
-        }
-        
         console.log('Ending conversation session...');
         await conversationRef.current.endSession();
       }
