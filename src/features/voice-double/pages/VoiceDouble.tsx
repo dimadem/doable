@@ -64,7 +64,6 @@ const VoiceDouble = () => {
     }
   }, []);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (isActive) {
@@ -76,15 +75,40 @@ const VoiceDouble = () => {
     };
   }, [conversation, isActive, cleanupAudioResources]);
 
+  const requestMicrophoneAccess = async () => {
+    try {
+      // First, request basic microphone access with minimal constraints
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true
+        }
+      });
+
+      sessionLogger.info('Basic microphone access granted');
+      
+      // Stop the initial stream as we'll create a new one with specific constraints
+      stream.getTracks().forEach(track => track.stop());
+      
+      return true;
+    } catch (error) {
+      sessionLogger.error('Error requesting microphone access', error);
+      throw new Error('Please grant microphone access to use voice features');
+    }
+  };
+
   const initializeAudioStream = async () => {
     try {
-      // Create AudioContext with specific sample rate for ElevenLabs
+      // First ensure we have microphone permission
+      await requestMicrophoneAccess();
+
+      // Then create AudioContext with specific sample rate
       audioContextRef.current = new AudioContext({
         sampleRate: 24000,
         latencyHint: 'interactive'
       });
 
-      // Request microphone access with specific constraints
+      // Now request stream with specific constraints for ElevenLabs
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -96,15 +120,23 @@ const VoiceDouble = () => {
       });
 
       micStreamRef.current = stream;
+      
+      // Create audio nodes to ensure audio is flowing
+      const source = audioContextRef.current.createMediaStreamSource(stream);
+      const destination = audioContextRef.current.createMediaStreamDestination();
+      source.connect(destination);
+
       sessionLogger.info('Audio stream initialized', {
         sampleRate: audioContextRef.current.sampleRate,
-        tracks: stream.getAudioTracks().length
+        tracks: stream.getAudioTracks().length,
+        audioContextState: audioContextRef.current.state
       });
 
       return stream;
     } catch (error) {
       sessionLogger.error('Error initializing audio stream', error);
-      throw new Error('Microphone access is required. Please allow microphone access and try again.');
+      cleanupAudioResources();
+      throw new Error('Failed to initialize audio. Please ensure microphone access is granted and try again.');
     }
   };
 
@@ -134,13 +166,13 @@ const VoiceDouble = () => {
         sessionLogger.info('Ended conversation');
       } else {
         setIsConnecting(true);
-
-        // Initialize audio stream before starting session
-        await initializeAudioStream();
         
-        // Get fresh session data
+        // Get fresh session data first
         const data = await getSessionData();
         setSessionData(data);
+
+        // Then initialize audio stream
+        await initializeAudioStream();
 
         sessionLogger.info('Starting session', {
           agentId: data.agentId,
