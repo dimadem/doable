@@ -43,7 +43,8 @@ export const useVoiceConnection = () => {
         
         setCurrentTask(task_description);
         
-        if (end_conversation && !isClosing.current) {
+        // Only end the conversation if explicitly requested and not in a timer interaction
+        if (end_conversation && !isClosing.current && !timerState.isRunning) {
           isClosing.current = true;
           sessionLogger.info('Agent requesting session end', {
             task_description,

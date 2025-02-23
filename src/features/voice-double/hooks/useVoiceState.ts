@@ -10,12 +10,23 @@ const initialState: VoiceState = {
   status: 'idle',
   isSpeaking: false,
   conversationId: null,
-  volume: 1
+  volume: 1,
+  timerState: {
+    isRunning: false,
+    remainingTime: 0
+  }
 };
 
 export const useVoiceState = (): VoiceContextType => {
   const [state, setState] = useState<VoiceState>(initialState);
-  const { connect, disconnect } = useVoiceConnection();
+  const { 
+    connect, 
+    disconnect, 
+    status, 
+    isSpeaking, 
+    timerState,
+    permissionState 
+  } = useVoiceConnection();
   const { setVoiceVolume } = useVoiceVolume();
 
   const startInteraction = useCallback(async () => {
@@ -29,14 +40,15 @@ export const useVoiceState = (): VoiceContextType => {
       setState(prev => ({ 
         ...prev, 
         status: 'connected',
-        conversationId 
+        conversationId,
+        timerState 
       }));
     } catch (error) {
       setState(prev => ({ ...prev, status: 'error' }));
       sessionLogger.error('Failed to start voice interaction', error);
       throw error;
     }
-  }, [connect]);
+  }, [connect, timerState]);
 
   const stopInteraction = useCallback(async () => {
     try {
@@ -77,6 +89,7 @@ export const useVoiceState = (): VoiceContextType => {
     ...state,
     startInteraction,
     stopInteraction,
-    setVolume
+    setVolume,
+    timerState: timerState || initialState.timerState
   };
 };
