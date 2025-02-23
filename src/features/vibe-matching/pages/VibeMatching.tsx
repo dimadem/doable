@@ -1,3 +1,4 @@
+
 import React, { useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -64,6 +65,12 @@ const VibeMatching: React.FC = () => {
 
   const handleImageSelect = useCallback(async (imageUrl: string) => {
     try {
+      // Verify session exists before proceeding
+      const sessionData = getSessionData();
+      if (!sessionData) {
+        throw new Error('No active session found');
+      }
+
       const selectedPersonality = personalities?.find(p => 
         p.url_array?.includes(imageUrl)
       );
@@ -98,13 +105,19 @@ const VibeMatching: React.FC = () => {
           })
         };
 
+        // Try to store personality data with verification
         const success = updateSessionPersonalityData(personalityData);
-        
         if (!success) {
           throw new Error('Failed to store personality data');
         }
 
-        console.log('Successfully stored personality data:', personalityData);
+        // Verify the data was stored correctly
+        const verifiedData = getSessionData();
+        if (!verifiedData?.personalityData) {
+          throw new Error('Failed to verify stored personality data');
+        }
+
+        console.log('Successfully stored personality data:', verifiedData.personalityData);
         
         navigate('/struggle', { state: { direction: 1 } });
       }

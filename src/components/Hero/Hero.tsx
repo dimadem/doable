@@ -6,33 +6,53 @@ import { useNavigate } from 'react-router-dom';
 import { pageVariants } from '@/animations/pageTransitions';
 import { AppHeader } from '../layouts/AppHeader';
 import { createLocalSession, getSessionData } from '@/features/session/utils/sessionStorage';
+import { useToast } from '@/hooks/use-toast';
 
 const Hero = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const sessionData = getSessionData();
 
   const handleStart = () => {
-    // If we have personality data, go to struggle
-    if (sessionData?.personalityData) {
-      navigate('/struggle');
-      return;
-    }
-    
-    // Create a new session if needed and ensure it exists before navigation
-    if (!sessionData) {
-      const newSession = createLocalSession();
-      if (!newSession) {
-        console.error('Failed to create session');
+    try {
+      // If we have personality data, go to struggle
+      if (sessionData?.personalityData) {
+        navigate('/struggle');
         return;
       }
-    }
-    
-    // Double check we have a valid session before navigating
-    const currentSession = getSessionData();
-    if (currentSession?.sessionId) {
+      
+      // Clear any existing session if we're starting fresh
+      if (!sessionData) {
+        const newSession = createLocalSession();
+        if (!newSession) {
+          toast({
+            title: "Error",
+            description: "Failed to create session. Please try again.",
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        // Verify session was created successfully
+        const verifiedSession = getSessionData();
+        if (!verifiedSession) {
+          toast({
+            title: "Error",
+            description: "Session verification failed. Please try again.",
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+      
       navigate('/vibe-matching');
-    } else {
-      console.error('Session validation failed');
+    } catch (error) {
+      console.error('Error starting session:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start journey. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
