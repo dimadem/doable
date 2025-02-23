@@ -14,11 +14,14 @@ serve(async (req) => {
 
   try {
     const apiKey = Deno.env.get('ELEVENLABS_API_KEY');
-    const agentId = Deno.env.get('ELEVENLABS_AGENT_ID') || 'TGp0ve1q0XQurppvTzrO';  // Default to public agent if none set
-
+    
     if (!apiKey) {
+      console.error('ElevenLabs API key not found');
       throw new Error('ElevenLabs API key not configured');
     }
+
+    // Using a default public agent if none is specified
+    const agentId = 'TGp0ve1q0XQurppvTzrO';
 
     console.log('Fetching signed URL for agent:', agentId);
 
@@ -41,21 +44,37 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    console.log('Received signed URL and agent ID:', { signed_url: data.signed_url, agent_id: agentId });
+    
+    if (!data.signed_url) {
+      console.error('No signed URL in response:', data);
+      throw new Error('No signed URL returned from ElevenLabs');
+    }
+
+    console.log('Successfully received signed URL');
+    
+    const responseData = {
+      signed_url: data.signed_url,
+      agent_id: agentId
+    };
+
+    console.log('Sending response:', responseData);
     
     return new Response(
-      JSON.stringify({ 
-        signed_url: data.signed_url,
-        agent_id: agentId 
-      }),
+      JSON.stringify(responseData),
       { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        }
       },
     );
   } catch (error) {
     console.error('Error in get-eleven-labs-key:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: 'Failed to get ElevenLabs signed URL'
+      }),
       { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
