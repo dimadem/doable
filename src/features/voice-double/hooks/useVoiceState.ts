@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useConversation } from '@11labs/react';
 import { sessionLogger } from '@/utils/sessionLogger';
 import { toast } from '@/components/ui/use-toast';
@@ -23,6 +23,7 @@ export const useVoiceState = (): VoiceContextType => {
   const { personalityData, sessionId } = useSession();
   const [state, setState] = useState<VoiceState>(initialState);
   const [timerState, setTimerState] = useState<TimerState>(initialTimerState);
+  const conversationRef = useRef<ReturnType<typeof useConversation>>();
   const isConnectingRef = useRef(false);
   const isDisconnectingRef = useRef(false);
   
@@ -43,7 +44,6 @@ export const useVoiceState = (): VoiceContextType => {
       },
       set_task: async ({ task_description, end_conversation = false }) => {
         sessionLogger.info('Task update received', { task_description, end_conversation });
-        // Only end conversation if explicitly requested AND no timer is running
         if (end_conversation && !timerState.isRunning) {
           await stopInteraction();
         }
@@ -51,6 +51,7 @@ export const useVoiceState = (): VoiceContextType => {
       }
     },
     onConnect: () => {
+      console.log('WebSocket connected');
       isConnectingRef.current = false;
       setState(prev => ({ ...prev, status: 'connected' }));
       toast({
@@ -59,16 +60,14 @@ export const useVoiceState = (): VoiceContextType => {
       });
     },
     onDisconnect: () => {
+      console.log('WebSocket disconnected');
       isConnectingRef.current = false;
       isDisconnectingRef.current = false;
       setState(initialState);
       setTimerState(initialTimerState);
-      toast({
-        title: "Disconnected",
-        description: "Voice connection closed"
-      });
     },
     onError: (error) => {
+      console.error('WebSocket error:', error);
       isConnectingRef.current = false;
       isDisconnectingRef.current = false;
       setState(prev => ({ ...prev, status: 'error' }));
@@ -81,9 +80,15 @@ export const useVoiceState = (): VoiceContextType => {
     }
   });
 
+  // Store conversation instance in ref to ensure consistency
+  useEffect(() => {
+    conversationRef.current = conversation;
+  }, [conversation]);
+
   const startInteraction = useCallback(async () => {
-    // Prevent multiple connection attempts
+    console.log('Starting interaction, current status:', state.status);
     if (isConnectingRef.current || state.status === 'connected') {
+      console.log('Already connecting or connected, skipping');
       return;
     }
 
@@ -91,6 +96,10 @@ export const useVoiceState = (): VoiceContextType => {
       isConnectingRef.current = true;
       setState(prev => ({ ...prev, status: 'connecting' }));
       
+      console.log('Requesting microphone permission...');
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      console.log('Starting conversation session...');
       const conversationId = await conversation.startSession({
         agentId: PUBLIC_AGENT_ID,
         dynamicVariables: {
@@ -101,22 +110,32 @@ export const useVoiceState = (): VoiceContextType => {
         }
       });
 
-      // Only update the conversationId, let onConnect handle the status change
+      console.log('Session started, updating state with conversationId:', conversationId);
       setState(prev => ({ 
         ...prev,
         conversationId 
       }));
     } catch (error) {
+      console.error('Failed to start interaction:', error);
       isConnectingRef.current = false;
       setState(prev => ({ ...prev, status: 'error' }));
       sessionLogger.error('Failed to start voice interaction', error);
+      
+      if (error instanceof Error) {
+        toast({
+          variant: "destructive",
+          title: "Connection Error",
+          description: error.message || "Failed to establish voice connection"
+        });
+      }
       throw error;
     }
   }, [conversation, personalityData, state.status]);
 
   const stopInteraction = useCallback(async () => {
-    // Prevent multiple disconnection attempts
+    console.log('Stopping interaction, current status:', state.status);
     if (isDisconnectingRef.current || state.status === 'idle') {
+      console.log('Already disconnecting or idle, skipping');
       return;
     }
 
@@ -128,15 +147,27 @@ export const useVoiceState = (): VoiceContextType => {
         setTimerState(prev => ({ ...prev, isRunning: false }));
       }
       
-      await conversation.endSession();
-      // Let onDisconnect handle the state reset
+      if (conversationRef.current) {
+        console.log('Ending conversation session...');
+        await conversationRef.current.endSession();
+      }
     } catch (error) {
+      console.error('Failed to stop interaction:', error);
       isDisconnectingRef.current = false;
       setState(prev => ({ ...prev, status: 'error' }));
       sessionLogger.error('Failed to stop voice interaction', error);
       throw error;
     }
-  }, [conversation, state.status, timerState.isRunning]);
+  }, [state.status, timerState.isRunning]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (state.status !== 'idle') {
+        stopInteraction().catch(console.error);
+      }
+    };
+  }, [stopInteraction, state.status]);
 
   return {
     ...state,
