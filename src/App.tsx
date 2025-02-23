@@ -11,6 +11,7 @@ import { VoiceDouble } from "./features/voice-double";
 import NotFound from "./pages/NotFound";
 import { SessionProvider } from "./contexts/SessionContext";
 import { SessionGuard } from "./components/session/SessionGuard";
+import { ErrorBoundary } from "./components/error/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
@@ -52,16 +53,18 @@ const AnimatedRoutes = () => {
 };
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <BrowserRouter>
-        <SessionProvider>
-          <Toaster />
-          <AnimatedRoutes />
-        </SessionProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <BrowserRouter>
+          <SessionProvider>
+            <Toaster />
+            <AnimatedRoutes />
+          </SessionProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

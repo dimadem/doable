@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { SessionSelection } from '@/features/vibe-matching/types';
+import { isSessionExpired, getSessionData, clearSessionData } from '@/utils/sessionUtils';
 
 interface SessionState {
   sessionId: string | null;
@@ -12,12 +13,14 @@ interface SessionState {
     selections: SessionSelection[];
     finalPersonality: string;
   };
+  error: Error | null;
 }
 
 interface SessionContextType extends SessionState {
   startSession: () => Promise<void>;
   endSession: () => void;
   setPersonalityData: (personalityKey: string, selections: SessionSelection[]) => void;
+  validateSession: () => Promise<boolean>;
 }
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
@@ -30,25 +33,79 @@ const DEFAULT_PERSONALITY = 'neutral';
 export const SessionProvider = ({ children }: { children: React.ReactNode }) => {
   const [state, setState] = useState<SessionState>({
     sessionId: null,
-    loading: true
+    loading: true,
+    error: null
   });
 
+  const validateSession = async () => {
+    try {
+      if (!state.sessionId) return false;
+
+      const { data, error } = await supabase
+        .from('user_sessions')
+        .select('started_at')
+        .eq('id', state.sessionId)
+        .single();
+
+      if (error) throw error;
+      if (!data?.started_at) return false;
+
+      // Check if session is expired
+      if (isSessionExpired(data.started_at)) {
+        endSession();
+        toast({
+          title: "Session Expired",
+          description: "Your session has expired. Please start a new session.",
+          variant: "destructive"
+        });
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Session validation error:', error);
+      endSession();
+      return false;
+    }
+  };
+
   useEffect(() => {
-    const savedSessionId = localStorage.getItem('sessionId');
-    const savedPersonalityData = localStorage.getItem('personalityData');
-    
-    setState(prev => ({
-      ...prev,
-      sessionId: savedSessionId,
-      ...(savedPersonalityData ? JSON.parse(savedPersonalityData) : {}),
-      loading: false
-    }));
+    const initializeSession = async () => {
+      try {
+        const { sessionId, personalityData } = getSessionData();
+        
+        if (sessionId) {
+          const isValid = await validateSession();
+          if (!isValid) {
+            clearSessionData();
+            setState({ sessionId: null, loading: false, error: null });
+            return;
+          }
+        }
+
+        setState(prev => ({
+          ...prev,
+          sessionId,
+          ...(personalityData ? JSON.parse(personalityData) : {}),
+          loading: false,
+          error: null
+        }));
+      } catch (error) {
+        console.error('Session initialization error:', error);
+        setState(prev => ({ 
+          ...prev, 
+          loading: false, 
+          error: error instanceof Error ? error : new Error('Session initialization failed') 
+        }));
+      }
+    };
+
+    initializeSession();
   }, []);
 
   const startSession = async () => {
     try {
       const sessionId = generateSessionId();
-      localStorage.setItem('sessionId', sessionId);
       
       const { error } = await supabase
         .from('user_sessions')
@@ -62,7 +119,8 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
 
       if (error) throw error;
       
-      setState({ sessionId, loading: false });
+      localStorage.setItem('sessionId', sessionId);
+      setState(prev => ({ ...prev, sessionId, error: null }));
       
       toast({
         title: "Session started",
@@ -70,6 +128,10 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
       });
     } catch (error) {
       console.error('Session start error:', error);
+      setState(prev => ({ 
+        ...prev, 
+        error: error instanceof Error ? error : new Error('Failed to start session') 
+      }));
       toast({
         variant: "destructive",
         title: "Error",
@@ -79,22 +141,29 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
   };
 
   const setPersonalityData = (personalityKey: string, selections: SessionSelection[]) => {
-    const personalityData = {
-      personalityKey,
-      sessionData: {
-        selections,
-        finalPersonality: personalityKey
-      }
-    };
-    
-    localStorage.setItem('personalityData', JSON.stringify(personalityData));
-    setState(prev => ({ ...prev, ...personalityData }));
+    try {
+      const personalityData = {
+        personalityKey,
+        sessionData: {
+          selections,
+          finalPersonality: personalityKey
+        }
+      };
+      
+      localStorage.setItem('personalityData', JSON.stringify(personalityData));
+      setState(prev => ({ ...prev, ...personalityData, error: null }));
+    } catch (error) {
+      console.error('Error setting personality data:', error);
+      setState(prev => ({ 
+        ...prev, 
+        error: error instanceof Error ? error : new Error('Failed to set personality data') 
+      }));
+    }
   };
 
   const endSession = () => {
-    localStorage.removeItem('sessionId');
-    localStorage.removeItem('personalityData');
-    setState({ sessionId: null, loading: false });
+    clearSessionData();
+    setState({ sessionId: null, loading: false, error: null });
   };
 
   return (
@@ -102,7 +171,8 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
       ...state,
       startSession,
       endSession,
-      setPersonalityData
+      setPersonalityData,
+      validateSession
     }}>
       {children}
     </SessionContext.Provider>
