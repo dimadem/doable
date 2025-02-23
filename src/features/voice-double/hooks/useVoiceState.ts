@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef, useEffect, useReducer, useMemo } from 'react';
 import { useConversation } from '@11labs/react';
 import { sessionLogger } from '@/utils/sessionLogger';
@@ -54,33 +53,49 @@ export const useVoiceState = (): VoiceContextType => {
   const unmountingRef = useRef(false);
   const connectionTimeoutRef = useRef<NodeJS.Timeout>();
   const lastConnectionAttemptRef = useRef<number>(0);
+  const endConversationAllowedRef = useRef(false);
   
   const conversation = useConversation({
     clientTools: {
       set_timer_state: async ({ timer_on }) => {
         if (!unmountingRef.current) {
+          console.log('Setting timer state:', timer_on);
           setTimerState(prev => ({ ...prev, isRunning: timer_on }));
         }
         return "Timer state updated";
       },
       set_timer_duration: async ({ timer_duration }) => {
         if (!unmountingRef.current) {
+          console.log('Setting timer duration:', timer_duration);
           const durationInSeconds = timer_duration * 60;
           setTimerState(prev => ({
             ...prev,
             duration: timer_duration,
             remainingTime: durationInSeconds
           }));
+          endConversationAllowedRef.current = false;
         }
         return "Timer duration set";
       },
       set_task: async ({ task_description, end_conversation = false }) => {
-        sessionLogger.info('Task update received', { task_description, end_conversation });
+        if (unmountingRef.current) return "Component unmounted";
         
-        if (end_conversation && !timerState.isRunning && !unmountingRef.current) {
-          await stopInteraction();
-          return "Task completed and conversation ended";
+        sessionLogger.info('Task update received', { 
+          task_description, 
+          end_conversation,
+          timerRunning: timerState.isRunning 
+        });
+        
+        if (end_conversation) {
+          endConversationAllowedRef.current = true;
+          
+          if (timerState.isRunning && endConversationAllowedRef.current) {
+            console.log('Ending conversation as requested by agent');
+            await stopInteraction();
+            return "Task completed and conversation ended";
+          }
         }
+        
         return "Task handled";
       }
     },
@@ -97,9 +112,10 @@ export const useVoiceState = (): VoiceContextType => {
     },
     onDisconnect: () => {
       if (!unmountingRef.current) {
-        console.log('WebSocket disconnected');
+        console.log('WebSocket disconnected naturally');
         dispatch({ type: 'CONNECTION_CLOSED' });
         setTimerState(initialTimerState);
+        endConversationAllowedRef.current = false;
       }
     },
     onError: (error) => {
@@ -122,14 +138,27 @@ export const useVoiceState = (): VoiceContextType => {
 
   useEffect(() => {
     unmountingRef.current = false;
+    endConversationAllowedRef.current = false;
+    
     return () => {
+      console.log('Component unmounting cleanup');
       unmountingRef.current = true;
       clearTimeout(connectionTimeoutRef.current);
+      
+      if (conversationRef.current && state.status !== 'idle') {
+        console.log('Cleaning up active connection on unmount');
+        conversationRef.current.endSession().catch(error => {
+          console.error('Error during cleanup:', error);
+        });
+      }
     };
   }, []);
 
   const startInteraction = useCallback(async () => {
-    if (unmountingRef.current) return;
+    if (unmountingRef.current) {
+      console.log('Preventing start - component unmounting');
+      return;
+    }
     
     const now = Date.now();
     if (now - lastConnectionAttemptRef.current < DEBOUNCE_DELAY) {
@@ -188,10 +217,13 @@ export const useVoiceState = (): VoiceContextType => {
       }
       throw error;
     }
-  }, [conversation, personalityData, state.status]);
+  }, [conversation, personalityData]);
 
   const stopInteraction = useCallback(async () => {
-    if (unmountingRef.current) return;
+    if (unmountingRef.current) {
+      console.log('Preventing stop - component unmounting');
+      return;
+    }
     
     console.log('Stopping interaction, current status:', state.status);
     if (state.status === 'idle') return;
@@ -200,6 +232,7 @@ export const useVoiceState = (): VoiceContextType => {
       dispatch({ type: 'START_DISCONNECTING' });
       
       if (timerState.isRunning) {
+        console.log('Stopping timer before disconnection');
         setTimerState(prev => ({ ...prev, isRunning: false }));
       }
 
@@ -215,15 +248,7 @@ export const useVoiceState = (): VoiceContextType => {
       }
       throw error;
     }
-  }, [state.status, timerState.isRunning]);
-
-  useEffect(() => {
-    return () => {
-      if (state.status !== 'idle') {
-        stopInteraction().catch(console.error);
-      }
-    };
-  }, []);
+  }, [state.status]);
 
   const stableContextValue = useMemo(() => ({
     ...state,
