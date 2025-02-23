@@ -31,7 +31,7 @@ export const useVoiceInteraction = (voiceConfig: VoiceConfig | undefined) => {
     }
   });
 
-  const handleConnectionError = async (error: Error) => {
+  const handleConnectionError = React.useCallback(async (error: Error) => {
     console.error('Connection error:', error);
     
     if (retryCount < MAX_RETRIES && status === 'connecting') {
@@ -50,9 +50,9 @@ export const useVoiceInteraction = (voiceConfig: VoiceConfig | undefined) => {
       setStatus('idle');
       setRetryCount(0);
     }
-  };
+  }, [retryCount, status, toast]);
 
-  const checkMicrophonePermission = async (): Promise<boolean> => {
+  const checkMicrophonePermission = React.useCallback(async (): Promise<boolean> => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       // Stop the stream immediately after getting permission
@@ -67,9 +67,9 @@ export const useVoiceInteraction = (voiceConfig: VoiceConfig | undefined) => {
       });
       return false;
     }
-  };
+  }, [toast]);
 
-  const startVoiceSession = async () => {
+  const startVoiceSession = React.useCallback(async () => {
     if (!voiceConfig?.api_key || !voiceConfig?.agent_id || !voiceConfig?.agent_settings?.tts?.voice_id) {
       console.error('Missing voice configuration:', {
         hasApiKey: !!voiceConfig?.api_key,
@@ -102,9 +102,9 @@ export const useVoiceInteraction = (voiceConfig: VoiceConfig | undefined) => {
       console.error('Voice interaction error:', err);
       handleConnectionError(err instanceof Error ? err : new Error('Failed to start voice interaction'));
     }
-  };
+  }, [voiceConfig, conversation, toast, handleConnectionError]);
 
-  const handleInteractionToggle = async () => {
+  const handleInteractionToggle = React.useCallback(async () => {
     if (status === 'idle') {
       const hasMicPermission = await checkMicrophonePermission();
       if (!hasMicPermission) {
@@ -119,7 +119,7 @@ export const useVoiceInteraction = (voiceConfig: VoiceConfig | undefined) => {
       setStatus('idle');
       setRetryCount(0);
     }
-  };
+  }, [status, checkMicrophonePermission, startVoiceSession, conversation]);
 
   return {
     status,
