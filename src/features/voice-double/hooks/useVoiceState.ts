@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useConversation } from '@11labs/react';
 import { sessionLogger } from '@/utils/sessionLogger';
 import { toast } from '@/components/ui/use-toast';
@@ -23,6 +23,8 @@ export const useVoiceState = (): VoiceContextType => {
   const { personalityData, sessionId } = useSession();
   const [state, setState] = useState<VoiceState>(initialState);
   const [timerState, setTimerState] = useState<TimerState>(initialTimerState);
+  const isConnectingRef = useRef(false);
+  const isDisconnectingRef = useRef(false);
   
   const conversation = useConversation({
     clientTools: {
@@ -49,6 +51,7 @@ export const useVoiceState = (): VoiceContextType => {
       }
     },
     onConnect: () => {
+      isConnectingRef.current = false;
       setState(prev => ({ ...prev, status: 'connected' }));
       toast({
         title: "Connected",
@@ -56,6 +59,8 @@ export const useVoiceState = (): VoiceContextType => {
       });
     },
     onDisconnect: () => {
+      isConnectingRef.current = false;
+      isDisconnectingRef.current = false;
       setState(initialState);
       setTimerState(initialTimerState);
       toast({
@@ -64,6 +69,8 @@ export const useVoiceState = (): VoiceContextType => {
       });
     },
     onError: (error) => {
+      isConnectingRef.current = false;
+      isDisconnectingRef.current = false;
       setState(prev => ({ ...prev, status: 'error' }));
       sessionLogger.error('Voice connection error', error);
       toast({
@@ -75,46 +82,61 @@ export const useVoiceState = (): VoiceContextType => {
   });
 
   const startInteraction = useCallback(async () => {
+    // Prevent multiple connection attempts
+    if (isConnectingRef.current || state.status === 'connected') {
+      return;
+    }
+
     try {
+      isConnectingRef.current = true;
       setState(prev => ({ ...prev, status: 'connecting' }));
       
       const conversationId = await conversation.startSession({
         agentId: PUBLIC_AGENT_ID,
         dynamicVariables: {
           personality: personalityData?.finalPersonality || 'default',
-          end_conversation: false, // Prevent immediate disconnection
-          timer_active: false, // Start with timer inactive
-          timer_duration: 0 // No initial timer duration
+          end_conversation: false,
+          timer_active: false,
+          timer_duration: 0
         }
       });
 
+      // Only update the conversationId, let onConnect handle the status change
       setState(prev => ({ 
-        ...prev, 
-        status: 'connected',
+        ...prev,
         conversationId 
       }));
     } catch (error) {
+      isConnectingRef.current = false;
       setState(prev => ({ ...prev, status: 'error' }));
       sessionLogger.error('Failed to start voice interaction', error);
       throw error;
     }
-  }, [conversation, personalityData]);
+  }, [conversation, personalityData, state.status]);
 
   const stopInteraction = useCallback(async () => {
+    // Prevent multiple disconnection attempts
+    if (isDisconnectingRef.current || state.status === 'idle') {
+      return;
+    }
+
     try {
+      isDisconnectingRef.current = true;
+      setState(prev => ({ ...prev, status: 'disconnecting' }));
+      
       if (timerState.isRunning) {
         setTimerState(prev => ({ ...prev, isRunning: false }));
       }
-      setState(prev => ({ ...prev, status: 'disconnecting' }));
+      
       await conversation.endSession();
-      setState(initialState);
-      setTimerState(initialTimerState);
+      // Let onDisconnect handle the state reset
     } catch (error) {
-      sessionLogger.error('Failed to stop voice interaction', error);
+      isDisconnectingRef.current = false;
       setState(prev => ({ ...prev, status: 'error' }));
+      sessionLogger.error('Failed to stop voice interaction', error);
       throw error;
     }
-  }, [conversation, timerState.isRunning]);
+  }, [conversation, state.status, timerState.isRunning]);
 
   return {
     ...state,
