@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { determinePersonality } from '../services/personalityService';
 import { usePersonalities } from '../hooks/usePersonalities';
 import { useVibeState } from '../hooks/useVibeState';
-import { updateSessionPersonalityData } from '@/utils/sessionUtils';
+import { updateSessionPersonalityData } from '@/features/session/utils/sessionStorage';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import ProgressBar from '../components/ProgressBar';

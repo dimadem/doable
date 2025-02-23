@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { SessionProvider } from "./contexts/SessionContext";
-import { SessionGuard } from "./components/session/SessionGuard";
+import { SessionGuard } from "./features/session/components/SessionGuard";
 import { ErrorBoundary } from "./components/error/ErrorBoundary";
 
 // Lazy load components

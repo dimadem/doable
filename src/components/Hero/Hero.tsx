@@ -5,22 +5,25 @@ import { ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { pageVariants } from '@/animations/pageTransitions';
 import { AppHeader } from '../layouts/AppHeader';
-import { createLocalSession, getSessionData } from '@/utils/sessionUtils';
+import { createLocalSession, getSessionData } from '@/features/session/utils/sessionStorage';
 
 const Hero = () => {
   const navigate = useNavigate();
   const sessionData = getSessionData();
 
   const handleStart = () => {
+    // If we have personality data, go to struggle
     if (sessionData?.personalityData) {
       navigate('/struggle');
       return;
     }
     
-    if (!sessionData?.sessionId) {
+    // If we don't have a session, create one
+    if (!sessionData) {
       createLocalSession();
     }
     
+    // Always navigate to vibe-matching after ensuring we have a session
     navigate('/vibe-matching');
   };
 
