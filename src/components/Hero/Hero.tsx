@@ -14,8 +14,11 @@ const Hero = () => {
   const handleStart = async () => {
     if (sessionId) {
       navigate('/vibe-matching');
-    } else {
-      await startSession();
+      return;
+    }
+
+    const success = await startSession();
+    if (success) {
       navigate('/vibe-matching');
     }
   };

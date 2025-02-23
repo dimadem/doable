@@ -17,7 +17,7 @@ interface SessionState {
 }
 
 interface SessionContextType extends SessionState {
-  startSession: () => Promise<void>;
+  startSession: () => Promise<boolean>;
   endSession: () => void;
   setPersonalityData: (personalityKey: string, selections: SessionSelection[]) => void;
   validateSession: () => Promise<boolean>;
@@ -41,7 +41,7 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
       const { data, error } = await supabase
         .from('user_sessions')
         .select('started_at')
-        .eq('id', state.sessionId)
+        .eq('session_id', state.sessionId)
         .single();
 
       if (error) throw error;
@@ -112,7 +112,9 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
           device_info: {}
         });
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       
       localStorage.setItem('sessionId', sessionId);
       setState(prev => ({ ...prev, sessionId, error: null }));
@@ -121,6 +123,8 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
         title: "Session started",
         description: "Your journey has begun."
       });
+
+      return true;
     } catch (error) {
       console.error('Session start error:', error);
       setState(prev => ({ 
@@ -132,6 +136,7 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
         title: "Error",
         description: "Failed to start session. Please try again."
       });
+      return false;
     }
   };
 
