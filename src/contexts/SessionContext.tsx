@@ -5,6 +5,7 @@ import { SessionSelection } from '@/features/vibe-matching/types';
 import { SessionState, SessionContextType } from './types/session.types';
 import { createLocalSession, getSessionData, clearSessionData, updateSessionPersonalityData } from '@/features/session/utils/sessionStorage';
 import { validateSessionInDb, updatePersonalityData, initializeSession } from './services/sessionService';
+import { sessionLogger } from '@/utils/sessionLogger';
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
@@ -18,15 +19,15 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
   const validateSession = async () => {
     try {
       if (!state.sessionId) {
-        console.log('No session ID to validate');
+        sessionLogger.info('No session ID to validate');
         return false;
       }
 
-      console.log('Validating session:', state.sessionId);
+      sessionLogger.info('Validating session', { sessionId: state.sessionId });
       const isValid = await validateSessionInDb(state.sessionId);
       
       if (!isValid) {
-        console.log('Session invalid, cleaning up...');
+        sessionLogger.warn('Session invalid, cleaning up', { sessionId: state.sessionId });
         endSession();
         toast({
           title: "Session Error",
@@ -36,10 +37,10 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
         return false;
       }
 
-      console.log('Session validated successfully');
+      sessionLogger.info('Session validated successfully', { sessionId: state.sessionId });
       return true;
     } catch (error) {
-      console.error('Session validation error:', error);
+      sessionLogger.error('Session validation error', { error, sessionId: state.sessionId });
       endSession();
       return false;
     }
@@ -48,26 +49,30 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
   useEffect(() => {
     const initSession = async () => {
       try {
-        console.log('Initializing session from storage');
+        sessionLogger.info('Initializing session from storage');
         const sessionData = getSessionData();
         
         if (!sessionData) {
-          console.log('No session data found in storage');
+          sessionLogger.info('No session data found in storage');
           setState({ sessionId: null, loading: false, error: null });
           return;
         }
 
-        console.log('Found session data, validating:', sessionData.sessionId);
+        sessionLogger.info('Found session data', { sessionId: sessionData.sessionId });
         const isValid = await validateSessionInDb(sessionData.sessionId);
         
         if (!isValid) {
-          console.log('Stored session invalid, clearing...');
+          sessionLogger.warn('Stored session invalid', { sessionId: sessionData.sessionId });
           clearSessionData();
           setState({ sessionId: null, loading: false, error: null });
           return;
         }
 
-        console.log('Session validated, updating state');
+        sessionLogger.info('Session validated, updating state', { 
+          sessionId: sessionData.sessionId,
+          hasPersonalityData: !!sessionData.personalityData
+        });
+        
         setState({
           sessionId: sessionData.sessionId,
           personalityData: sessionData.personalityData,
@@ -75,7 +80,7 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
           error: null
         });
       } catch (error) {
-        console.error('Session initialization error:', error);
+        sessionLogger.error('Session initialization error', { error });
         setState({ 
           sessionId: null, 
           loading: false, 
@@ -89,14 +94,14 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
 
   const startSession = async () => {
     try {
-      console.log('Starting new session');
+      sessionLogger.info('Starting new session');
       const sessionData = createLocalSession();
       
       if (!sessionData) {
         throw new Error('Failed to create local session');
       }
 
-      console.log('Created local session, initializing in DB:', sessionData.sessionId);
+      sessionLogger.info('Created local session', { sessionId: sessionData.sessionId });
       await initializeSession(sessionData.sessionId);
 
       setState({ 
@@ -110,10 +115,10 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
         description: "Your journey has begun."
       });
 
-      console.log('Session started successfully');
+      sessionLogger.info('Session started successfully', { sessionId: sessionData.sessionId });
       return true;
     } catch (error) {
-      console.error('Failed to start session:', error);
+      sessionLogger.error('Failed to start session', { error });
       setState({ 
         sessionId: null, 
         loading: false, 
@@ -136,6 +141,12 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
         throw new Error('No active session');
       }
 
+      sessionLogger.info('Setting personality data', { 
+        sessionId: state.sessionId,
+        personalityKey,
+        selectionsCount: selections.length
+      });
+
       const personalityData = {
         personalityKey,
         selections,
@@ -154,8 +165,16 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
         personalityData
       }));
 
+      sessionLogger.info('Personality data set successfully', { 
+        sessionId: state.sessionId,
+        personalityKey
+      });
+
     } catch (error) {
-      console.error('Error setting personality data:', error);
+      sessionLogger.error('Error setting personality data', { 
+        error,
+        sessionId: state.sessionId
+      });
       toast({
         variant: "destructive",
         title: "Error",
@@ -166,6 +185,9 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
   };
 
   const endSession = () => {
+    if (state.sessionId) {
+      sessionLogger.info('Ending session', { sessionId: state.sessionId });
+    }
     clearSessionData();
     setState({ sessionId: null, loading: false, error: null });
   };
