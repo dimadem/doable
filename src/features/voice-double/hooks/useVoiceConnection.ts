@@ -6,12 +6,14 @@ import { useSession } from '@/contexts/SessionContext';
 import { toast } from '@/components/ui/use-toast';
 import { PUBLIC_AGENT_ID } from '../constants/voice';
 import { useVoiceTimer } from './useVoiceTimer';
+import { useVoiceAudioPermission } from './useVoiceAudioPermission';
 import { saveVoiceContext, loadVoiceContext } from '../services/voiceStorageService';
 
 export const useVoiceConnection = () => {
   const { personalityData, sessionId, struggleType } = useSession();
   const [currentTask, setCurrentTask] = useState<string>();
   const isClosing = useRef<boolean>(false);
+  const { permissionState, requestPermission, cleanup: cleanupAudio } = useVoiceAudioPermission();
   
   const {
     timerState,
@@ -117,7 +119,11 @@ export const useVoiceConnection = () => {
         throw new Error('No struggle type selected');
       }
 
-      await navigator.mediaDevices.getUserMedia({ audio: true });
+      const hasPermission = await requestPermission();
+      if (!hasPermission) {
+        throw new Error('Audio permission denied');
+      }
+
       const savedContext = loadVoiceContext(sessionId);
       
       sessionLogger.info('Starting voice session', { 
@@ -143,7 +149,7 @@ export const useVoiceConnection = () => {
       sessionLogger.error('Failed to start voice session', error);
       throw error;
     }
-  }, [conversation, sessionId, personalityData, struggleType]);
+  }, [conversation, sessionId, personalityData, struggleType, requestPermission]);
 
   const disconnect = useCallback(async () => {
     try {
@@ -154,11 +160,12 @@ export const useVoiceConnection = () => {
       
       sessionLogger.info('Voice session ended', { sessionId });
       cleanupTimer();
+      cleanupAudio();
     } catch (error) {
       sessionLogger.error('Failed to end voice session', error);
       throw error;
     }
-  }, [conversation, sessionId, cleanupTimer]);
+  }, [conversation, sessionId, cleanupTimer, cleanupAudio]);
 
   return {
     connect,
@@ -167,6 +174,7 @@ export const useVoiceConnection = () => {
     isSpeaking: conversation.isSpeaking,
     currentTask,
     timerState,
-    timerDuration
+    timerDuration,
+    permissionState
   };
 };

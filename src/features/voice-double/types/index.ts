@@ -1,5 +1,6 @@
 
 import { TimerState } from './timer';
+import { AudioPermissionState } from './audio';
 
 export type VoiceStatus = 'idle' | 'connecting' | 'connected' | 'closing' | 'error';
 
@@ -8,6 +9,7 @@ export interface VoiceState {
   isSpeaking: boolean;
   conversationId: string | null;
   volume: number;
+  permissionState?: AudioPermissionState;
 }
 
 export interface VoiceContextType extends VoiceState {
