@@ -43,7 +43,7 @@ export const useVoiceConnection = () => {
         
         setCurrentTask(task_description);
         
-        // Only end the conversation if explicitly requested and not in a timer interaction
+        // Prevent ending conversation during active timer or if already closing
         if (end_conversation && !isClosing.current && !timerState.isRunning) {
           isClosing.current = true;
           sessionLogger.info('Agent requesting session end', {
@@ -51,7 +51,17 @@ export const useVoiceConnection = () => {
             sessionId,
             timestamp: new Date().toISOString()
           });
-          await conversation.endSession();
+          
+          try {
+            await conversation.endSession();
+          } catch (error) {
+            if (error.message?.includes('CLOSING') || error.message?.includes('CLOSED')) {
+              // WebSocket already closing/closed, ignore the error
+              sessionLogger.info('WebSocket already closing or closed');
+            } else {
+              throw error;
+            }
+          }
         }
 
         return "Task context stored successfully";
@@ -64,7 +74,6 @@ export const useVoiceConnection = () => {
         });
 
         setTimerDurationMinutes(timer_duration);
-
         return "Timer duration set successfully";
       },
       set_timer_state: async ({ timer_on }) => {
@@ -156,17 +165,26 @@ export const useVoiceConnection = () => {
     try {
       if (!isClosing.current) {
         isClosing.current = true;
-        await conversation.endSession();
+        try {
+          await conversation.endSession();
+        } catch (error) {
+          if (error.message?.includes('CLOSING') || error.message?.includes('CLOSED')) {
+            // WebSocket already closing/closed, ignore the error
+            sessionLogger.info('WebSocket already closing or closed');
+          } else {
+            throw error;
+          }
+        }
       }
       
       sessionLogger.info('Voice session ended', { sessionId });
-      cleanupTimer();
       cleanupAudio();
+      // Don't cleanup timer here, let it run independently
     } catch (error) {
       sessionLogger.error('Failed to end voice session', error);
       throw error;
     }
-  }, [conversation, sessionId, cleanupTimer, cleanupAudio]);
+  }, [conversation, sessionId, cleanupAudio]);
 
   return {
     connect,
