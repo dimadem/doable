@@ -76,21 +76,24 @@ export const VoiceDouble = () => {
         setIsActive(false);
         console.log('Ended conversation');
       } else {
-        const { data: signedUrlData, error: signedUrlError } = await supabase.functions.invoke('get-eleven-labs-key');
+        const { data, error: signedUrlError } = await supabase.functions.invoke('get-eleven-labs-key');
         
         if (signedUrlError) {
           throw new Error('Failed to get signed URL');
         }
 
-        if (!signedUrlData?.signed_url) {
-          throw new Error('No signed URL received');
+        if (!data?.signed_url || !data?.agent_id) {
+          throw new Error('Missing required connection data');
         }
 
-        console.log('Starting session with signed URL:', signedUrlData.signed_url);
+        console.log('Starting session with:', {
+          agentId: data.agent_id,
+          signedUrl: data.signed_url
+        });
         
         await conversation.startSession({
-          agentId: process.env.ELEVENLABS_AGENT_ID || Deno.env.get('ELEVENLABS_AGENT_ID'),
-          url: signedUrlData.signed_url
+          agentId: data.agent_id,
+          url: data.signed_url
         });
         
         setIsActive(true);
@@ -122,4 +125,3 @@ export const VoiceDouble = () => {
     </div>
   );
 };
-

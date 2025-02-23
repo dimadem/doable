@@ -50,14 +50,15 @@ serve(async (req) => {
     }
 
     const data = await response.json();
+    console.log('Received signed URL and agent ID:', { signed_url: data.signed_url, agent_id: agentId });
     
     return new Response(
-      JSON.stringify({ signed_url: data.signed_url }),
+      JSON.stringify({ 
+        signed_url: data.signed_url,
+        agent_id: agentId 
+      }),
       { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json'
-        } 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       },
     );
   } catch (error) {
